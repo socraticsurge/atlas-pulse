@@ -9,6 +9,8 @@ import {
   HiOutlineXMark,
   HiOutlineArrowLeft,
   HiOutlineArrowRight,
+  HiOutlineClipboardDocument,
+  HiOutlineCheck,
 } from 'react-icons/hi2';
 import { BsBookmarkFill } from 'react-icons/bs';
 import db from '../db/database.js';
@@ -34,6 +36,18 @@ export default function ArticleReader({
   const [extractError, setExtractError] = useState(null);
   const [readerSettings, setReaderSettings] = useState(getReaderSettings);
   const [isVisible, setIsVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // Handle copy to clipboard
+  const handleCopyLink = useCallback(() => {
+    if (!article?.link) return;
+    navigator.clipboard.writeText(article.link)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(err => console.error("Failed to copy link:", err));
+  }, [article?.link]);
 
   // ALL hooks must be called before any conditional returns
   const feed = useLiveQuery(
@@ -255,6 +269,14 @@ export default function ArticleReader({
               settings={readerSettings}
               onSettingsChange={setReaderSettings}
             />
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleCopyLink}
+              title="Copy link to clipboard"
+            >
+              {copied ? <HiOutlineCheck style={{ color: 'var(--accent)' }} /> : <HiOutlineClipboardDocument />}
+              {copied ? 'Copied!' : 'Copy Link'}
+            </button>
             <a
               href={article.link}
               target="_blank"
