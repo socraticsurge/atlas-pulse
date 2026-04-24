@@ -508,9 +508,6 @@ a:hover {
   top: 0;
   right: 0;
   bottom: 0;
-  width: 55%;
-  min-width: 400px;
-  max-width: 900px;
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -1437,6 +1434,45 @@ a:hover {
 
 .resize-handle:hover .resize-handle-grip,
 .resize-handle.active .resize-handle-grip {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== Overlay Resize Handle ===== */
+.overlay-resize-handle {
+  position: absolute;
+  left: -2px;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: ew-resize;
+  z-index: 120;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+.overlay-resize-handle:hover,
+.overlay-resize-handle.active {
+  background: var(--accent);
+}
+
+.overlay-resize-handle.active {
+  box-shadow: 0 0 8px rgba(0, 212, 170, 0.4);
+}
+
+.overlay-resize-handle .resize-handle-grip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 32px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+.overlay-resize-handle:hover .resize-handle-grip,
+.overlay-resize-handle.active .resize-handle-grip {
   background: rgba(255, 255, 255, 0.3);
 }
 

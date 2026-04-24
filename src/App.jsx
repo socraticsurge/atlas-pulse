@@ -36,6 +36,10 @@ function App() {
     const stored = localStorage.getItem('atlas-pulse-sidebar-width');
     return stored ? parseInt(stored, 10) : 260;
   });
+  const [readerWidth, setReaderWidth] = useState(() => {
+    const stored = localStorage.getItem('atlas-pulse-reader-width');
+    return stored ? parseInt(stored, 10) : 600;
+  });
 
   const { feeds, addFeed, removeFeed, updateFeedFolder, refreshFeed, refreshAllFeeds } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
@@ -159,6 +163,15 @@ function App() {
     });
   }, []);
 
+  const handleReaderResize = useCallback((delta) => {
+    setReaderWidth(prev => {
+      // Panel is on right, dragging left (negative delta) means increasing width
+      const next = Math.min(1200, Math.max(400, prev - delta));
+      localStorage.setItem('atlas-pulse-reader-width', next);
+      return next;
+    });
+  }, []);
+
   const existingFeedUrls = feeds.map(f => f.url);
 
   // Calculate current article index for reader navigation UI
@@ -211,6 +224,8 @@ function App() {
           hasNext={hasNext}
           currentIndex={currentArticleIndex}
           totalCount={visibleArticles.length}
+          width={readerWidth}
+          onResize={handleReaderResize}
         />
       )}
 

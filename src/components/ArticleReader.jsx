@@ -15,6 +15,7 @@ import db from '../db/database.js';
 import { formatDate, estimateReadTime } from '../utils/helpers.js';
 import * as api from '../utils/api.js';
 import ReaderSettings, { getReaderSettings, getReaderCSSVars } from './ReaderSettings.jsx';
+import ResizableHandle from './ResizableHandle.jsx';
 
 export default function ArticleReader({ 
   article, 
@@ -24,7 +25,9 @@ export default function ArticleReader({
   hasNext,
   hasPrev,
   currentIndex,
-  totalCount
+  totalCount,
+  width,
+  onResize
 }) {
   const [extractedContent, setExtractedContent] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -175,7 +178,11 @@ export default function ArticleReader({
       />
       
       {/* Slide-in panel */}
-      <div className={`article-reader-panel ${isVisible ? 'visible' : ''}`}>
+      <div 
+        className={`article-reader-panel ${isVisible ? 'visible' : ''}`}
+        style={{ width: `${width}px` }}
+      >
+        <ResizableHandle className="overlay-resize-handle" onResize={onResize} />
         <div className="reader-toolbar">
           <div className="reader-toolbar-left">
             <button
