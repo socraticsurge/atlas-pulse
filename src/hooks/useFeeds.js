@@ -63,6 +63,52 @@ export function useFeeds() {
     });
   }, []);
 
+  const importFeedsFromOPML = useCallback(async (parsedFeeds) => {
+    let importedCount = 0;
+    
+    await db.transaction('rw', db.feeds, db.folders, async () => {
+      // Get all existing feed URLs to avoid duplicates
+      const existingFeeds = await db.feeds.toArray();
+      const existingUrls = new Set(existingFeeds.map(f => f.url));
+
+      for (const feed of parsedFeeds) {
+        if (existingUrls.has(feed.url)) continue;
+        
+        let folderId = null;
+        if (feed.folderName) {
+          // Find or create folder
+          let folder = await db.folders.where('name').equals(feed.folderName).first();
+          if (!folder) {
+            folderId = await db.folders.add({
+              name: feed.folderName,
+              order: 0,
+              createdAt: new Date().toISOString()
+            });
+          } else {
+            folderId = folder.id;
+          }
+        }
+
+        // Add to dexie without fetching right away
+        await db.feeds.add({
+          title: feed.title,
+          url: feed.url,
+          siteUrl: feed.siteUrl || '',
+          description: '',
+          favicon: getFaviconUrl(feed.siteUrl || feed.url),
+          folderId: folderId,
+          lastRefreshed: null, // important: null means it needs refresh
+          createdAt: new Date().toISOString()
+        });
+        
+        existingUrls.add(feed.url);
+        importedCount++;
+      }
+    });
+    
+    return importedCount;
+  }, []);
+
   const updateFeedFolder = useCallback(async (feedId, folderId) => {
     await db.feeds.update(feedId, { folderId });
   }, []);
@@ -128,5 +174,6 @@ export function useFeeds() {
     updateFeedFolder,
     refreshFeed,
     refreshAllFeeds,
+    importFeedsFromOPML,
   };
 }

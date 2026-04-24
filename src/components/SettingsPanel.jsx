@@ -3,15 +3,23 @@ import {
   HiOutlineSun,
   HiOutlineMoon,
   HiOutlineTrash,
+  HiOutlineArrowDownTray,
+  HiOutlineArrowUpTray,
 } from 'react-icons/hi2';
+import { useState, useRef } from 'react';
 import db from '../db/database.js';
+import { parseOPML, generateOPML } from '../utils/opml.js';
 
 export default function SettingsPanel({ 
   isOpen, onClose, 
   theme, onToggleTheme,
   appFont, onChangeFont,
-  appColor, onChangeColor 
+  appColor, onChangeColor,
+  feeds, folders, onImportOPML, onRefreshAll
 }) {
+  const fileInputRef = useRef(null);
+  const [isImporting, setIsImporting] = useState(false);
+
   if (!isOpen) return null;
 
   const handleClearData = async () => {
@@ -20,6 +28,44 @@ export default function SettingsPanel({
       await db.feeds.clear();
       await db.folders.clear();
       onClose();
+    }
+  };
+
+  const handleExport = () => {
+    const opmlString = generateOPML(feeds, folders);
+    const blob = new Blob([opmlString], { type: 'text/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'atlas-pulse-feeds.opml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const parsedFeeds = parseOPML(text);
+      const count = await onImportOPML(parsedFeeds);
+      
+      if (count > 0) {
+        onRefreshAll();
+        alert(`Successfully imported ${count} feeds! Articles are downloading in the background.`);
+      } else {
+        alert('No new feeds were found to import.');
+      }
+      onClose();
+    } catch (err) {
+      alert(`Failed to import OPML: ${err.message}`);
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -84,6 +130,39 @@ export default function SettingsPanel({
                   />
                 ))}
               </div>
+            </div>
+          </div>
+
+          {/* Data Management */}
+          <div className="settings-group">
+            <h3>Data Management</h3>
+            <div className="settings-row">
+              <label>Export feeds and folders as OPML</label>
+              <button className="btn btn-secondary btn-sm" onClick={handleExport}>
+                <HiOutlineArrowDownTray /> Export OPML
+              </button>
+            </div>
+            <div className="settings-row" style={{ borderBottom: 'none' }}>
+              <label>Import feeds from another reader</label>
+              <input
+                type="file"
+                accept=".opml,.xml"
+                style={{ display: 'none' }}
+                ref={fileInputRef}
+                onChange={handleImport}
+              />
+              <button 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <span className="spinner" style={{ width: 14, height: 14 }} />
+                ) : (
+                  <HiOutlineArrowUpTray />
+                )}
+                {isImporting ? 'Importing...' : 'Import OPML'}
+              </button>
             </div>
           </div>
 

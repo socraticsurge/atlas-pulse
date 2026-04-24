@@ -41,7 +41,7 @@ function App() {
     return stored ? parseInt(stored, 10) : 600;
   });
 
-  const { feeds, addFeed, removeFeed, updateFeedFolder, refreshFeed, refreshAllFeeds } = useFeeds();
+  const { feeds, addFeed, removeFeed, updateFeedFolder, refreshFeed, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
 
   const refreshIntervalRef = useRef(null);
@@ -246,6 +246,10 @@ function App() {
         onChangeFont={setAppFont}
         appColor={appColor}
         onChangeColor={setAppColor}
+        feeds={feeds}
+        folders={folders}
+        onImportOPML={importFeedsFromOPML}
+        onRefreshAll={handleRefreshAll}
       />
 
       {/* Toast */}
