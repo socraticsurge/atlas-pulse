@@ -48,7 +48,7 @@ export default function SettingsPanel({ isOpen, onClose, theme, onToggleTheme })
           <div className="settings-group">
             <h3>About</h3>
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
-              <p><strong>FeedFlow</strong> — A modern RSS feed reader</p>
+              <p><strong>Atlas Pulse</strong> — A modern RSS feed reader</p>
               <p style={{ marginTop: 8 }}>
                 All data is stored locally in your browser using IndexedDB.
                 No accounts, no cloud, no tracking. Your data stays on your machine.
