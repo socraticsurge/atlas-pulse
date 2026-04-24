@@ -4,18 +4,32 @@ import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
 import AddFeedModal from './components/AddFeedModal.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
+import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
 import { DEFAULT_REFRESH_INTERVAL } from './utils/constants.js';
 
+// Panel width constraints
+const SIDEBAR_MIN = 180;
+const SIDEBAR_MAX = 400;
+
 function App() {
   const [activeView, setActiveView] = useState({ type: 'all' });
   const [selectedArticle, setSelectedArticle] = useState(null);
+  const [visibleArticles, setVisibleArticles] = useState([]);
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState(null);
-  const [theme, setTheme] = useState(() => localStorage.getItem('feedflow-theme') || 'dark');
+  const [theme, setTheme] = useState(() =>
+    localStorage.getItem('atlas-pulse-theme') || localStorage.getItem('feedflow-theme') || 'dark'
+  );
+
+  // Resizable panel widths
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    const stored = localStorage.getItem('atlas-pulse-sidebar-width');
+    return stored ? parseInt(stored, 10) : 260;
+  });
 
   const { feeds, addFeed, removeFeed, updateFeedFolder, refreshFeed, refreshAllFeeds } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
@@ -25,7 +39,7 @@ function App() {
   // Apply theme
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('feedflow-theme', theme);
+    localStorage.setItem('atlas-pulse-theme', theme);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {
@@ -101,6 +115,19 @@ function App() {
     setSelectedArticle(article);
   }, []);
 
+  // Handle navigation
+  const handleNavigateArticle = useCallback((direction) => {
+    if (!selectedArticle || visibleArticles.length === 0) return;
+    
+    const currentIndex = visibleArticles.findIndex(a => a.id === selectedArticle.id);
+    if (currentIndex === -1) return;
+    
+    const newIndex = currentIndex + direction;
+    if (newIndex >= 0 && newIndex < visibleArticles.length) {
+      setSelectedArticle(visibleArticles[newIndex]);
+    }
+  }, [selectedArticle, visibleArticles]);
+
   // Handle folder delete
   const handleDeleteFolder = useCallback(async (folderId) => {
     const folder = folders.find(f => f.id === folderId);
@@ -113,7 +140,23 @@ function App() {
     }
   }, [folders, deleteFolder, showToast, activeView]);
 
+  // Resizable panel handlers
+  const handleSidebarResize = useCallback((delta) => {
+    setSidebarWidth(prev => {
+      const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, prev + delta));
+      localStorage.setItem('atlas-pulse-sidebar-width', next);
+      return next;
+    });
+  }, []);
+
   const existingFeedUrls = feeds.map(f => f.url);
+
+  // Calculate current article index for reader navigation UI
+  const currentArticleIndex = selectedArticle 
+    ? visibleArticles.findIndex(a => a.id === selectedArticle.id) 
+    : -1;
+  const hasNext = currentArticleIndex >= 0 && currentArticleIndex < visibleArticles.length - 1;
+  const hasPrev = currentArticleIndex > 0;
 
   return (
     <div className="app-layout">
@@ -136,17 +179,30 @@ function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         refreshing={refreshing}
+        style={{ width: sidebarWidth, minWidth: sidebarWidth }}
       />
+
+      <ResizableHandle onResize={handleSidebarResize} />
 
       <ArticleList
         activeView={activeView}
         selectedArticleId={selectedArticle?.id}
         onSelectArticle={handleSelectArticle}
+        onArticlesLoaded={setVisibleArticles}
       />
 
-      <ArticleReader
-        article={selectedArticle}
-      />
+      {selectedArticle && (
+        <ArticleReader
+          article={selectedArticle}
+          isOpen={!!selectedArticle}
+          onClose={() => setSelectedArticle(null)}
+          onNavigate={handleNavigateArticle}
+          hasPrev={hasPrev}
+          hasNext={hasNext}
+          currentIndex={currentArticleIndex}
+          totalCount={visibleArticles.length}
+        />
+      )}
 
       <AddFeedModal
         isOpen={showAddFeed}

@@ -34,6 +34,7 @@ export default function Sidebar({
   theme,
   onToggleTheme,
   refreshing,
+  style,
 }) {
   const [openFolders, setOpenFolders] = useState(new Set());
   const [newFolderName, setNewFolderName] = useState('');
@@ -100,11 +101,15 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" style={style}>
       <div className="sidebar-header">
         <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">R</div>
-          <h1>FeedFlow</h1>
+          <img
+            src="/atlas-pulse-icon.png"
+            alt="Atlas Pulse"
+            className="sidebar-logo-img"
+          />
+          <h1>Atlas Pulse</h1>
         </div>
         <div className="sidebar-actions">
           <button

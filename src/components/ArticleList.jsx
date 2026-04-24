@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineCheckCircle,
   HiOutlineNewspaper,
   HiOutlineMagnifyingGlass,
   HiOutlineXMark,
+  HiOutlineQueueList,
+  HiOutlineRectangleStack,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
@@ -13,9 +15,13 @@ export default function ArticleList({
   activeView,
   selectedArticleId,
   onSelectArticle,
+  onArticlesLoaded,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [viewMode, setViewMode] = useState(() =>
+    localStorage.getItem('atlas-pulse-view-mode') || 'magazine'
+  );
 
   const feeds = useLiveQuery(() => db.feeds.toArray()) || [];
   const feedMap = useMemo(() => {
@@ -88,6 +94,13 @@ export default function ArticleList({
     });
   }, [rawArticles, searchQuery, feedMap]);
 
+  // Notify parent of the current visible articles list
+  useEffect(() => {
+    if (onArticlesLoaded) {
+      onArticlesLoaded(articles);
+    }
+  }, [articles, onArticlesLoaded]);
+
   const viewTitle = useMemo(() => {
     switch (activeView.type) {
       case 'all': return 'All Articles';
@@ -101,6 +114,11 @@ export default function ArticleList({
 
   const unreadCount = rawArticles.filter(a => !a.isRead).length;
 
+  const handleViewModeChange = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('atlas-pulse-view-mode', mode);
+  };
+
   return (
     <div className="article-list-panel">
       <div className="article-list-header">
@@ -111,6 +129,24 @@ export default function ArticleList({
           </h2>
         </div>
         <div className="article-list-actions">
+          {/* View mode toggle */}
+          <div className="view-toggle-group">
+            <button
+              className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'magazine' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('magazine')}
+              title="Magazine view"
+            >
+              <HiOutlineRectangleStack />
+            </button>
+            <button
+              className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'compact' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('compact')}
+              title="Compact view"
+            >
+              <HiOutlineQueueList />
+            </button>
+          </div>
+
           <button
             className={`btn btn-ghost btn-icon btn-sm ${showSearch ? 'active' : ''}`}
             onClick={() => {
@@ -178,6 +214,30 @@ export default function ArticleList({
         ) : (
           articles.map((article) => {
             const feed = feedMap[article.feedId];
+
+            if (viewMode === 'compact') {
+              return (
+                <div
+                  key={article.id}
+                  className={`article-card-compact ${article.isRead ? 'read' : ''} ${
+                    selectedArticleId === article.id ? 'active' : ''
+                  }`}
+                  onClick={() => onSelectArticle(article)}
+                >
+                  {!article.isRead && <div className="unread-dot-compact" />}
+                  {feed?.favicon ? (
+                    <img className="compact-favicon" src={feed.favicon} alt="" />
+                  ) : (
+                    <span className="compact-source-icon"><HiOutlineNewspaper /></span>
+                  )}
+                  <span className="compact-source">{feed?.title || 'Unknown'}</span>
+                  <span className="compact-title">{article.title}</span>
+                  <span className="compact-time">{timeAgo(article.publishedAt)}</span>
+                </div>
+              );
+            }
+
+            // Magazine view (default)
             return (
               <div
                 key={article.id}
