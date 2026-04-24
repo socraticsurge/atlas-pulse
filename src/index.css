@@ -52,8 +52,57 @@
   --transition-fast: 150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
 
+/* Typography settings */
+:root, [data-font="sans"] {
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+[data-font="serif"] {
+  --font-family: 'Merriweather', Georgia, 'Times New Roman', serif;
+}
+[data-font="mono"] {
+  --font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+}
+
+/* Color settings - Dark */
+:root[data-theme="dark"][data-color="blue"] {
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-muted: rgba(59, 130, 246, 0.15);
+  --accent-border: rgba(59, 130, 246, 0.3);
+}
+:root[data-theme="dark"][data-color="purple"] {
+  --accent: #a855f7;
+  --accent-hover: #c084fc;
+  --accent-muted: rgba(168, 85, 247, 0.15);
+  --accent-border: rgba(168, 85, 247, 0.3);
+}
+:root[data-theme="dark"][data-color="orange"] {
+  --accent: #f97316;
+  --accent-hover: #fb923c;
+  --accent-muted: rgba(249, 115, 22, 0.15);
+  --accent-border: rgba(249, 115, 22, 0.3);
+}
+
+/* Color settings - Light */
+:root[data-theme="light"][data-color="blue"] {
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-muted: rgba(37, 99, 235, 0.1);
+  --accent-border: rgba(37, 99, 235, 0.25);
+}
+:root[data-theme="light"][data-color="purple"] {
+  --accent: #9333ea;
+  --accent-hover: #a855f7;
+  --accent-muted: rgba(147, 51, 234, 0.1);
+  --accent-border: rgba(147, 51, 234, 0.25);
+}
+:root[data-theme="light"][data-color="orange"] {
+  --accent: #ea580c;
+  --accent-hover: #f97316;
+  --accent-muted: rgba(234, 88, 12, 0.1);
+  --accent-border: rgba(234, 88, 12, 0.25);
 }
 
 /* Light theme */
@@ -389,12 +438,12 @@ a:hover {
 
 .article-card-time {
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .article-card-dot {
   font-size: 4px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 
 .article-card h3 {
@@ -1421,10 +1470,11 @@ a:hover {
 
 /* ===== Compact Article View ===== */
 .article-card-compact {
-  display: flex;
+  display: grid;
+  grid-template-columns: 14px 160px 1fr auto;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px 8px 18px;
+  gap: 12px;
+  padding: 8px 14px 8px 20px;
   cursor: pointer;
   border-bottom: 1px solid var(--border);
   transition: background var(--transition-fast);
@@ -1477,10 +1527,8 @@ a:hover {
 .compact-source {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--text-secondary);
   white-space: nowrap;
-  flex-shrink: 0;
-  max-width: 90px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -1489,18 +1537,15 @@ a:hover {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 
 .compact-time {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* ===== Reader Settings ===== */
