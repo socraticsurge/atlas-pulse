@@ -6,7 +6,12 @@ import {
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 
-export default function SettingsPanel({ isOpen, onClose, theme, onToggleTheme }) {
+export default function SettingsPanel({ 
+  isOpen, onClose, 
+  theme, onToggleTheme,
+  appFont, onChangeFont,
+  appColor, onChangeColor 
+}) {
   if (!isOpen) return null;
 
   const handleClearData = async () => {
@@ -41,6 +46,44 @@ export default function SettingsPanel({ isOpen, onClose, theme, onToggleTheme })
                   <><HiOutlineMoon /> Switch to Dark</>
                 )}
               </button>
+            </div>
+            <div className="settings-row">
+              <label>Global Font</label>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {['sans', 'serif', 'mono'].map(f => (
+                  <button
+                    key={f}
+                    className={`btn btn-sm ${appFont === f ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => onChangeFont(f)}
+                    style={{ textTransform: 'capitalize' }}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="settings-row">
+              <label>Accent Color</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[
+                  { id: 'emerald', color: '#00d4aa' },
+                  { id: 'blue', color: '#3b82f6' },
+                  { id: 'purple', color: '#a855f7' },
+                  { id: 'orange', color: '#f97316' }
+                ].map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => onChangeColor(c.id)}
+                    title={c.id}
+                    style={{
+                      width: 24, height: 24, borderRadius: '50%',
+                      background: c.color, border: 'none', cursor: 'pointer',
+                      outline: appColor === c.id ? `2px solid var(--text-primary)` : 'none',
+                      outlineOffset: 2
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 

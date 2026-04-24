@@ -24,6 +24,12 @@ function App() {
   const [theme, setTheme] = useState(() =>
     localStorage.getItem('atlas-pulse-theme') || localStorage.getItem('feedflow-theme') || 'dark'
   );
+  const [appFont, setAppFont] = useState(() =>
+    localStorage.getItem('atlas-pulse-font') || 'sans'
+  );
+  const [appColor, setAppColor] = useState(() =>
+    localStorage.getItem('atlas-pulse-color') || 'emerald'
+  );
 
   // Resizable panel widths
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -36,11 +42,15 @@ function App() {
 
   const refreshIntervalRef = useRef(null);
 
-  // Apply theme
+  // Apply theme and global settings
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-font', appFont);
+    document.documentElement.setAttribute('data-color', appColor);
     localStorage.setItem('atlas-pulse-theme', theme);
-  }, [theme]);
+    localStorage.setItem('atlas-pulse-font', appFont);
+    localStorage.setItem('atlas-pulse-color', appColor);
+  }, [theme, appFont, appColor]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -217,6 +227,10 @@ function App() {
         onClose={() => setShowSettings(false)}
         theme={theme}
         onToggleTheme={toggleTheme}
+        appFont={appFont}
+        onChangeFont={setAppFont}
+        appColor={appColor}
+        onChangeColor={setAppColor}
       />
 
       {/* Toast */}
