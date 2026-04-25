@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   HiOutlineXMark,
   HiOutlineGlobeAlt,
@@ -12,6 +12,14 @@ import { POPULAR_FEEDS } from '../utils/constants.js';
 import { getFaviconUrl, normalizeUrl } from '../utils/helpers.js';
 import * as api from '../utils/api.js';
 
+function getDomain(siteUrl) {
+  try {
+    return new URL(siteUrl).hostname.replace(/^www\./, '');
+  } catch {
+    return siteUrl;
+  }
+}
+
 export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedUrls, folders }) {
   const [activeTab, setActiveTab] = useState('discover');
   const [url, setUrl] = useState('');
@@ -20,10 +28,36 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
   const [error, setError] = useState('');
   const [discoveredFeeds, setDiscoveredFeeds] = useState([]);
   const [feedPreview, setFeedPreview] = useState(null);
-  const [searchResults, setSearchResults] = useState(null);
+  const [googleNewsResult, setGoogleNewsResult] = useState(null);
   const [selectedFolder, setSelectedFolder] = useState('');
   const [addedUrls, setAddedUrls] = useState(new Set(existingFeedUrls || []));
-  const [popularFilter, setPopularFilter] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Instant catalog search — no network, purely client-side
+  const searchCatalogResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const results = [];
+    for (const cat of POPULAR_FEEDS) {
+      for (const feed of cat.feeds) {
+        if (
+          feed.title.toLowerCase().includes(q) ||
+          (feed.description || '').toLowerCase().includes(q) ||
+          cat.category.toLowerCase().includes(q)
+        ) {
+          results.push({ feed, category: cat.category, emoji: cat.emoji });
+        }
+      }
+    }
+    return results;
+  }, [searchQuery]);
+
+  const displayedCategories = useMemo(() =>
+    selectedCategory === 'all'
+      ? POPULAR_FEEDS
+      : POPULAR_FEEDS.filter((c) => c.category === selectedCategory),
+    [selectedCategory]
+  );
 
   const handleDiscover = useCallback(async () => {
     if (!url.trim()) return;
@@ -31,12 +65,10 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
     setError('');
     setDiscoveredFeeds([]);
     setFeedPreview(null);
-    setSearchResults(null);
 
     const normalizedUrl = normalizeUrl(url.trim());
 
     try {
-      // Check if it's directly an RSS feed
       try {
         const feed = await api.parseFeed(normalizedUrl);
         if (feed && feed.title && feed.items) {
@@ -48,7 +80,6 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
         // Not a direct feed, try discovery
       }
 
-      // Try to discover feeds from the URL
       const result = await api.discoverFeeds(normalizedUrl);
       if (result.feeds && result.feeds.length > 0) {
         setDiscoveredFeeds(result.feeds);
@@ -62,12 +93,12 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
     }
   }, [url]);
 
-  // Keyword search using Google News RSS
-  const handleKeywordSearch = useCallback(async () => {
+  // Fetches Google News RSS for the current searchQuery and shows a subscribe card
+  const handleSubscribeGoogleNews = useCallback(async () => {
     if (!searchQuery.trim()) return;
     setLoading(true);
     setError('');
-    setSearchResults(null);
+    setGoogleNewsResult(null);
 
     const query = searchQuery.trim();
     const googleNewsUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en&gl=US&ceid=US:en`;
@@ -75,13 +106,13 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
     try {
       const feed = await api.parseFeed(googleNewsUrl);
       if (feed && feed.items && feed.items.length > 0) {
-        setSearchResults({
+        setGoogleNewsResult({
           query,
           feedUrl: googleNewsUrl,
           title: `Google News: ${query}`,
-          description: `Latest news about "${query}" from Google News`,
+          description: `Live news about "${query}" from Google News`,
           articleCount: feed.items.length,
-          sampleArticles: feed.items.slice(0, 5),
+          sampleArticles: feed.items.slice(0, 3),
         });
       } else {
         setError(`No results found for "${query}". Try a different search term.`);
@@ -121,18 +152,6 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
     setFeedPreview(null);
     setUrl('');
   }, [feedPreview, handleAddFeed]);
-
-  // Filter popular feeds by search
-  const filteredPopularFeeds = popularFilter
-    ? POPULAR_FEEDS.map((cat) => ({
-        ...cat,
-        feeds: cat.feeds.filter(
-          (f) =>
-            f.title.toLowerCase().includes(popularFilter.toLowerCase()) ||
-            cat.category.toLowerCase().includes(popularFilter.toLowerCase())
-        ),
-      })).filter((cat) => cat.feeds.length > 0)
-    : POPULAR_FEEDS;
 
   if (!isOpen) return null;
 
@@ -199,34 +218,15 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
 
           {/* Error */}
           {error && (
-            <div
-              style={{
-                padding: '10px 14px',
-                background: 'var(--danger-muted)',
-                color: 'var(--danger)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '13px',
-                marginBottom: 12,
-              }}
-            >
-              {error}
-            </div>
+            <div className="feed-error-banner">{error}</div>
           )}
 
-          {/* Discover Tab (URL-based) */}
+          {/* ── URL Tab ── */}
           {activeTab === 'discover' && (
             <div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 <div style={{ position: 'relative', flex: 1 }}>
-                  <HiOutlineGlobeAlt
-                    style={{
-                      position: 'absolute',
-                      left: 12,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--text-muted)',
-                    }}
-                  />
+                  <HiOutlineGlobeAlt className="input-icon-left" />
                   <input
                     className="input"
                     style={{ paddingLeft: 36 }}
@@ -246,17 +246,9 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
                 </button>
               </div>
 
-              {/* Feed Preview */}
               {feedPreview && (
                 <div className="discovery-results">
-                  <div
-                    style={{
-                      padding: 16,
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--accent-border)',
-                      borderRadius: 'var(--radius-md)',
-                    }}
-                  >
+                  <div className="feed-preview-card">
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
                       {feedPreview.link && (
                         <img
@@ -293,7 +285,6 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
                 </div>
               )}
 
-              {/* Discovered Feeds List */}
               {discoveredFeeds.length > 0 && !feedPreview && (
                 <div className="discovery-results">
                   <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
@@ -334,151 +325,202 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
             </div>
           )}
 
-          {/* Search Tab (keyword-based) */}
+          {/* ── Search Tab ── */}
           {activeTab === 'search' && (
             <div>
-              <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>
-                Search by keyword to find Google News RSS feeds you can subscribe to.
-              </p>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <HiOutlineMagnifyingGlass
-                    style={{
-                      position: 'absolute',
-                      left: 12,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: 'var(--text-muted)',
-                    }}
-                  />
-                  <input
-                    className="input"
-                    style={{ paddingLeft: 36 }}
-                    placeholder="e.g. artificial intelligence, climate change, startup funding..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleKeywordSearch()}
-                  />
-                </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleKeywordSearch}
-                  disabled={loading || !searchQuery.trim()}
-                >
-                  {loading ? <span className="spinner" /> : <HiOutlineMagnifyingGlass />}
-                  {loading ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-
-              {/* Search Results */}
-              {searchResults && (
-                <div className="discovery-results">
-                  <div
-                    style={{
-                      padding: 16,
-                      background: 'var(--bg-tertiary)',
-                      border: '1px solid var(--accent-border)',
-                      borderRadius: 'var(--radius-md)',
-                    }}
-                  >
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginBottom: 4 }}>
-                        {searchResults.title}
-                      </div>
-                      <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        {searchResults.description}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 12 }}>
-                        {searchResults.articleCount} articles available
-                      </div>
-
-                      {/* Sample articles preview */}
-                      <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: 6 }}>
-                          Recent articles
-                        </div>
-                        {searchResults.sampleArticles.map((article, i) => (
-                          <div
-                            key={i}
-                            style={{
-                              padding: '6px 0',
-                              borderBottom: i < searchResults.sampleArticles.length - 1 ? '1px solid var(--border-primary)' : 'none',
-                              fontSize: 13,
-                              color: 'var(--text-secondary)',
-                            }}
-                          >
-                            {article.title}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <button
-                      className="btn btn-primary"
-                      onClick={() => handleAddFeed(searchResults.feedUrl)}
-                      disabled={addedUrls.has(searchResults.feedUrl)}
-                      style={{ width: '100%' }}
-                    >
-                      {addedUrls.has(searchResults.feedUrl) ? (
-                        <><HiOutlineCheckCircle /> Already Added</>
-                      ) : (
-                        <><HiOutlinePlus /> Subscribe to this feed</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {loading && (
-                <div className="loading-overlay">
-                  <span className="spinner" />
-                  <span>Searching Google News...</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Popular Feeds Tab */}
-          {activeTab === 'popular' && (
-            <div className="discover-categories">
-              <div style={{ marginBottom: 12 }}>
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <HiOutlineMagnifyingGlass className="input-icon-left" />
                 <input
                   className="input"
-                  placeholder="Filter feeds..."
-                  value={popularFilter}
-                  onChange={(e) => setPopularFilter(e.target.value)}
-                  style={{ width: '100%' }}
+                  style={{ paddingLeft: 36 }}
+                  placeholder="Search 150+ curated feeds by name, topic, or category..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setGoogleNewsResult(null);
+                  }}
+                  autoFocus
                 />
               </div>
-              {filteredPopularFeeds.map((category) => (
-                <div key={category.category} className="discover-category">
-                  <h3>{category.category}</h3>
-                  <div className="discover-feeds-grid">
-                    {category.feeds.map((feed) => (
-                      <div
-                        key={feed.url}
-                        className={`discover-feed-card ${addedUrls.has(feed.url) ? 'added' : ''}`}
-                        onClick={() => !addedUrls.has(feed.url) && handleAddFeed(feed.url)}
-                      >
-                        <img src={getFaviconUrl(feed.siteUrl)} alt="" />
-                        <span>{feed.title}</span>
-                        {addedUrls.has(feed.url) && (
-                          <HiOutlineCheckCircle style={{ color: 'var(--accent)', marginLeft: 'auto' }} />
+
+              {/* Empty state */}
+              {!searchQuery.trim() && (
+                <div className="search-empty-state">
+                  <HiOutlineMagnifyingGlass className="search-empty-icon" />
+                  <p>Start typing to search <strong>150+ curated feeds</strong> across 24 categories</p>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>
+                    Try: <em>"AI"</em>, <em>"climate"</em>, <em>"design"</em>, <em>"crypto"</em>...
+                  </p>
+                </div>
+              )}
+
+              {/* Catalog results */}
+              {searchQuery.trim() && searchCatalogResults.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <div className="search-results-header">
+                    {searchCatalogResults.length} curated feed{searchCatalogResults.length !== 1 ? 's' : ''} match
+                  </div>
+                  {searchCatalogResults.map(({ feed, category, emoji }) => (
+                    <div key={feed.url} className="search-result-card">
+                      <img
+                        src={getFaviconUrl(feed.siteUrl)}
+                        alt=""
+                        className="search-result-favicon"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div className="search-result-info">
+                        <div className="search-result-title">{feed.title}</div>
+                        {feed.description && (
+                          <div className="search-result-desc">{feed.description}</div>
                         )}
+                        <div className="search-result-meta">
+                          <span className="search-result-domain">{getDomain(feed.siteUrl)}</span>
+                          <span className="search-result-category">{emoji} {category}</span>
+                        </div>
+                      </div>
+                      <button
+                        className={`btn btn-sm ${addedUrls.has(feed.url) ? 'btn-ghost' : 'btn-primary'}`}
+                        onClick={() => !addedUrls.has(feed.url) && handleAddFeed(feed.url)}
+                        disabled={addedUrls.has(feed.url)}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {addedUrls.has(feed.url) ? <><HiOutlineCheckCircle /> Added</> : <><HiOutlinePlus /> Add</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* No catalog matches */}
+              {searchQuery.trim() && searchCatalogResults.length === 0 && (
+                <div className="search-empty-state" style={{ marginBottom: 16 }}>
+                  <p>No curated feeds match <strong>"{searchQuery}"</strong></p>
+                </div>
+              )}
+
+              {/* Google News subscribe option */}
+              {searchQuery.trim() && !googleNewsResult && (
+                <div className="google-news-subscribe-box">
+                  <div className="google-news-subscribe-text">
+                    <span>📡</span>
+                    <span>Subscribe to live Google News about <strong>"{searchQuery}"</strong></span>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleSubscribeGoogleNews}
+                    disabled={loading}
+                  >
+                    {loading ? <span className="spinner" style={{ width: 14, height: 14 }} /> : null}
+                    {loading ? 'Fetching...' : 'Subscribe'}
+                  </button>
+                </div>
+              )}
+
+              {/* Google News result card */}
+              {googleNewsResult && (
+                <div className="feed-preview-card">
+                  <div style={{ marginBottom: 8 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', marginBottom: 2 }}>
+                      {googleNewsResult.title}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 10 }}>
+                      {googleNewsResult.articleCount} articles · updates automatically
+                    </div>
+                    {googleNewsResult.sampleArticles.map((a, i) => (
+                      <div key={i} style={{ fontSize: 13, color: 'var(--text-secondary)', padding: '4px 0', borderBottom: i < 2 ? '1px solid var(--border-primary)' : 'none' }}>
+                        {a.title}
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
-              {filteredPopularFeeds.length === 0 && (
-                <div className="empty-state" style={{ padding: '20px 0' }}>
-                  <p>No feeds match "{popularFilter}"</p>
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => handleAddFeed(googleNewsResult.feedUrl)}
+                    disabled={addedUrls.has(googleNewsResult.feedUrl)}
+                    style={{ width: '100%', marginTop: 8 }}
+                  >
+                    {addedUrls.has(googleNewsResult.feedUrl) ? (
+                      <><HiOutlineCheckCircle /> Already Added</>
+                    ) : (
+                      <><HiOutlinePlus /> Add Google News Feed</>
+                    )}
+                  </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* Google Alerts Tab */}
+          {/* ── Popular Tab ── */}
+          {activeTab === 'popular' && (
+            <div>
+              {/* Category pills */}
+              <div className="category-pills-scroll">
+                <button
+                  className={`category-pill ${selectedCategory === 'all' ? 'active' : ''}`}
+                  onClick={() => setSelectedCategory('all')}
+                >
+                  All
+                </button>
+                {POPULAR_FEEDS.map((cat) => (
+                  <button
+                    key={cat.category}
+                    className={`category-pill ${selectedCategory === cat.category ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat.category)}
+                  >
+                    {cat.emoji} {cat.category}
+                  </button>
+                ))}
+              </div>
+
+              {/* Feed list */}
+              <div className="discover-categories">
+                {displayedCategories.map((cat) => (
+                  <div key={cat.category} className="discover-category">
+                    <h3>
+                      <span className="category-heading-emoji">{cat.emoji}</span>
+                      {cat.category}
+                      <span className="category-heading-desc">{cat.description}</span>
+                    </h3>
+                    <div className="popular-feeds-list">
+                      {cat.feeds.map((feed) => (
+                        <div
+                          key={feed.url}
+                          className={`popular-feed-card ${addedUrls.has(feed.url) ? 'added' : ''}`}
+                        >
+                          <img
+                            src={getFaviconUrl(feed.siteUrl)}
+                            alt=""
+                            className="popular-feed-favicon"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                          <div className="popular-feed-info">
+                            <div className="popular-feed-title">{feed.title}</div>
+                            {feed.description && (
+                              <div className="popular-feed-desc">{feed.description}</div>
+                            )}
+                            <div className="popular-feed-domain">{getDomain(feed.siteUrl)}</div>
+                          </div>
+                          <button
+                            className={`btn btn-sm ${addedUrls.has(feed.url) ? 'btn-ghost' : 'btn-primary'}`}
+                            onClick={() => !addedUrls.has(feed.url) && handleAddFeed(feed.url)}
+                            disabled={addedUrls.has(feed.url)}
+                            style={{ flexShrink: 0 }}
+                          >
+                            {addedUrls.has(feed.url) ? (
+                              <><HiOutlineCheckCircle /> Added</>
+                            ) : (
+                              <><HiOutlinePlus /> Add</>
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Google Alerts Tab ── */}
           {activeTab === 'google' && (
             <div>
               <div className="google-alerts-info">
