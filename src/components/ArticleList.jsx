@@ -7,6 +7,9 @@ import {
   HiOutlineXMark,
   HiOutlineQueueList,
   HiOutlineRectangleStack,
+  HiOutlineDocumentText,
+  HiOutlineSparkles,
+  HiOutlineBars3,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
@@ -16,6 +19,8 @@ export default function ArticleList({
   selectedArticleId,
   onSelectArticle,
   onArticlesLoaded,
+  sidebarHidden = false,
+  onShowSidebar,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -122,7 +127,16 @@ export default function ArticleList({
   return (
     <div className="article-list-panel">
       <div className="article-list-header">
-        <div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {sidebarHidden && (
+            <button
+              className="btn btn-ghost btn-icon btn-sm"
+              onClick={onShowSidebar}
+              title="Show sidebar"
+            >
+              <HiOutlineBars3 />
+            </button>
+          )}
           <h2>
             {viewTitle}
             <span className="article-count"> · {articles.length} articles</span>
@@ -137,6 +151,13 @@ export default function ArticleList({
               title="Magazine view"
             >
               <HiOutlineRectangleStack />
+            </button>
+            <button
+              className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'excerpt' ? 'active' : ''}`}
+              onClick={() => handleViewModeChange('excerpt')}
+              title="Excerpt view"
+            >
+              <HiOutlineDocumentText />
             </button>
             <button
               className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'compact' ? 'active' : ''}`}
@@ -199,16 +220,26 @@ export default function ArticleList({
       <div className="article-list-content">
         {articles.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon"><HiOutlineNewspaper /></span>
-            <h3>{searchQuery ? 'No matching articles' : 'No articles'}</h3>
+            <span className="empty-icon">
+              {searchQuery ? <HiOutlineMagnifyingGlass /> : <HiOutlineSparkles />}
+            </span>
+            <h3>
+              {searchQuery
+                ? 'No matching articles'
+                : activeView.type === 'saved'
+                ? 'Nothing saved yet'
+                : activeView.type === 'today'
+                ? 'All caught up'
+                : 'Your feed is empty'}
+            </h3>
             <p>
               {searchQuery
                 ? `No articles match "${searchQuery}"`
                 : activeView.type === 'saved'
-                ? 'Save articles to read them later'
+                ? 'Bookmark articles to find them here'
                 : activeView.type === 'today'
-                ? 'No articles published today yet'
-                : 'Add some feeds to get started'}
+                ? 'No new articles published today'
+                : 'Add feeds from the sidebar to start reading'}
             </p>
           </div>
         ) : (
@@ -237,6 +268,45 @@ export default function ArticleList({
               );
             }
 
+            if (viewMode === 'excerpt') {
+              const summary = stripHtml(article.summary || article.content || '');
+              return (
+                <div
+                  key={article.id}
+                  className={`article-card-excerpt ${article.isRead ? 'read' : ''} ${
+                    selectedArticleId === article.id ? 'active' : ''
+                  }`}
+                  onClick={() => onSelectArticle(article)}
+                >
+                  {!article.isRead && <div className="unread-dot-compact" />}
+                  <div className="excerpt-meta">
+                    {feed?.favicon ? (
+                      <img className="excerpt-favicon" src={feed.favicon} alt="" />
+                    ) : (
+                      <span className="excerpt-source-icon"><HiOutlineNewspaper /></span>
+                    )}
+                    <span className="excerpt-source">{feed?.title || 'Unknown'}</span>
+                    <span className="excerpt-time">{timeAgo(article.publishedAt)}</span>
+                  </div>
+                  <div className="excerpt-body">
+                    <div className="excerpt-text">
+                      <div className="excerpt-title">{article.title}</div>
+                      {summary && <div className="excerpt-summary">{summary}</div>}
+                    </div>
+                    {article.imageUrl && (
+                      <img
+                        className="excerpt-thumbnail"
+                        src={article.imageUrl}
+                        alt=""
+                        loading="lazy"
+                        onError={(e) => (e.target.style.display = 'none')}
+                      />
+                    )}
+                  </div>
+                </div>
+              );
+            }
+
             // Magazine view (default)
             return (
               <div
@@ -248,6 +318,11 @@ export default function ArticleList({
               >
                 {!article.isRead && <div className="unread-dot" />}
                 <div className="article-card-meta">
+                  {feed?.favicon ? (
+                    <img className="article-card-favicon" src={feed.favicon} alt="" />
+                  ) : (
+                    <span className="article-card-favicon-icon"><HiOutlineNewspaper /></span>
+                  )}
                   <span className="article-card-source">{feed?.title || 'Unknown'}</span>
                   <span className="article-card-dot">●</span>
                   <span className="article-card-time">{timeAgo(article.publishedAt)}</span>
