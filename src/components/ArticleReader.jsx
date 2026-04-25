@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import DOMPurify from 'dompurify';
 import {
@@ -11,7 +11,13 @@ import {
   HiOutlineArrowRight,
   HiOutlineClipboardDocument,
   HiOutlineCheck,
+  HiOutlineArrowUpOnSquare,
+  HiOutlineArrowsPointingOut,
+  HiOutlineArrowsPointingIn,
+  HiOutlineEnvelope,
 } from 'react-icons/hi2';
+import { SiX } from 'react-icons/si';
+import { FaLinkedinIn } from 'react-icons/fa';
 import { BsBookmarkFill } from 'react-icons/bs';
 import db from '../db/database.js';
 import { formatDate, estimateReadTime } from '../utils/helpers.js';
@@ -19,9 +25,9 @@ import * as api from '../utils/api.js';
 import ReaderSettings, { getReaderSettings, getReaderCSSVars } from './ReaderSettings.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
 
-export default function ArticleReader({ 
-  article, 
-  isOpen, 
+export default function ArticleReader({
+  article,
+  isOpen,
   onClose,
   onNavigate,
   hasNext,
@@ -29,7 +35,7 @@ export default function ArticleReader({
   currentIndex,
   totalCount,
   width,
-  onResize
+  onResize,
 }) {
   const [extractedContent, setExtractedContent] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -37,66 +43,100 @@ export default function ArticleReader({
   const [readerSettings, setReaderSettings] = useState(getReaderSettings);
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
 
-  // Handle copy to clipboard
-  const handleCopyLink = useCallback(() => {
-    if (!article?.link) return;
-    navigator.clipboard.writeText(article.link)
-      .then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      })
-      .catch(err => console.error("Failed to copy link:", err));
-  }, [article?.link]);
+  const contentRef = useRef(null);
+  const shareMenuRef = useRef(null);
 
-  // ALL hooks must be called before any conditional returns
+  // Live DB queries
   const feed = useLiveQuery(
     () => (article ? db.feeds.get(article.feedId) : undefined),
     [article?.feedId]
   );
-
-  // Re-query the article for live bookmark/read state
   const liveArticle = useLiveQuery(
     () => (article ? db.articles.get(article.id) : undefined),
     [article?.id]
   );
 
-  // Keyboard navigation
+  // Reading progress bar
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = el;
+      const total = scrollHeight - clientHeight;
+      setScrollProgress(total > 0 ? Math.min(100, (scrollTop / total) * 100) : 100);
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, [isOpen, article?.id]);
+
+  // Reset scroll + progress when article changes
+  useEffect(() => {
+    setScrollProgress(0);
+    if (contentRef.current) contentRef.current.scrollTop = 0;
+  }, [article?.id]);
+
+  // Close share menu on outside click
+  useEffect(() => {
+    if (!showShareMenu) return;
+    const handler = (e) => {
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target)) {
+        setShowShareMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showShareMenu]);
+
+  // Keyboard shortcuts
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e) => {
-      // Don't trigger navigation if the user is typing in an input
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
-
       switch (e.key) {
         case 'ArrowUp':
         case 'ArrowLeft':
+        case 'k':
           e.preventDefault();
           if (hasPrev) onNavigate(-1);
           break;
         case 'ArrowDown':
         case 'ArrowRight':
+        case 'j':
           e.preventDefault();
           if (hasNext) onNavigate(1);
           break;
+        case 'b':
+          e.preventDefault();
+          toggleBookmark();
+          break;
+        case 'o':
+          e.preventDefault();
+          if (article?.link) window.open(article.link, '_blank', 'noopener,noreferrer');
+          break;
+        case 'f':
+          e.preventDefault();
+          setZenMode((z) => !z);
+          break;
         case 'Escape':
           e.preventDefault();
-          onClose();
+          if (zenMode) setZenMode(false);
+          else onClose();
           break;
         default:
           break;
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, hasPrev, hasNext, onNavigate, onClose]);
+  }, [isOpen, hasPrev, hasNext, onNavigate, onClose, article?.link, zenMode]);
 
-  // Handle slide animation visibility
+  // Slide animation
   useEffect(() => {
     if (isOpen) {
-      // Small delay to allow display: block to apply before setting transform
       const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
     } else {
@@ -104,7 +144,7 @@ export default function ArticleReader({
     }
   }, [isOpen]);
 
-  // Reset when article changes
+  // Reset extraction state when article changes
   useEffect(() => {
     setExtractedContent(null);
     setExtractError(null);
@@ -118,29 +158,21 @@ export default function ArticleReader({
     }
   }, [article?.id]);
 
-  // Auto-extract full article on select
+  // Auto-extract full article
   useEffect(() => {
     if (!article?.link) return;
-
     let cancelled = false;
     const extractFull = async () => {
       setExtracting(true);
       try {
         const data = await api.extractArticle(article.link);
-        if (!cancelled && data.content) {
-          setExtractedContent(data.content);
-        }
+        if (!cancelled && data.content) setExtractedContent(data.content);
       } catch (err) {
-        if (!cancelled) {
-          setExtractError(err.message);
-        }
+        if (!cancelled) setExtractError(err.message);
       } finally {
-        if (!cancelled) {
-          setExtracting(false);
-        }
+        if (!cancelled) setExtracting(false);
       }
     };
-
     extractFull();
     return () => { cancelled = true; };
   }, [article?.id, article?.link]);
@@ -148,18 +180,44 @@ export default function ArticleReader({
   const toggleBookmark = useCallback(async () => {
     if (!article) return;
     const current = liveArticle || article;
-    await db.articles.update(article.id, {
-      isBookmarked: current.isBookmarked ? 0 : 1,
-    });
+    await db.articles.update(article.id, { isBookmarked: current.isBookmarked ? 0 : 1 });
   }, [article, liveArticle]);
 
   const toggleRead = useCallback(async () => {
     if (!article) return;
     const current = liveArticle || article;
-    await db.articles.update(article.id, {
-      isRead: !current.isRead,
-    });
+    await db.articles.update(article.id, { isRead: !current.isRead });
   }, [article, liveArticle]);
+
+  const handleCopyLink = useCallback(() => {
+    if (!article?.link) return;
+    navigator.clipboard.writeText(article.link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [article?.link]);
+
+  const handleShare = useCallback((platform) => {
+    const url = encodeURIComponent(article?.link || '');
+    const title = encodeURIComponent(article?.title || '');
+    switch (platform) {
+      case 'linkedin':
+        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=600,noopener');
+        break;
+      case 'twitter':
+        window.open(`https://x.com/intent/tweet?url=${url}&text=${title}`, '_blank', 'width=600,height=400,noopener');
+        break;
+      case 'email':
+        window.open(`mailto:?subject=${title}&body=${url}`);
+        break;
+      case 'native':
+        navigator.share?.({ title: article?.title, url: article?.link }).catch(() => {});
+        break;
+      default:
+        break;
+    }
+    setShowShareMenu(false);
+  }, [article?.link, article?.title]);
 
   const displayContent = useMemo(() => {
     if (!article) return '';
@@ -175,69 +233,73 @@ export default function ArticleReader({
 
   const readerCSSVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
 
-  // Return null if no article (empty state is no longer needed since it's an overlay)
-  if (!article) {
-    return null;
-  }
+  if (!article) return null;
 
   const currentArticle = liveArticle || article;
   const hasRSSContent = article.content || article.summary;
+  const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share;
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className={`reader-overlay-backdrop ${isVisible ? 'visible' : ''}`} 
-        onClick={onClose}
+      <div
+        className={`reader-overlay-backdrop ${isVisible ? 'visible' : ''} ${zenMode ? 'zen' : ''}`}
+        onClick={zenMode ? () => setZenMode(false) : onClose}
       />
-      
-      {/* Slide-in panel */}
-      <div 
-        className={`article-reader-panel ${isVisible ? 'visible' : ''}`}
-        style={{ width: `${width}px` }}
+
+      <div
+        className={`article-reader-panel ${isVisible ? 'visible' : ''} ${zenMode ? 'zen' : ''}`}
+        style={zenMode ? undefined : { width: `${width}px` }}
       >
-        <ResizableHandle className="overlay-resize-handle" onResize={onResize} />
+        {/* Reading progress bar */}
+        <div
+          className="reading-progress-bar"
+          style={{ width: `${scrollProgress}%` }}
+        />
+
+        {!zenMode && <ResizableHandle className="overlay-resize-handle" onResize={onResize} />}
+
         <div className="reader-toolbar">
           <div className="reader-toolbar-left">
             <button
               className="btn btn-ghost btn-icon"
-              onClick={onClose}
-              title="Close reader (Esc)"
+              onClick={zenMode ? () => setZenMode(false) : onClose}
+              title={zenMode ? 'Exit focus mode (Esc)' : 'Close reader (Esc)'}
             >
               <HiOutlineXMark />
             </button>
-            <div className="reader-nav-controls">
-              <button
-                className="btn btn-ghost btn-icon reader-nav-btn"
-                onClick={() => onNavigate(-1)}
-                disabled={!hasPrev}
-                title="Previous article (↑/←)"
-              >
-                <HiOutlineArrowLeft />
-              </button>
-              <span className="reader-nav-counter">
-                {currentIndex + 1} of {totalCount}
-              </span>
-              <button
-                className="btn btn-ghost btn-icon reader-nav-btn"
-                onClick={() => onNavigate(1)}
-                disabled={!hasNext}
-                title="Next article (↓/→)"
-              >
-                <HiOutlineArrowRight />
-              </button>
-            </div>
-            
+
+            {!zenMode && (
+              <div className="reader-nav-controls">
+                <button
+                  className="btn btn-ghost btn-icon reader-nav-btn"
+                  onClick={() => onNavigate(-1)}
+                  disabled={!hasPrev}
+                  title="Previous article (k / ↑)"
+                >
+                  <HiOutlineArrowLeft />
+                </button>
+                <span className="reader-nav-counter">
+                  {currentIndex + 1} of {totalCount}
+                </span>
+                <button
+                  className="btn btn-ghost btn-icon reader-nav-btn"
+                  onClick={() => onNavigate(1)}
+                  disabled={!hasNext}
+                  title="Next article (j / ↓)"
+                >
+                  <HiOutlineArrowRight />
+                </button>
+              </div>
+            )}
+
             <button
               className="btn btn-ghost btn-icon"
               onClick={toggleBookmark}
-              title={currentArticle.isBookmarked ? 'Remove bookmark' : 'Bookmark'}
+              title={currentArticle.isBookmarked ? 'Remove bookmark (b)' : 'Bookmark (b)'}
             >
-              {currentArticle.isBookmarked ? (
-                <BsBookmarkFill style={{ color: 'var(--accent)' }} />
-              ) : (
-                <HiOutlineBookmark />
-              )}
+              {currentArticle.isBookmarked
+                ? <BsBookmarkFill style={{ color: 'var(--accent)' }} />
+                : <HiOutlineBookmark />}
             </button>
             <button
               className="btn btn-ghost btn-icon"
@@ -247,49 +309,80 @@ export default function ArticleReader({
               {currentArticle.isRead ? <HiOutlineEyeSlash /> : <HiOutlineEye />}
             </button>
 
-            {/* Extraction status indicator */}
             {extracting && (
               <span className="reader-status extracting">
-                <span className="spinner" style={{ width: 12, height: 12 }} /> Loading full article…
+                <span className="spinner" style={{ width: 12, height: 12 }} /> Loading…
               </span>
             )}
             {extractedContent && !extracting && (
-              <span className="reader-status extracted">
-                ✓ Full article loaded
-              </span>
+              <span className="reader-status extracted">✓ Full article</span>
             )}
             {extractError && !extracting && !extractedContent && (
-              <span className="reader-status error">
-                Feed content only
-              </span>
+              <span className="reader-status error">Feed content only</span>
             )}
           </div>
+
           <div className="reader-toolbar-right">
-            <ReaderSettings
-              settings={readerSettings}
-              onSettingsChange={setReaderSettings}
-            />
+            {/* Zen / focus mode */}
             <button
-              className="btn btn-ghost btn-sm"
-              onClick={handleCopyLink}
-              title="Copy link to clipboard"
+              className={`btn btn-ghost btn-icon ${zenMode ? 'active' : ''}`}
+              onClick={() => setZenMode((z) => !z)}
+              title={zenMode ? 'Exit focus mode (f)' : 'Focus mode (f)'}
             >
-              {copied ? <HiOutlineCheck style={{ color: 'var(--accent)' }} /> : <HiOutlineClipboardDocument />}
-              {copied ? 'Copied!' : 'Copy Link'}
+              {zenMode ? <HiOutlineArrowsPointingIn /> : <HiOutlineArrowsPointingOut />}
             </button>
+
+            <ReaderSettings settings={readerSettings} onSettingsChange={setReaderSettings} />
+
+            {/* Share popover */}
+            <div className="share-popover-anchor" ref={shareMenuRef}>
+              <button
+                className={`btn btn-ghost btn-sm ${showShareMenu ? 'active' : ''}`}
+                onClick={() => setShowShareMenu((s) => !s)}
+                title="Share"
+              >
+                <HiOutlineArrowUpOnSquare /> Share
+              </button>
+              {showShareMenu && (
+                <div className="share-popover">
+                  <button className="share-option" onClick={() => handleShare('linkedin')}>
+                    <FaLinkedinIn style={{ color: '#0a66c2' }} /> LinkedIn
+                  </button>
+                  <button className="share-option" onClick={() => handleShare('twitter')}>
+                    <SiX /> X / Twitter
+                  </button>
+                  <button className="share-option" onClick={() => handleShare('email')}>
+                    <HiOutlineEnvelope /> Email
+                  </button>
+                  {canNativeShare && (
+                    <button className="share-option" onClick={() => handleShare('native')}>
+                      <HiOutlineArrowUpOnSquare /> More…
+                    </button>
+                  )}
+                  <div className="share-divider" />
+                  <button className="share-option" onClick={handleCopyLink}>
+                    {copied
+                      ? <HiOutlineCheck style={{ color: 'var(--accent)' }} />
+                      : <HiOutlineClipboardDocument />}
+                    {copied ? 'Copied!' : 'Copy Link'}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <a
               href={article.link}
               target="_blank"
               rel="noopener noreferrer"
               className="btn btn-ghost btn-sm"
-              title="Open in new tab"
+              title="Open in new tab (o)"
             >
-              <HiOutlineArrowTopRightOnSquare /> Open Original
+              <HiOutlineArrowTopRightOnSquare /> Open
             </a>
           </div>
         </div>
 
-        <div className="reader-content" style={readerCSSVars}>
+        <div className="reader-content" ref={contentRef} style={readerCSSVars}>
           <h1 className="article-title">{article.title}</h1>
 
           <div className="reader-meta">
@@ -306,23 +399,18 @@ export default function ArticleReader({
             )}
           </div>
 
-          {/* Show loading state while extracting, with RSS content as fallback */}
           {extracting && hasRSSContent && (
             <div
               className="reader-article-content"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content || article.summary) }}
             />
           )}
-
-          {/* Show extracted or fallback content when not extracting */}
           {!extracting && (
             <div
               className="reader-article-content"
               dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
           )}
-
-          {/* If extraction failed and no RSS content, show fallback */}
           {!extracting && !displayContent && (
             <div className="empty-state" style={{ padding: '40px 0' }}>
               <p>No content available for this article.</p>
