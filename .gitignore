@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local SQLite database — user data, never committed
+data/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
