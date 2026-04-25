@@ -15,10 +15,12 @@ import {
   HiOutlinePencil,
   HiOutlineFolderPlus,
   HiOutlineArrowRightCircle,
+  HiOutlineBars3,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 
 export default function Sidebar({
+  mode = 'expanded',
   activeView,
   onViewChange,
   onAddFeed,
@@ -34,8 +36,11 @@ export default function Sidebar({
   theme,
   onToggleTheme,
   refreshing,
+  onToggleMode,
   style,
 }) {
+  const isIcon = mode === 'icon' || mode === 'hidden';
+
   const [openFolders, setOpenFolders] = useState(new Set());
   const [newFolderName, setNewFolderName] = useState('');
   const [addingFolder, setAddingFolder] = useState(false);
@@ -43,7 +48,6 @@ export default function Sidebar({
   const [renameValue, setRenameValue] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
 
-  // Live unread counts - use integer 0 for false since IndexedDB can't index booleans
   const unreadCounts = useLiveQuery(async () => {
     const articles = await db.articles.toArray();
     const counts = {};
@@ -100,18 +104,113 @@ export default function Sidebar({
     return folderFeeds.reduce((sum, f) => sum + (unreadCounts.byFeed[f.id] || 0), 0);
   };
 
-  return (
-    <aside className="sidebar" style={style}>
-      <div className="sidebar-header">
-        <div className="sidebar-logo">
-          <img
-            src="/atlas-pulse-icon.png"
-            alt="Atlas Pulse"
-            className="sidebar-logo-img"
-          />
-          <h1>Atlas Pulse</h1>
+  const capBadge = (n) => (n > 99 ? '99+' : n);
+
+  // ── Icon / hidden mode ──────────────────────────────────────────────────────
+  if (isIcon) {
+    return (
+      <aside className="sidebar sidebar-icon" style={style}>
+        <div className="sidebar-header-icon">
+          <button
+            className="btn btn-ghost btn-icon sidebar-toggle-btn"
+            onClick={onToggleMode}
+            title="Expand sidebar"
+          >
+            <HiOutlineBars3 />
+          </button>
         </div>
-        <div className="sidebar-actions">
+
+        <nav className="sidebar-icon-nav">
+          <button
+            className="sidebar-icon-add btn btn-ghost btn-icon"
+            onClick={onAddFeed}
+            title="Add Content"
+          >
+            <HiOutlinePlus />
+          </button>
+
+          <div className="sidebar-icon-divider" />
+
+          <div
+            className={`sidebar-icon-item ${activeView.type === 'all' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'all' })}
+            title="All Articles"
+          >
+            <HiOutlineNewspaper />
+            {unreadCounts.total > 0 && (
+              <span className="sidebar-icon-badge">{capBadge(unreadCounts.total)}</span>
+            )}
+          </div>
+          <div
+            className={`sidebar-icon-item ${activeView.type === 'today' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'today' })}
+            title="Today"
+          >
+            <HiOutlineCalendar />
+            {todayCount > 0 && (
+              <span className="sidebar-icon-badge">{capBadge(todayCount)}</span>
+            )}
+          </div>
+          <div
+            className={`sidebar-icon-item ${activeView.type === 'saved' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'saved' })}
+            title="Saved"
+          >
+            <HiOutlineBookmark />
+            {savedCount > 0 && (
+              <span className="sidebar-icon-badge">{capBadge(savedCount)}</span>
+            )}
+          </div>
+
+          {(folders.length > 0 || uncategorizedFeeds.length > 0) && (
+            <div className="sidebar-icon-divider" />
+          )}
+
+          {folders.map((folder) => {
+            const folderUnread = getFolderUnread(folder.id);
+            return (
+              <div
+                key={folder.id}
+                className={`sidebar-icon-item ${activeView.type === 'folder' && activeView.id === folder.id ? 'active' : ''}`}
+                onClick={() => onViewChange({ type: 'folder', id: folder.id, name: folder.name })}
+                title={folder.name}
+              >
+                <HiOutlineFolderOpen />
+                {folderUnread > 0 && (
+                  <span className="sidebar-icon-badge">{capBadge(folderUnread)}</span>
+                )}
+              </div>
+            );
+          })}
+
+          {uncategorizedFeeds.map((feed) => (
+            <div
+              key={feed.id}
+              className={`sidebar-icon-item ${activeView.type === 'feed' && activeView.id === feed.id ? 'active' : ''}`}
+              onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
+              title={feed.title}
+            >
+              {feed.favicon ? (
+                <img src={feed.favicon} alt="" style={{ width: 16, height: 16, borderRadius: 3 }} />
+              ) : (
+                <HiOutlineNewspaper />
+              )}
+              {unreadCounts.byFeed[feed.id] > 0 && (
+                <span className="sidebar-icon-badge">{capBadge(unreadCounts.byFeed[feed.id])}</span>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-icon-footer">
+          <button
+            className="btn btn-ghost btn-icon"
+            onClick={onRefreshAll}
+            disabled={refreshing}
+            title="Refresh all feeds"
+          >
+            <HiOutlineArrowPath className={refreshing ? 'spinning' : ''} />
+          </button>
           <button
             className="btn btn-ghost btn-icon"
             onClick={onToggleTheme}
@@ -119,11 +218,58 @@ export default function Sidebar({
           >
             {theme === 'dark' ? <HiOutlineSun /> : <HiOutlineMoon />}
           </button>
+          <button
+            className="btn btn-ghost btn-icon"
+            onClick={onSettings}
+            title="Settings"
+          >
+            <HiOutlineCog6Tooth />
+          </button>
+        </div>
+      </aside>
+    );
+  }
+
+  // ── Expanded mode ───────────────────────────────────────────────────────────
+  return (
+    <aside className="sidebar" style={style}>
+      <div className="sidebar-header">
+        <button
+          className="btn btn-ghost btn-icon sidebar-toggle-btn"
+          onClick={onToggleMode}
+          title="Collapse sidebar"
+        >
+          <HiOutlineBars3 />
+        </button>
+        <div className="sidebar-logo">
+          <img src="/atlas-pulse-icon.png" alt="Atlas Pulse" className="sidebar-logo-img" />
+          <h1>Atlas Pulse</h1>
+        </div>
+        <div className="sidebar-header-actions">
+          <button
+            className="btn btn-ghost btn-icon"
+            onClick={onToggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <HiOutlineSun /> : <HiOutlineMoon />}
+          </button>
+          <button
+            className="btn btn-ghost btn-icon"
+            onClick={onSettings}
+            title="Settings"
+          >
+            <HiOutlineCog6Tooth />
+          </button>
         </div>
       </div>
 
+      <div className="sidebar-add-wrapper">
+        <button className="btn btn-primary sidebar-add-btn" onClick={onAddFeed}>
+          <HiOutlinePlus /> Add Feed
+        </button>
+      </div>
+
       <nav className="sidebar-nav">
-        {/* Main Navigation */}
         <div className="sidebar-section">
           <div
             className={`nav-item ${activeView.type === 'all' ? 'active' : ''}`}
@@ -133,7 +279,6 @@ export default function Sidebar({
             <span className="nav-label">All Articles</span>
             {unreadCounts.total > 0 && <span className="badge">{unreadCounts.total}</span>}
           </div>
-
           <div
             className={`nav-item ${activeView.type === 'today' ? 'active' : ''}`}
             onClick={() => onViewChange({ type: 'today' })}
@@ -142,7 +287,6 @@ export default function Sidebar({
             <span className="nav-label">Today</span>
             {todayCount > 0 && <span className="badge">{todayCount}</span>}
           </div>
-
           <div
             className={`nav-item ${activeView.type === 'saved' ? 'active' : ''}`}
             onClick={() => onViewChange({ type: 'saved' })}
@@ -153,7 +297,6 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Folders Section */}
         <div className="sidebar-section">
           <div className="sidebar-section-header">
             <span className="sidebar-section-title">Folders</span>
@@ -179,9 +322,7 @@ export default function Sidebar({
                 }}
                 autoFocus
               />
-              <button className="btn btn-primary btn-sm" onClick={handleAddFolder}>
-                Add
-              </button>
+              <button className="btn btn-primary btn-sm" onClick={handleAddFolder}>Add</button>
             </div>
           )}
 
@@ -189,7 +330,6 @@ export default function Sidebar({
             const folderFeeds = feeds.filter((f) => f.folderId === folder.id);
             const isOpen = openFolders.has(folder.id);
             const folderUnread = getFolderUnread(folder.id);
-
             return (
               <div key={folder.id}>
                 <div
@@ -202,10 +342,7 @@ export default function Sidebar({
                 >
                   <span
                     className={`folder-toggle ${isOpen ? 'open' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFolder(folder.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); toggleFolder(folder.id); }}
                   >
                     <HiChevronRight style={{ fontSize: 12 }} />
                   </span>
@@ -231,88 +368,64 @@ export default function Sidebar({
                   )}
                 </div>
 
-                {isOpen &&
-                  folderFeeds.map((feed) => (
-                    <div
-                      key={feed.id}
-                      className={`nav-item nav-item-feed ${activeView.type === 'feed' && activeView.id === feed.id ? 'active' : ''}`}
-                      onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setContextMenu({ type: 'feed', id: feed.id, x: e.clientX, y: e.clientY });
-                      }}
-                    >
-                      {feed.favicon ? (
-                        <img className="feed-favicon" src={feed.favicon} alt="" />
-                      ) : (
-                        <span className="nav-icon"><HiOutlineNewspaper /></span>
-                      )}
-                      <span className="nav-label">{feed.title}</span>
-                      {unreadCounts.byFeed[feed.id] > 0 && (
-                        <span className="badge">{unreadCounts.byFeed[feed.id]}</span>
-                      )}
-                    </div>
-                  ))}
+                {isOpen && folderFeeds.map((feed) => (
+                  <div
+                    key={feed.id}
+                    className={`nav-item nav-item-feed ${activeView.type === 'feed' && activeView.id === feed.id ? 'active' : ''}`}
+                    onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({ type: 'feed', id: feed.id, x: e.clientX, y: e.clientY });
+                    }}
+                  >
+                    {feed.favicon ? (
+                      <img className="feed-favicon" src={feed.favicon} alt="" />
+                    ) : (
+                      <span className="nav-icon"><HiOutlineNewspaper /></span>
+                    )}
+                    <span className="nav-label">{feed.title}</span>
+                    {unreadCounts.byFeed[feed.id] > 0 && (
+                      <span className="badge">{unreadCounts.byFeed[feed.id]}</span>
+                    )}
+                  </div>
+                ))}
               </div>
             );
           })}
 
-          {/* Uncategorized feeds */}
-          {uncategorizedFeeds.length > 0 && (
-            <>
-              {uncategorizedFeeds.map((feed) => (
-                <div
-                  key={feed.id}
-                  className={`nav-item nav-item-feed ${activeView.type === 'feed' && activeView.id === feed.id ? 'active' : ''}`}
-                  onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setContextMenu({ type: 'feed', id: feed.id, x: e.clientX, y: e.clientY });
-                  }}
-                >
-                  {feed.favicon ? (
-                    <img className="feed-favicon" src={feed.favicon} alt="" />
-                  ) : (
-                    <span className="nav-icon"><HiOutlineNewspaper /></span>
-                  )}
-                  <span className="nav-label">{feed.title}</span>
-                  {unreadCounts.byFeed[feed.id] > 0 && (
-                    <span className="badge">{unreadCounts.byFeed[feed.id]}</span>
-                  )}
-                </div>
-              ))}
-            </>
-          )}
+          {uncategorizedFeeds.map((feed) => (
+            <div
+              key={feed.id}
+              className={`nav-item nav-item-feed ${activeView.type === 'feed' && activeView.id === feed.id ? 'active' : ''}`}
+              onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ type: 'feed', id: feed.id, x: e.clientX, y: e.clientY });
+              }}
+            >
+              {feed.favicon ? (
+                <img className="feed-favicon" src={feed.favicon} alt="" />
+              ) : (
+                <span className="nav-icon"><HiOutlineNewspaper /></span>
+              )}
+              <span className="nav-label">{feed.title}</span>
+              {unreadCounts.byFeed[feed.id] > 0 && (
+                <span className="badge">{unreadCounts.byFeed[feed.id]}</span>
+              )}
+            </div>
+          ))}
         </div>
       </nav>
 
       <div className="sidebar-footer">
         <button
-          className="btn btn-primary"
-          onClick={onAddFeed}
-          style={{ width: '100%', marginBottom: 8 }}
+          className="btn btn-ghost btn-icon"
+          onClick={onRefreshAll}
+          disabled={refreshing}
+          title="Refresh all feeds"
         >
-          <HiOutlinePlus /> Add Content
+          <HiOutlineArrowPath className={refreshing ? 'spinning' : ''} />
         </button>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button
-            className="btn btn-secondary"
-            onClick={onRefreshAll}
-            disabled={refreshing}
-            style={{ flex: 1 }}
-            title="Refresh all feeds"
-          >
-            <HiOutlineArrowPath className={refreshing ? 'spinning' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh All'}
-          </button>
-          <button
-            className="btn btn-ghost btn-icon"
-            onClick={onSettings}
-            title="Settings"
-          >
-            <HiOutlineCog6Tooth />
-          </button>
-        </div>
       </div>
 
       {/* Context Menu */}
@@ -342,10 +455,7 @@ export default function Sidebar({
                 <div className="context-menu-divider" />
                 <button
                   className="context-menu-item danger"
-                  onClick={() => {
-                    onDeleteFolder(contextMenu.id);
-                    setContextMenu(null);
-                  }}
+                  onClick={() => { onDeleteFolder(contextMenu.id); setContextMenu(null); }}
                 >
                   <HiOutlineTrash /> Delete Folder
                 </button>
@@ -358,10 +468,7 @@ export default function Sidebar({
                 </div>
                 <button
                   className={`context-menu-item ${!feeds.find(f => f.id === contextMenu.id)?.folderId ? 'active' : ''}`}
-                  onClick={() => {
-                    onMoveFeed(contextMenu.id, null);
-                    setContextMenu(null);
-                  }}
+                  onClick={() => { onMoveFeed(contextMenu.id, null); setContextMenu(null); }}
                 >
                   Uncategorized
                 </button>
@@ -369,10 +476,7 @@ export default function Sidebar({
                   <button
                     key={folder.id}
                     className={`context-menu-item ${feeds.find(f => f.id === contextMenu.id)?.folderId === folder.id ? 'active' : ''}`}
-                    onClick={() => {
-                      onMoveFeed(contextMenu.id, folder.id);
-                      setContextMenu(null);
-                    }}
+                    onClick={() => { onMoveFeed(contextMenu.id, folder.id); setContextMenu(null); }}
                   >
                     <HiOutlineFolderOpen style={{ fontSize: 13 }} /> {folder.name}
                   </button>
@@ -380,10 +484,7 @@ export default function Sidebar({
                 <div className="context-menu-divider" />
                 <button
                   className="context-menu-item danger"
-                  onClick={() => {
-                    onRemoveFeed(contextMenu.id);
-                    setContextMenu(null);
-                  }}
+                  onClick={() => { onRemoveFeed(contextMenu.id); setContextMenu(null); }}
                 >
                   <HiOutlineTrash /> Remove Feed
                 </button>

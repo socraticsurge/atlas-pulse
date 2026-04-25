@@ -9,9 +9,24 @@ import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
 import { DEFAULT_REFRESH_INTERVAL } from './utils/constants.js';
 
-// Panel width constraints
 const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 400;
+const SIDEBAR_ICON_WIDTH = 56;
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function adjustHexBrightness(hex, amount) {
+  const clamp = (n) => Math.min(255, Math.max(0, n));
+  const r = clamp(parseInt(hex.slice(1, 3), 16) + amount);
+  const g = clamp(parseInt(hex.slice(3, 5), 16) + amount);
+  const b = clamp(parseInt(hex.slice(5, 7), 16) + amount);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
 
 function App() {
   const [activeView, setActiveView] = useState({ type: 'all' });
@@ -21,6 +36,7 @@ function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState(null);
+
   const [theme, setTheme] = useState(() =>
     localStorage.getItem('atlas-pulse-theme') || localStorage.getItem('feedflow-theme') || 'dark'
   );
@@ -30,8 +46,16 @@ function App() {
   const [appColor, setAppColor] = useState(() =>
     localStorage.getItem('atlas-pulse-color') || 'emerald'
   );
+  const [customAccentHex, setCustomAccentHex] = useState(() =>
+    localStorage.getItem('atlas-pulse-custom-color') || '#00d4aa'
+  );
+  const [appTextColor, setAppTextColor] = useState(() =>
+    localStorage.getItem('atlas-pulse-text') || 'default'
+  );
+  const [sidebarMode, setSidebarMode] = useState(() =>
+    localStorage.getItem('atlas-pulse-sidebar-mode') || 'expanded'
+  );
 
-  // Resizable panel widths
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const stored = localStorage.getItem('atlas-pulse-sidebar-width');
     return stored ? parseInt(stored, 10) : 260;
@@ -41,32 +65,68 @@ function App() {
     return stored ? parseInt(stored, 10) : 600;
   });
 
-  const { feeds, addFeed, removeFeed, updateFeedFolder, refreshFeed, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
+  const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
-
   const refreshIntervalRef = useRef(null);
 
-  // Apply theme and global settings
+  const effectiveSidebarWidth = sidebarMode === 'hidden' ? 0
+    : sidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH
+    : sidebarWidth;
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-font', appFont);
-    document.documentElement.setAttribute('data-color', appColor);
+    document.documentElement.setAttribute('data-text', appTextColor);
     localStorage.setItem('atlas-pulse-theme', theme);
     localStorage.setItem('atlas-pulse-font', appFont);
-    localStorage.setItem('atlas-pulse-color', appColor);
-  }, [theme, appFont, appColor]);
+    localStorage.setItem('atlas-pulse-text', appTextColor);
+
+    if (appColor === 'custom') {
+      document.documentElement.setAttribute('data-color', 'custom');
+      document.documentElement.style.setProperty('--accent', customAccentHex);
+      document.documentElement.style.setProperty('--accent-hover', adjustHexBrightness(customAccentHex, 20));
+      document.documentElement.style.setProperty('--accent-muted', hexToRgba(customAccentHex, 0.15));
+      document.documentElement.style.setProperty('--accent-border', hexToRgba(customAccentHex, 0.3));
+      document.documentElement.style.setProperty('--shadow-glow', `0 0 20px ${hexToRgba(customAccentHex, 0.1)}`);
+      localStorage.setItem('atlas-pulse-color', 'custom');
+      localStorage.setItem('atlas-pulse-custom-color', customAccentHex);
+    } else {
+      document.documentElement.setAttribute('data-color', appColor);
+      document.documentElement.style.removeProperty('--accent');
+      document.documentElement.style.removeProperty('--accent-hover');
+      document.documentElement.style.removeProperty('--accent-muted');
+      document.documentElement.style.removeProperty('--accent-border');
+      document.documentElement.style.removeProperty('--shadow-glow');
+      localStorage.setItem('atlas-pulse-color', appColor);
+    }
+  }, [theme, appFont, appColor, appTextColor, customAccentHex]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   }, []);
 
-  // Show toast notification
+  const handleChangeColor = useCallback((colorOrHex) => {
+    if (colorOrHex.startsWith('#')) {
+      setAppColor('custom');
+      setCustomAccentHex(colorOrHex);
+    } else {
+      setAppColor(colorOrHex);
+    }
+  }, []);
+
+  const toggleSidebarMode = useCallback(() => {
+    setSidebarMode(prev => {
+      const next = prev === 'expanded' ? 'icon' : prev === 'icon' ? 'hidden' : 'expanded';
+      localStorage.setItem('atlas-pulse-sidebar-mode', next);
+      return next;
+    });
+  }, []);
+
   const showToast = useCallback((message, type = 'success') => {
     setToast({ message, type, id: Date.now() });
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Handle adding a feed
   const handleAddFeed = useCallback(async (feedUrl, folderId) => {
     try {
       await addFeed(feedUrl, folderId);
@@ -77,7 +137,6 @@ function App() {
     }
   }, [addFeed, showToast]);
 
-  // Handle removing a feed
   const handleRemoveFeed = useCallback(async (feedId) => {
     const feed = feeds.find(f => f.id === feedId);
     if (window.confirm(`Remove "${feed?.title || 'this feed'}"? All its articles will be deleted.`)) {
@@ -89,14 +148,12 @@ function App() {
     }
   }, [feeds, removeFeed, showToast, activeView]);
 
-  // Handle moving a feed to a different folder
   const handleMoveFeed = useCallback(async (feedId, folderId) => {
     await updateFeedFolder(feedId, folderId);
     const folder = folders.find(f => f.id === folderId);
     showToast(`Moved to ${folder ? folder.name : 'Uncategorized'}`);
   }, [updateFeedFolder, folders, showToast]);
 
-  // Handle refresh all
   const handleRefreshAll = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -109,40 +166,30 @@ function App() {
     }
   }, [refreshAllFeeds, showToast]);
 
-  // Auto-refresh
   useEffect(() => {
     if (feeds.length === 0) return;
-
     refreshIntervalRef.current = setInterval(() => {
       refreshAllFeeds().catch(console.error);
     }, DEFAULT_REFRESH_INTERVAL);
-
     return () => {
-      if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
-      }
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
     };
   }, [feeds.length, refreshAllFeeds]);
 
-  // Select article
   const handleSelectArticle = useCallback((article) => {
     setSelectedArticle(article);
   }, []);
 
-  // Handle navigation
   const handleNavigateArticle = useCallback((direction) => {
     if (!selectedArticle || visibleArticles.length === 0) return;
-    
     const currentIndex = visibleArticles.findIndex(a => a.id === selectedArticle.id);
     if (currentIndex === -1) return;
-    
     const newIndex = currentIndex + direction;
     if (newIndex >= 0 && newIndex < visibleArticles.length) {
       setSelectedArticle(visibleArticles[newIndex]);
     }
   }, [selectedArticle, visibleArticles]);
 
-  // Handle folder delete
   const handleDeleteFolder = useCallback(async (folderId) => {
     const folder = folders.find(f => f.id === folderId);
     if (window.confirm(`Delete folder "${folder?.name}"? Feeds will be moved to uncategorized.`)) {
@@ -154,7 +201,6 @@ function App() {
     }
   }, [folders, deleteFolder, showToast, activeView]);
 
-  // Resizable panel handlers
   const handleSidebarResize = useCallback((delta) => {
     setSidebarWidth(prev => {
       const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, prev + delta));
@@ -165,7 +211,6 @@ function App() {
 
   const handleReaderResize = useCallback((delta) => {
     setReaderWidth(prev => {
-      // Panel is on right, dragging left (negative delta) means increasing width
       const next = Math.min(1200, Math.max(400, prev - delta));
       localStorage.setItem('atlas-pulse-reader-width', next);
       return next;
@@ -173,10 +218,8 @@ function App() {
   }, []);
 
   const existingFeedUrls = feeds.map(f => f.url);
-
-  // Calculate current article index for reader navigation UI
-  const currentArticleIndex = selectedArticle 
-    ? visibleArticles.findIndex(a => a.id === selectedArticle.id) 
+  const currentArticleIndex = selectedArticle
+    ? visibleArticles.findIndex(a => a.id === selectedArticle.id)
     : -1;
   const hasNext = currentArticleIndex >= 0 && currentArticleIndex < visibleArticles.length - 1;
   const hasPrev = currentArticleIndex > 0;
@@ -184,11 +227,9 @@ function App() {
   return (
     <div className="app-layout">
       <Sidebar
+        mode={sidebarMode}
         activeView={activeView}
-        onViewChange={(view) => {
-          setActiveView(view);
-          setSelectedArticle(null);
-        }}
+        onViewChange={(view) => { setActiveView(view); setSelectedArticle(null); }}
         onAddFeed={() => setShowAddFeed(true)}
         onSettings={() => setShowSettings(true)}
         folders={folders}
@@ -202,16 +243,19 @@ function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         refreshing={refreshing}
-        style={{ width: sidebarWidth, minWidth: sidebarWidth }}
+        onToggleMode={toggleSidebarMode}
+        style={{ width: effectiveSidebarWidth, minWidth: effectiveSidebarWidth }}
       />
 
-      <ResizableHandle onResize={handleSidebarResize} />
+      {sidebarMode === 'expanded' && <ResizableHandle onResize={handleSidebarResize} />}
 
       <ArticleList
         activeView={activeView}
         selectedArticleId={selectedArticle?.id}
         onSelectArticle={handleSelectArticle}
         onArticlesLoaded={setVisibleArticles}
+        sidebarHidden={sidebarMode === 'hidden'}
+        onShowSidebar={toggleSidebarMode}
       />
 
       {selectedArticle && (
@@ -245,19 +289,19 @@ function App() {
         appFont={appFont}
         onChangeFont={setAppFont}
         appColor={appColor}
-        onChangeColor={setAppColor}
+        customAccentHex={customAccentHex}
+        onChangeColor={handleChangeColor}
+        appTextColor={appTextColor}
+        onChangeTextColor={setAppTextColor}
         feeds={feeds}
         folders={folders}
         onImportOPML={importFeedsFromOPML}
         onRefreshAll={handleRefreshAll}
       />
 
-      {/* Toast */}
       {toast && (
         <div className="toast-container">
-          <div className={`toast toast-${toast.type}`}>
-            {toast.message}
-          </div>
+          <div className={`toast toast-${toast.type}`}>{toast.message}</div>
         </div>
       )}
     </div>
