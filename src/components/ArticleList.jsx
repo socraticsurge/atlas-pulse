@@ -336,6 +336,7 @@ export default function ArticleList({
                       <span className="card-favicon-icon"><HiOutlineNewspaper /></span>
                     )}
                     <span className="card-source">{feed?.title || 'Unknown'}</span>
+                    <span className="card-dot" />
                     <span className="card-time">{timeAgo(article.publishedAt)}</span>
                   </div>
                   <h3 className="card-title">{article.title}</h3>
