@@ -16,6 +16,7 @@ import {
   HiOutlineFolderPlus,
   HiOutlineArrowRightCircle,
   HiOutlineBars3,
+  HiOutlineSparkles,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 
@@ -37,6 +38,7 @@ export default function Sidebar({
   onToggleTheme,
   refreshing,
   onToggleMode,
+  onShowSummaries,
   style,
 }) {
   const isIcon = mode === 'icon' || mode === 'hidden';
@@ -160,6 +162,13 @@ export default function Sidebar({
             {savedCount > 0 && (
               <span className="sidebar-icon-badge">{capBadge(savedCount)}</span>
             )}
+          </div>
+          <div
+            className="sidebar-icon-item"
+            onClick={onShowSummaries}
+            title="AI Summaries"
+          >
+            <HiOutlineSparkles />
           </div>
 
           {(folders.length > 0 || uncategorizedFeeds.length > 0) && (
@@ -294,6 +303,10 @@ export default function Sidebar({
             <span className="nav-icon"><HiOutlineBookmark /></span>
             <span className="nav-label">Saved</span>
             {savedCount > 0 && <span className="badge">{savedCount}</span>}
+          </div>
+          <div className="nav-item" onClick={onShowSummaries}>
+            <span className="nav-icon"><HiOutlineSparkles /></span>
+            <span className="nav-label">AI Summaries</span>
           </div>
         </div>
 
