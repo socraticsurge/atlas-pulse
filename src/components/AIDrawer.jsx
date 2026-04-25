@@ -12,6 +12,7 @@ import {
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
+import { PERSONAS, ALL_TONES, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 
@@ -25,7 +26,6 @@ function pickDefaultModel(models) {
 
 function buildArticleContext(article, extractedContent) {
   const content = stripHtml(extractedContent || article?.content || article?.summary || '');
-  // Truncate to ~6000 chars to stay within context limits
   const truncated = content.length > 6000 ? content.slice(0, 6000) + '…' : content;
   return `Title: ${article?.title || 'Unknown'}
 Author: ${article?.author || 'Unknown'}
@@ -34,9 +34,9 @@ Published: ${article?.publishedAt ? new Date(article.publishedAt).toDateString()
 ${truncated}`;
 }
 
-const SUMMARY_SYSTEM = `You are a sharp editorial assistant. Read the article provided and write a concise, insightful summary in 3–4 sentences. Focus on the key finding or argument, why it matters, and one concrete takeaway. Write in plain prose, no bullet points. Do not start with "This article".`;
+const BASE_SUMMARY = `You are an editorial reading assistant. Read the article and write a concise, insightful summary in 3–4 sentences. Focus on the key finding or argument, why it matters, and one concrete takeaway. Write in plain prose, no bullet points. Do not start with "This article".`;
 
-const CHAT_SYSTEM = `You are a helpful reading assistant. Answer questions about the article clearly and concisely. Stay grounded in the article content. If the user asks something not covered, say so briefly.`;
+const BASE_CHAT = `You are a reading assistant. Answer questions about the article clearly and concisely. Stay grounded in the article content. If something is not covered in the article, say so briefly.`;
 
 export default function AIDrawer({ isOpen, onClose, article, extractedContent }) {
   const [tab, setTab] = useState('summary'); // 'summary' | 'chat'
@@ -113,9 +113,11 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
     setSummaryError(null);
     abortRef.current = false;
 
+    const settings = getAISettings();
+    const systemPrompt = buildSystemPrompt(BASE_SUMMARY, settings);
     const articleContext = buildArticleContext(article, extractedContent);
     const msgs = [
-      { role: 'system', content: SUMMARY_SYSTEM },
+      { role: 'system', content: systemPrompt },
       { role: 'user', content: articleContext },
     ];
 
@@ -143,8 +145,10 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
     setChatError(null);
     abortRef.current = false;
 
+    const settings = getAISettings();
+    const systemPrompt = buildSystemPrompt(BASE_CHAT, settings);
     const articleContext = buildArticleContext(article, extractedContent);
-    const systemMsg = { role: 'system', content: `${CHAT_SYSTEM}\n\nARTICLE:\n${articleContext}` };
+    const systemMsg = { role: 'system', content: `${systemPrompt}\n\nARTICLE:\n${articleContext}` };
     const ollamaMsgs = [systemMsg, ...nextMessages];
 
     // Add placeholder for streaming assistant reply
@@ -219,6 +223,11 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
     ? selectedModel.split(':')[0].replace(/-/g, ' ')
     : 'No model';
 
+  // Read current settings for the config badge (re-reads each render when open)
+  const activeSettings = getAISettings();
+  const activePersonas = PERSONAS.filter((p) => activeSettings.personas.includes(p.id));
+  const activeTone = ALL_TONES.find((t) => t.id === activeSettings.tone);
+
   return (
     <div className="ai-drawer">
       {/* Header */}
@@ -276,6 +285,25 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
         >
           Chat
         </button>
+      </div>
+
+      {/* Active persona + tone badge strip */}
+      <div className="ai-config-strip">
+        {activePersonas.map((p) => (
+          <span key={p.id} className="ai-config-badge">
+            {p.emoji} {p.label}
+          </span>
+        ))}
+        {activeTone && (
+          <span className="ai-config-badge ai-config-tone-badge">
+            {activeTone.label}
+          </span>
+        )}
+        {activeSettings.customInstructions.trim() && (
+          <span className="ai-config-badge ai-config-custom-badge" title={activeSettings.customInstructions}>
+            + Custom
+          </span>
+        )}
       </div>
 
       {/* ── Summary Tab ── */}
