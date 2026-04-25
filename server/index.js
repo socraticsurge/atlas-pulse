@@ -3,6 +3,7 @@ import cors from 'cors';
 import feedsRouter from './routes/feeds.js';
 import discoverRouter from './routes/discover.js';
 import articlesRouter from './routes/articles.js';
+import aiRouter from './routes/ai.js';
 
 const app = express();
 const PORT = 3001;
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use('/api/feeds', feedsRouter);
 app.use('/api/discover', discoverRouter);
 app.use('/api/articles', articlesRouter);
+app.use('/api/ai', aiRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
