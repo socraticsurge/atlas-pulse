@@ -10,6 +10,12 @@ import {
 import { useState, useRef } from 'react';
 import db from '../db/database.js';
 import { parseOPML, generateOPML } from '../utils/opml.js';
+import {
+  PERSONAS,
+  TONE_GROUPS,
+  getAISettings,
+  saveAISettings,
+} from '../utils/aiSettings.js';
 
 const PRESET_COLORS = [
   { id: 'emerald', hex: '#00d4aa', label: 'Emerald' },
@@ -45,6 +51,23 @@ export default function SettingsPanel({
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
   const [pickerColor, setPickerColor] = useState(customAccentHex || '#00d4aa');
+  const [aiSettings, setAISettings] = useState(getAISettings);
+
+  const updateAISettings = (patch) => {
+    setAISettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveAISettings(next);
+      return next;
+    });
+  };
+
+  const togglePersona = (id) => {
+    const current = aiSettings.personas;
+    const next = current.includes(id)
+      ? current.length > 1 ? current.filter((p) => p !== id) : current // keep at least one
+      : [...current, id];
+    updateAISettings({ personas: next });
+  };
 
   if (!isOpen) return null;
 
@@ -195,6 +218,80 @@ export default function SettingsPanel({
                     <span>{t.label}</span>
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── AI Assistant ─────────────────────────────────────────── */}
+          <div className="settings-group">
+            <h3>AI Assistant</h3>
+
+            {/* Persona — multi-select */}
+            <div className="settings-row settings-row-col">
+              <label>
+                Persona
+                <span className="settings-sublabel"> — select one or more to blend</span>
+              </label>
+              <div className="persona-grid">
+                {PERSONAS.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`persona-card ${aiSettings.personas.includes(p.id) ? 'active' : ''}`}
+                    onClick={() => togglePersona(p.id)}
+                    title={p.desc}
+                  >
+                    <span className="persona-emoji">{p.emoji}</span>
+                    <span className="persona-label">{p.label}</span>
+                    <span className="persona-desc">{p.desc}</span>
+                    {aiSettings.personas.includes(p.id) && (
+                      <HiOutlineCheck className="persona-check" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tone — single-select grouped */}
+            <div className="settings-row settings-row-col">
+              <label>Tone</label>
+              <div className="tone-groups">
+                {TONE_GROUPS.map((group) => (
+                  <div key={group.label} className="tone-group">
+                    <span className="tone-group-label">{group.label}</span>
+                    <div className="tone-chip-row">
+                      {group.tones.map((t) => (
+                        <button
+                          key={t.id}
+                          className={`tone-chip ${aiSettings.tone === t.id ? 'active' : ''}`}
+                          onClick={() => updateAISettings({ tone: t.id })}
+                          title={t.instruction}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom instructions */}
+            <div className="settings-row settings-row-col" style={{ borderBottom: 'none' }}>
+              <label>
+                Custom Instructions
+                <span className="settings-sublabel"> — optional, applied to every AI response</span>
+              </label>
+              <textarea
+                className="ai-custom-instructions-input"
+                placeholder={'Always respond in French.\nI work in healthcare — focus on clinical implications.\nAssume I have a PhD in economics.'}
+                value={aiSettings.customInstructions}
+                onChange={(e) =>
+                  updateAISettings({ customInstructions: e.target.value.slice(0, 300) })
+                }
+                rows={3}
+              />
+              <div className="settings-char-count">
+                {aiSettings.customInstructions.length} / 300
               </div>
             </div>
           </div>
