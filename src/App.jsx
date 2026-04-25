@@ -4,6 +4,7 @@ import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
 import AddFeedModal from './components/AddFeedModal.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
+import SummariesModal from './components/SummariesModal.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
@@ -34,6 +35,7 @@ function App() {
   const [visibleArticles, setVisibleArticles] = useState([]);
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSummaries, setShowSummaries] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -244,6 +246,7 @@ function App() {
         onToggleTheme={toggleTheme}
         refreshing={refreshing}
         onToggleMode={toggleSidebarMode}
+        onShowSummaries={() => setShowSummaries(true)}
         style={{ width: effectiveSidebarWidth, minWidth: effectiveSidebarWidth }}
       />
 
@@ -279,6 +282,11 @@ function App() {
         onAddFeed={handleAddFeed}
         existingFeedUrls={existingFeedUrls}
         folders={folders}
+      />
+
+      <SummariesModal
+        isOpen={showSummaries}
+        onClose={() => setShowSummaries(false)}
       />
 
       <SettingsPanel
