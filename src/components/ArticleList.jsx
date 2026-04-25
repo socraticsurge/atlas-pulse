@@ -146,25 +146,28 @@ export default function ArticleList({
           {/* View mode toggle */}
           <div className="view-toggle-group">
             <button
-              className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'magazine' ? 'active' : ''}`}
+              className={`btn btn-ghost btn-sm view-toggle-btn ${viewMode === 'magazine' ? 'active' : ''}`}
               onClick={() => handleViewModeChange('magazine')}
-              title="Magazine view"
+              title="Grid view — portrait thumbnail cards"
             >
               <HiOutlineRectangleStack />
+              <span className="view-toggle-label">Grid</span>
             </button>
             <button
-              className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'excerpt' ? 'active' : ''}`}
+              className={`btn btn-ghost btn-sm view-toggle-btn ${viewMode === 'excerpt' ? 'active' : ''}`}
               onClick={() => handleViewModeChange('excerpt')}
-              title="Excerpt view"
+              title="List view — title with excerpt and thumbnail"
             >
               <HiOutlineDocumentText />
+              <span className="view-toggle-label">List</span>
             </button>
             <button
-              className={`btn btn-ghost btn-icon btn-sm ${viewMode === 'compact' ? 'active' : ''}`}
+              className={`btn btn-ghost btn-sm view-toggle-btn ${viewMode === 'compact' ? 'active' : ''}`}
               onClick={() => handleViewModeChange('compact')}
-              title="Compact view"
+              title="Compact view — dense single-line rows"
             >
               <HiOutlineQueueList />
+              <span className="view-toggle-label">Compact</span>
             </button>
           </div>
 
@@ -316,17 +319,21 @@ export default function ArticleList({
                 }`}
                 onClick={() => onSelectArticle(article)}
               >
-                {article.imageUrl && (
-                  <div className="card-image-wrap">
+                <div className="card-image-wrap">
+                  {article.imageUrl ? (
                     <img
                       className="card-image"
                       src={article.imageUrl}
                       alt=""
                       loading="lazy"
-                      onError={(e) => { const w = e.target.closest('.card-image-wrap'); if (w) w.style.display = 'none'; }}
+                      onError={(e) => { e.target.style.display = 'none'; }}
                     />
-                  </div>
-                )}
+                  ) : (
+                    <div className="card-image-placeholder">
+                      <HiOutlineNewspaper />
+                    </div>
+                  )}
+                </div>
                 <div className="card-body">
                   <div className="card-meta">
                     {!article.isRead && <span className="card-unread-dot" />}
@@ -340,7 +347,6 @@ export default function ArticleList({
                     <span className="card-time">{timeAgo(article.publishedAt)}</span>
                   </div>
                   <h3 className="card-title">{article.title}</h3>
-                  <p className="card-excerpt">{stripHtml(article.summary || article.content)}</p>
                 </div>
               </div>
             );
