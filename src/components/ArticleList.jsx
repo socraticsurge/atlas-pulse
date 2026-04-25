@@ -307,37 +307,40 @@ export default function ArticleList({
               );
             }
 
-            // Magazine view (default)
+            // Card view (default)
             return (
               <div
                 key={article.id}
-                className={`article-card ${article.isRead ? 'read' : ''} ${
+                className={`article-card-grid ${article.isRead ? 'read' : ''} ${
                   selectedArticleId === article.id ? 'active' : ''
                 }`}
                 onClick={() => onSelectArticle(article)}
               >
-                {!article.isRead && <div className="unread-dot" />}
-                <div className="article-card-meta">
-                  {feed?.favicon ? (
-                    <img className="article-card-favicon" src={feed.favicon} alt="" />
-                  ) : (
-                    <span className="article-card-favicon-icon"><HiOutlineNewspaper /></span>
-                  )}
-                  <span className="article-card-source">{feed?.title || 'Unknown'}</span>
-                  <span className="article-card-dot">●</span>
-                  <span className="article-card-time">{timeAgo(article.publishedAt)}</span>
-                </div>
-                <h3>{article.title}</h3>
-                <p>{stripHtml(article.summary || article.content)}</p>
                 {article.imageUrl && (
-                  <img
-                    className="article-card-image"
-                    src={article.imageUrl}
-                    alt=""
-                    loading="lazy"
-                    onError={(e) => (e.target.style.display = 'none')}
-                  />
+                  <div className="card-image-wrap">
+                    <img
+                      className="card-image"
+                      src={article.imageUrl}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => { const w = e.target.closest('.card-image-wrap'); if (w) w.style.display = 'none'; }}
+                    />
+                  </div>
                 )}
+                <div className="card-body">
+                  <div className="card-meta">
+                    {!article.isRead && <span className="card-unread-dot" />}
+                    {feed?.favicon ? (
+                      <img className="card-favicon" src={feed.favicon} alt="" />
+                    ) : (
+                      <span className="card-favicon-icon"><HiOutlineNewspaper /></span>
+                    )}
+                    <span className="card-source">{feed?.title || 'Unknown'}</span>
+                    <span className="card-time">{timeAgo(article.publishedAt)}</span>
+                  </div>
+                  <h3 className="card-title">{article.title}</h3>
+                  <p className="card-excerpt">{stripHtml(article.summary || article.content)}</p>
+                </div>
               </div>
             );
           })
