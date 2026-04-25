@@ -1,6 +1,8 @@
-# FeedFlow — Personal RSS Feed Reader
+# Atlas Pulse — Personal RSS Feed Reader
 
-A fully functional, Feedly-style RSS feed reader that runs entirely on your local machine at **zero cost**. No cloud services, no subscriptions, no accounts — your data stays on your computer in the browser's IndexedDB.
+**Version 1.1.0**
+
+A modern, privacy-first RSS feed reader that runs entirely on your local machine. No cloud services, no subscriptions, no accounts — your data stays in your browser's IndexedDB. Powered by React, Express, and (optionally) a local Ollama LLM for AI-powered summaries and article chat.
 
 ---
 
@@ -8,73 +10,152 @@ A fully functional, Feedly-style RSS feed reader that runs entirely on your loca
 
 ### Prerequisites
 
-- **Node.js** (v18 or later) — check with `node -v`
-- **npm** (comes with Node.js) — check with `npm -v`
+- **Node.js** v18 or later — `node -v`
+- **npm** (bundled with Node.js) — `npm -v`
+- **Ollama** _(optional, for AI features)_ — [ollama.com](https://ollama.com)
 
 ### Run the App
 
 ```bash
-# 1. Open a terminal and navigate to this folder
-cd "/Users/vinaychaganti/Documents/RSS Feed Reader"
+# 1. Navigate to the project folder
+cd "/path/to/RSS Feed Reader"
 
-# 2. Install dependencies (only needed the first time, or after pulling new changes)
+# 2. Install dependencies (first time only, or after pulling updates)
 npm install
 
-# 3. Start the app (runs both frontend + backend concurrently)
+# 3. Start frontend + backend together
 npm run dev
 ```
 
-The app will open at: **http://localhost:5173/**
+Open **http://localhost:5173** in your browser.
 
-> **What happens under the hood:**
-> - The **Vite frontend** starts on port `5173`
-> - The **Express backend** starts on port `3001`
-> - The `concurrently` package runs both in a single terminal
-> - Vite proxies all `/api/*` requests to the Express backend (configured in `vite.config.js`)
+> **What starts:**
+> - Vite dev server on **port 5173** (React frontend)
+> - Express API server on **port 3001** (CORS proxy + AI bridge)
+> - Vite proxies all `/api/*` requests to Express automatically
 
-### Stop the App
-
-Press `Ctrl + C` in the terminal where `npm run dev` is running.
+Press `Ctrl + C` to stop everything.
 
 ---
 
-## How to Use
+## Features
 
-### Adding Feeds
+### Reading
 
-1. Click **"+ Add Content"** at the bottom of the sidebar.
-2. Four tabs are available:
-   - **URL** — Paste any website or RSS feed URL to auto-discover feeds.
-   - **Search** — Type a keyword (e.g., "artificial intelligence") to generate a Google News RSS feed you can subscribe to.
-   - **Popular** — Browse curated feeds by category (Technology, AI, Business, Science, etc.). Click any to add.
-   - **Alerts** — Step-by-step instructions for adding Google Alerts as RSS.
+| Feature | Details |
+|---------|---------|
+| **Three article views** | Magazine (card + image), Excerpt (title + snippet + thumbnail), Compact (dense list) |
+| **Auto full-text extraction** | Full article pulled from source automatically on open |
+| **Reading progress bar** | Accent-colored bar at the top of the reader tracks scroll position |
+| **Zen / Focus mode** | Press `f` to expand the reader to full width, hiding all distractions |
+| **Keyboard shortcuts** | `j/k` next/prev · `b` bookmark · `o` open original · `f` zen · `Esc` close |
 
-### Organizing with Folders
+### Organization
 
-- Click the **📁 icon** next to "FOLDERS" in the sidebar to create a new folder.
-- **Right-click** any feed → **"Move to folder"** to reorganize feeds between folders.
-- **Right-click** a folder to rename or delete it.
+| Feature | Details |
+|---------|---------|
+| **Folders** | Create folders, drag feeds into them, right-click to rename or delete |
+| **Saved / Bookmarks** | Bookmark any article; find them under "Saved" in the sidebar |
+| **Today view** | Shows only articles published today |
+| **Search** | Instant local search across title, content, and source name |
+| **Mark all read** | One-click button in the article list header |
 
-### Reading Articles
+### Sharing
 
-- Click any article in the middle panel to read it.
-- Full article content is **automatically extracted** from the original page (no need to click anything).
-- A green **"✓ Full article loaded"** badge confirms full extraction.
-- If extraction fails, the RSS summary is shown with an **"Open Original"** link.
+| Feature | Details |
+|---------|---------|
+| **Share popover** | Share to LinkedIn, X/Twitter, Email, or Web Share API |
+| **Copy link** | Copy article URL to clipboard from the share menu |
 
-### Searching Articles
+### Appearance
 
-- Click the **🔍 icon** in the article list header to open the search bar.
-- Type any keyword to filter articles by title, content, or source name.
-- Search is instant and fully local — no data leaves your machine.
+| Feature | Details |
+|---------|---------|
+| **Dark / Light theme** | Toggle in sidebar header or settings |
+| **Collapsible sidebar** | Three states: expanded → icon-only (56 px) → fully hidden |
+| **Resizable panels** | Drag the handle between article list and reader to resize |
+| **Font picker** | Inter, Serif (Merriweather), Mono (JetBrains Mono), System UI |
+| **Accent color** | 6 presets + custom color wheel picker |
+| **Text color** | Cool (default), Warm, Pure white, Soft grey |
+| **Reader typography** | Adjustable font size, line width, line height in reader settings |
 
-### Other Features
+### Feed Management
 
-- **Bookmark** articles using the bookmark icon in the reader toolbar → access them via **"Saved"** in the sidebar.
-- **Mark all read** — button in the article list header.
-- **Dark/Light theme** — toggle the sun/moon icon in the top-right of the sidebar.
-- **Auto-refresh** — feeds refresh automatically every 30 minutes while the app is running.
-- **Manual refresh** — click **"Refresh All"** at the bottom of the sidebar.
+| Feature | Details |
+|---------|---------|
+| **URL discovery** | Paste any URL — feeds auto-discovered from `<link>` tags and common paths |
+| **Google News search** | Type a keyword to subscribe to a Google News RSS feed |
+| **Popular feeds catalog** | Curated feeds across Technology, AI, Business, Science, and more |
+| **OPML import / export** | Move your feeds to/from any other RSS reader |
+| **Auto-refresh** | Feeds refresh every 30 minutes in the background |
+
+### AI Assistant (requires Ollama)
+
+| Feature | Details |
+|---------|---------|
+| **AI Summary** | One-click 3–4 sentence summary of the current article, streamed in real time |
+| **Share summary** | Copy or share the AI summary directly to LinkedIn / X |
+| **Article Chat** | Ask any question about the article; streamed responses with full context |
+| **Model selector** | Pick any locally installed Ollama model from a dropdown |
+| **Suggestion chips** | Pre-built prompts: key takeaways, simple explanation, author's argument |
+| **Stop generation** | Cancel streaming mid-response |
+
+---
+
+## Setting Up AI Features
+
+The AI drawer uses [Ollama](https://ollama.com) — a free, local LLM runner. No API keys, no usage costs.
+
+### 1. Install Ollama
+
+Download from [ollama.com](https://ollama.com) and follow the installer.
+
+### 2. Pull a Model
+
+```bash
+# Fast and capable — recommended default
+ollama pull deepseek-r1:8b
+
+# Lightest option for older hardware
+ollama pull phi4-mini:3.8b
+
+# Most powerful (needs ~20 GB RAM)
+ollama pull qwen3-coder:30b
+```
+
+### 3. Make Sure Ollama is Running
+
+```bash
+ollama serve   # starts the API on http://localhost:11434
+```
+
+Ollama usually starts automatically after install. Verify with:
+
+```bash
+curl http://localhost:11434   # should print "Ollama is running"
+```
+
+### 4. Open the AI Drawer in the App
+
+1. Open any article in the reader.
+2. Click the **✦ AI** button in the reader toolbar.
+3. The AI drawer slides up from the bottom of the reader.
+4. Choose **Summary** for a one-click summary, or **Chat** to ask questions.
+
+The Express backend at `localhost:3001` acts as a bridge between the browser and Ollama (Ollama doesn't allow direct browser requests by default). No article content is ever sent to any external server.
+
+---
+
+## Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `j` / `↓` / `→` | Next article |
+| `k` / `↑` / `←` | Previous article |
+| `b` | Toggle bookmark |
+| `o` | Open article in original tab |
+| `f` | Toggle zen / focus mode |
+| `Esc` | Exit zen mode / close reader |
 
 ---
 
@@ -83,98 +164,80 @@ Press `Ctrl + C` in the terminal where `npm run dev` is running.
 ```
 RSS Feed Reader/
 │
-├── package.json              # Dependencies & npm scripts
-├── vite.config.js            # Vite config + proxy to backend
-├── index.html                # HTML entry point (loads React)
+├── package.json                  # Dependencies & npm scripts
+├── vite.config.js                # Vite config + /api proxy to port 3001
+├── index.html                    # HTML entry point
 │
-├── server/                   # ── EXPRESS BACKEND (port 3001) ──
-│   ├── index.js              # Express server entry point
-│   ├── routes/
-│   │   ├── feeds.js          # POST /api/feeds/parse — parse RSS feed URL
-│   │   ├── discover.js       # POST /api/feeds/discover — auto-discover feeds from any URL
-│   │   └── articles.js       # POST /api/articles/extract — extract full article content
+├── server/                       # ── EXPRESS BACKEND (port 3001) ──
+│   ├── index.js                  # Server entry point — mounts all routes
+│   └── routes/
+│       ├── feeds.js              # POST /api/feeds/parse — parse RSS URL
+│       ├── discover.js           # POST /api/discover — auto-discover feeds
+│       ├── articles.js           # POST /api/articles/extract — full article extraction
+│       └── ai.js                 # GET /api/ai/models · POST /api/ai/chat (Ollama proxy)
 │   └── utils/
-│       ├── feedParser.js     # RSS/Atom feed parsing (uses rss-parser)
-│       ├── feedDiscovery.js  # Discovers RSS feeds from HTML link tags & common URL patterns
-│       └── articleExtractor.js # Full article extraction (uses @extractus/article-extractor)
+│       ├── feedParser.js         # RSS/Atom parsing (rss-parser)
+│       ├── feedDiscovery.js      # HTML link tag + common path discovery
+│       └── articleExtractor.js  # Full text extraction (@extractus/article-extractor)
 │
-├── src/                      # ── REACT FRONTEND (port 5173) ──
-│   ├── main.jsx              # React entry point — renders <App />
-│   ├── App.jsx               # Root component — wires everything together
-│   ├── index.css             # Complete design system (dark/light themes, all styles)
-│   │
-│   ├── components/           # UI Components
-│   │   ├── Sidebar.jsx       # Left panel — navigation, folders, feeds, context menus
-│   │   ├── ArticleList.jsx   # Middle panel — article cards, search bar
-│   │   ├── ArticleReader.jsx # Right panel — full article reader with auto-extraction
-│   │   ├── AddFeedModal.jsx  # Modal — add feeds via URL, search, popular, or alerts
-│   │   └── SettingsPanel.jsx # Modal — theme toggle, clear data
-│   │
-│   ├── hooks/                # React Hooks (business logic)
-│   │   ├── useFeeds.js       # Feed CRUD — add, remove, move, refresh feeds
-│   │   ├── useArticles.js    # Article queries — read/unread, bookmarks
-│   │   └── useFolders.js     # Folder CRUD — add, rename, delete folders
-│   │
-│   ├── db/
-│   │   └── database.js       # Dexie.js IndexedDB schema — defines tables & indexes
-│   │
-│   └── utils/
-│       ├── api.js            # HTTP client — calls backend /api/* endpoints
-│       ├── constants.js      # Popular feeds list, refresh interval, view types
-│       └── helpers.js        # Date formatting, text utilities, URL helpers
-│
-└── public/
-    └── favicon.svg           # App icon
+└── src/                          # ── REACT FRONTEND (port 5173) ──
+    ├── main.jsx                  # React entry — renders <App />
+    ├── App.jsx                   # Root component — state, routing, layout
+    ├── index.css                 # Full design system (themes, typography, all components)
+    │
+    ├── components/
+    │   ├── Sidebar.jsx           # Left panel — nav, folders, feeds, three-state collapse
+    │   ├── ArticleList.jsx       # Middle panel — magazine/excerpt/compact views + search
+    │   ├── ArticleReader.jsx     # Right panel — reader, toolbar, progress bar, sharing
+    │   ├── AIDrawer.jsx          # AI panel — summary + chat with local LLM via Ollama
+    │   ├── AddFeedModal.jsx      # Add feeds via URL / search / popular / alerts
+    │   ├── SettingsPanel.jsx     # Appearance + data management settings
+    │   ├── ReaderSettings.jsx    # Inline reader typography controls (font size, width, etc.)
+    │   └── ResizableHandle.jsx   # Draggable panel resize handle
+    │
+    ├── db/
+    │   └── database.js           # Dexie.js IndexedDB schema (feeds, articles, folders)
+    │
+    └── utils/
+        ├── api.js                # HTTP client — all /api/* calls + streamChat() generator
+        ├── helpers.js            # Date formatting, read time estimation, HTML stripping
+        └── opml.js               # OPML import/export utilities
 ```
-
-### How the Pieces Fit Together
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                        BROWSER                               │
-│                                                              │
-│  ┌─────────┐  ┌────────────┐  ┌─────────────────────────┐   │
-│  │ Sidebar │→│ ArticleList │→│   ArticleReader          │   │
-│  │         │  │ + Search    │  │   (auto-extracts full   │   │
-│  │ Folders │  │             │  │    article on select)   │   │
-│  │ Feeds   │  │             │  │                         │   │
-│  └─────────┘  └────────────┘  └─────────────────────────┘   │
-│       │              │                    │                   │
-│       └──────────────┴────────────────────┘                  │
-│                      │                                       │
-│              ┌───────────────┐                               │
-│              │  IndexedDB    │  ← All data stored locally    │
-│              │  (via Dexie)  │    in your browser             │
-│              └───────────────┘                               │
-│                      │                                       │
-└──────────────────────┼───────────────────────────────────────┘
-                       │ /api/* calls
-              ┌────────────────┐
-              │  Express.js    │  ← Backend (port 3001)
-              │  - Parse feeds │    Handles CORS proxying
-              │  - Discover    │    so the browser can fetch
-              │  - Extract     │    RSS feeds from any site
-              └────────┬───────┘
-                       │
-                  ┌────────┐
-                  │Internet│
-                  └────────┘
-```
-
-### Why a Backend Server?
-
-Browsers block direct requests to other websites (CORS policy). The Express backend acts as a proxy — the browser asks the backend, and the backend fetches from the internet. This is the standard approach for RSS readers and keeps everything free (no paid CORS proxy services).
 
 ---
 
-## Data Storage
+## Architecture Overview
 
-All your data (feeds, articles, folders, read/unread state, bookmarks) is stored in **IndexedDB** inside your browser. This means:
+```
+┌─────────────────────────────────────────────────────────┐
+│                        BROWSER                          │
+│                                                         │
+│  ┌──────────┐  ┌─────────────┐  ┌────────────────────┐  │
+│  │ Sidebar  │  │ ArticleList │  │  ArticleReader     │  │
+│  │ 3 states │  │ 3 view modes│  │  + AI Drawer       │  │
+│  └──────────┘  └─────────────┘  └────────────────────┘  │
+│                        │                                │
+│                 ┌──────────────┐                        │
+│                 │  IndexedDB   │  All data local        │
+│                 │  (Dexie.js)  │  feeds · articles      │
+│                 └──────────────┘  folders · bookmarks   │
+│                        │                                │
+└────────────────────────┼────────────────────────────────┘
+                         │ /api/* (proxied by Vite)
+               ┌─────────────────┐
+               │   Express.js    │  port 3001
+               │  ┌───────────┐  │
+               │  │ feeds     │  │  Fetches RSS from internet
+               │  │ discover  │  │  Extracts full article text
+               │  │ articles  │  │
+               │  │ ai ───────┼──┼──► Ollama (localhost:11434)
+               │  └───────────┘  │     Local LLM — no data leaves
+               └─────────────────┘     your machine
+```
 
-- ✅ **Zero cost** — no database server to run
-- ✅ **Private** — nothing leaves your machine
-- ⚠️ **Browser-specific** — data lives in the browser you use. If you switch browsers, you start fresh.
-- ⚠️ **Clearable** — clearing browser data will erase your feeds. Don't clear site data for localhost.
+### Why a Local Backend?
+
+Browsers block direct cross-origin requests (CORS). The Express server acts as a proxy so the browser can fetch RSS feeds from any website. For AI, it bridges between the browser and Ollama (which also blocks browser requests by default). Everything stays on your machine.
 
 ---
 
@@ -182,54 +245,85 @@ All your data (feeds, articles, folders, read/unread state, bookmarks) is stored
 
 | Layer | Technology | Purpose |
 |-------|-----------|---------|
-| Frontend | React + Vite | UI framework + fast dev server |
-| Styling | Vanilla CSS | Full design system with dark/light themes |
-| Storage | Dexie.js (IndexedDB) | Local data persistence |
-| Backend | Express.js | CORS proxy for feed/article fetching |
-| Feed Parsing | rss-parser | Parse RSS/Atom XML feeds |
-| Article Extraction | @extractus/article-extractor | Pull full article content from any URL |
-| HTML Sanitization | DOMPurify | Safely render article HTML |
-| Icons | react-icons (Heroicons) | UI iconography |
-| Dev Runner | concurrently | Run frontend + backend in one command |
+| Frontend | React 19 + Vite 8 | UI + fast HMR dev server |
+| Styling | Vanilla CSS | Full design system, dark/light themes |
+| Storage | Dexie.js (IndexedDB) | Local-first data persistence |
+| Backend | Express.js 5 | CORS proxy + Ollama bridge |
+| AI Runtime | Ollama | Local LLM inference — free, private |
+| Feed Parsing | rss-parser | RSS/Atom XML parsing |
+| Article Extraction | @extractus/article-extractor | Full-text extraction from any URL |
+| HTML Sanitization | DOMPurify | Safe HTML rendering in reader |
+| Icons | react-icons (hi2, fa, si) | UI iconography |
+| Dev Runner | concurrently | Frontend + backend in one command |
 
 ---
 
-## Key npm Scripts
+## npm Scripts
 
-| Command | What it does |
+| Command | Description |
 |---------|-------------|
-| `npm run dev` | Starts both frontend (Vite) and backend (Express) concurrently |
-| `npm run dev:frontend` | Starts only the Vite frontend |
-| `npm run dev:backend` | Starts only the Express backend |
-| `npm run build` | Builds the production frontend bundle |
+| `npm run dev` | Start frontend (Vite) + backend (Express) concurrently |
+| `npm run dev:frontend` | Start only the Vite frontend |
+| `npm run dev:server` | Start only the Express backend |
+| `npm run build` | Build production frontend bundle to `dist/` |
+| `npm run preview` | Preview the production build locally |
+
+---
+
+## Data & Privacy
+
+All feeds, articles, folders, read state, and bookmarks are stored in **IndexedDB** inside your browser:
+
+- **Zero cost** — no database server required
+- **Fully private** — nothing leaves your machine (including AI queries, which go to your local Ollama instance)
+- **Browser-specific** — data lives in the browser you use; switching browsers means starting fresh
+- **Clearable** — don't clear site data for `localhost` or you'll lose your feeds
+
+To back up your feeds, use **Settings → Export OPML**.
 
 ---
 
 ## Troubleshooting
 
-### App shows a blank page
-- Check the terminal for errors. If you see `EADDRINUSE`, another process is using port 3001 or 5173.
-- Fix: `kill -9 $(lsof -ti:3001)` and/or `kill -9 $(lsof -ti:5173)`, then run `npm run dev` again.
+### App shows a blank page or won't load
+- Check the terminal for errors.
+- `EADDRINUSE` means a port is already in use:
+  ```bash
+  kill -9 $(lsof -ti:3001) && kill -9 $(lsof -ti:5173)
+  npm run dev
+  ```
+
+### AI button shows "Ollama offline"
+- Make sure Ollama is running: `ollama serve`
+- Verify: `curl http://localhost:11434` → should return `Ollama is running`
+- Make sure you've pulled at least one model: `ollama list`
+
+### AI responses are slow
+- Use a smaller model like `phi4-mini:3.8b` — select it in the model picker inside the AI drawer.
+- Larger models (14B+) need significant RAM; on machines with less than 16 GB, stick to 7–8B models.
 
 ### Feeds show an error when adding
-- Some websites actively block automated requests (403/429 errors). This is a limitation — those sites don't want RSS readers accessing them.
-- Try the direct RSS URL instead of the website URL (e.g., `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`).
+- Some sites block automated requests (403/429). Try the direct RSS URL instead of the homepage.
+- Example: `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`
 
-### Articles don't load full content
-- If extraction fails, you'll see "Feed content only" in the reader toolbar — this means the source site blocked extraction.
-- Use the **"Open Original"** link to read in a new tab.
+### Full article doesn't load ("Feed content only")
+- The source site blocked extraction. Click **Open** in the toolbar to read in a new tab.
 
 ### Need to reset everything
-- Go to **Settings** (⚙️ icon) → **Clear All Data** to wipe IndexedDB and start fresh.
+- **Settings → Clear All Data** wipes all IndexedDB data and starts fresh.
 
 ---
 
-## Future Roadmap
+## Changelog
 
-The architecture is designed for extensibility:
+### v1.1.0
+- **AI Assistant** — Summary and chat powered by local Ollama models; streaming responses; model picker; LinkedIn/X sharing from summary
+- **Excerpt view** — New article list view with title, snippet, and thumbnail
+- **Sidebar collapse** — Three-state sidebar: expanded → icon-only → hidden
+- **Settings expansion** — Font picker (4 options), accent color wheel (6 presets + custom hex), text color variants
+- **Reader enhancements** — Reading progress bar, zen/focus mode, expanded keyboard shortcuts (j/k/b/o/f)
+- **Share popover** — LinkedIn, X/Twitter, Email, Web Share API, Copy Link
+- **OPML import/export** — Full feed portability
 
-- **AI Summarization** — Add an `/api/ai/summarize` endpoint that pipes article content to a local LLM (e.g., Ollama with DeepSeek).
-- **Smart Daily Digest** — Scheduled task that generates a morning briefing from unread articles.
-- **Topic Clustering** — Group related articles using embeddings.
-- **Export/Import** — OPML import/export for feed portability.
-- **Mobile PWA** — Add a service worker for offline reading on mobile.
+### v1.0.0
+- Initial release: RSS reading, full-text extraction, folders, bookmarks, dark/light theme, resizable panels, reader settings
