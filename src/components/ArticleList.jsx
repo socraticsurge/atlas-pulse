@@ -217,7 +217,7 @@ export default function ArticleList({
         </div>
       )}
 
-      <div className="article-list-content">
+      <div className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
         {articles.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">
