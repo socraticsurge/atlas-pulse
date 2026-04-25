@@ -595,8 +595,9 @@ a:hover {
 /* Grid mode — portrait thumbnail cards */
 .article-list-content.content-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 280px;
+  gap: 12px;
   padding: 14px 14px 20px;
   align-content: start;
 }
@@ -636,7 +637,7 @@ a:hover {
 
 .card-image-wrap {
   width: 100%;
-  aspect-ratio: 4 / 3;
+  height: 168px;
   overflow: hidden;
   background: var(--bg-tertiary);
   flex-shrink: 0;
@@ -650,15 +651,28 @@ a:hover {
   transition: transform 350ms ease;
 }
 
+.card-image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
+  color: var(--text-tertiary);
+  font-size: 28px;
+}
+
 .article-card-grid:hover .card-image {
   transform: scale(1.05);
 }
 
 .card-body {
-  padding: 9px 10px 10px;
+  padding: 10px 12px 12px;
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .card-meta {
@@ -723,18 +737,17 @@ a:hover {
 }
 
 .card-title {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--text-primary);
-  margin-bottom: 0;
+  margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
   letter-spacing: -0.1px;
-  flex: 1;
 }
 
 .article-card-grid.read .card-title {
@@ -2183,6 +2196,20 @@ a:hover {
 
 .view-toggle-group .btn:last-child {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.view-toggle-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 /* ===== Excerpt Article View ===== */
