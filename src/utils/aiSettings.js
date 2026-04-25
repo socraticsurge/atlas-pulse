@@ -68,6 +68,7 @@ export const PERSONAS = [
 
 export const TONE_GROUPS = [
   {
+    id: 'voice',
     label: 'Voice',
     tones: [
       { id: 'neutral',     label: 'Neutral',      instruction: 'Be balanced, measured, and objective.' },
@@ -77,6 +78,7 @@ export const TONE_GROUPS = [
     ],
   },
   {
+    id: 'energy',
     label: 'Energy',
     tones: [
       { id: 'enthusiastic', label: 'Enthusiastic', instruction: 'Bring genuine energy and excitement — let your enthusiasm for the ideas come through.' },
@@ -86,6 +88,7 @@ export const TONE_GROUPS = [
     ],
   },
   {
+    id: 'angle',
     label: 'Angle',
     tones: [
       { id: 'empathetic',   label: 'Empathetic',   instruction: 'Lead with human impact and emotional resonance — ground abstract ideas in lived experience.' },
@@ -100,14 +103,21 @@ export const ALL_TONES = TONE_GROUPS.flatMap((g) => g.tones);
 
 export const DEFAULT_AI_SETTINGS = {
   personas: ['analyst'],
-  tone: 'neutral',
+  tone: { voice: 'neutral', energy: 'enthusiastic', angle: 'optimistic' },
   customInstructions: '',
 };
 
 export function getAISettings() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...DEFAULT_AI_SETTINGS, ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Backward compat: old format stored tone as a plain string
+      if (typeof parsed.tone === 'string') {
+        parsed.tone = { ...DEFAULT_AI_SETTINGS.tone };
+      }
+      return { ...DEFAULT_AI_SETTINGS, ...parsed };
+    }
   } catch {
     // ignore parse errors
   }
@@ -123,10 +133,20 @@ export function saveAISettings(settings) {
  * into a base system prompt string.
  */
 export function buildSystemPrompt(basePrompt, settings) {
-  const { personas = ['analyst'], tone = 'neutral', customInstructions = '' } = settings;
+  const {
+    personas = ['analyst'],
+    tone = DEFAULT_AI_SETTINGS.tone,
+    customInstructions = '',
+  } = settings;
 
   const selectedPersonas = PERSONAS.filter((p) => personas.includes(p.id));
-  const selectedTone = ALL_TONES.find((t) => t.id === tone) || ALL_TONES[0];
+
+  // One selection per group — combine all three instructions into a single tone directive
+  const activeToneInstructions = TONE_GROUPS.map((group) => {
+    const selectedId = tone[group.id] || group.tones[0].id;
+    const found = group.tones.find((t) => t.id === selectedId) || group.tones[0];
+    return found.instruction;
+  });
 
   let prompt = basePrompt;
 
@@ -139,7 +159,7 @@ export function buildSystemPrompt(basePrompt, settings) {
     });
   }
 
-  prompt += `\n\nTone: ${selectedTone.instruction}`;
+  prompt += `\n\nTone: ${activeToneInstructions.join(' ')}`;
 
   if (customInstructions.trim()) {
     prompt += `\n\nAdditional instructions from the reader: ${customInstructions.trim()}`;

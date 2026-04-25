@@ -12,7 +12,7 @@ import {
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
-import { PERSONAS, ALL_TONES, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
+import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 
@@ -226,7 +226,10 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
   // Read current settings for the config badge (re-reads each render when open)
   const activeSettings = getAISettings();
   const activePersonas = PERSONAS.filter((p) => activeSettings.personas.includes(p.id));
-  const activeTone = ALL_TONES.find((t) => t.id === activeSettings.tone);
+  const activeTones = TONE_GROUPS.map((group) => {
+    const selectedId = activeSettings.tone[group.id] || group.tones[0].id;
+    return group.tones.find((t) => t.id === selectedId) || group.tones[0];
+  });
 
   return (
     <div className="ai-drawer">
@@ -294,11 +297,11 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
             {p.emoji} {p.label}
           </span>
         ))}
-        {activeTone && (
-          <span className="ai-config-badge ai-config-tone-badge">
-            {activeTone.label}
+        {activeTones.map((t) => (
+          <span key={t.id} className="ai-config-badge ai-config-tone-badge">
+            {t.label}
           </span>
-        )}
+        ))}
         {activeSettings.customInstructions.trim() && (
           <span className="ai-config-badge ai-config-custom-badge" title={activeSettings.customInstructions}>
             + Custom
