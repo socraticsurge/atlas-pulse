@@ -8,9 +8,10 @@ import {
   HiOutlineArrowPath,
   HiOutlineExclamationCircle,
   HiOutlineChevronDown,
+  HiOutlineBookmarkSquare,
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
-import { fetchAIModels, streamChat } from '../utils/api.js';
+import { fetchAIModels, streamChat, saveSummary } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 
@@ -38,7 +39,7 @@ const BASE_SUMMARY = `You are an editorial reading assistant. Read the article a
 
 const BASE_CHAT = `You are a reading assistant. Answer questions about the article clearly and concisely. Stay grounded in the article content. If something is not covered in the article, say so briefly.`;
 
-export default function AIDrawer({ isOpen, onClose, article, extractedContent }) {
+export default function AIDrawer({ isOpen, onClose, article, extractedContent, feedTitle }) {
   const [tab, setTab] = useState('summary'); // 'summary' | 'chat'
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
@@ -50,6 +51,8 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
   const [summarizing, setSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [summaryCopied, setSummaryCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   // Chat state
   const [messages, setMessages] = useState([]); // [{role, content}]
@@ -77,6 +80,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
     setSummary('');
     setSummaryError(null);
     setSummarizing(false);
+    setSaved(false);
     setMessages([]);
     setChatError(null);
     setChatLoading(false);
@@ -216,6 +220,33 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
       'width=600,height=400,noopener'
     );
   };
+
+  const handleSaveSummary = useCallback(async () => {
+    if (!summary || saving) return;
+    setSaving(true);
+    const settings = getAISettings();
+    try {
+      await saveSummary({
+        article_title: article?.title || null,
+        article_url: article?.link || null,
+        article_author: article?.author || null,
+        article_source: feedTitle || null,
+        article_published_at: article?.publishedAt || null,
+        summary_text: summary,
+        ai_model: selectedModel,
+        ai_personas: settings.personas,
+        ai_tone_voice: settings.tone?.voice || null,
+        ai_tone_energy: settings.tone?.energy || null,
+        ai_tone_angle: settings.tone?.angle || null,
+        ai_custom_instructions: settings.customInstructions || null,
+      });
+      setSaved(true);
+    } catch (err) {
+      console.error('Failed to save summary:', err);
+    } finally {
+      setSaving(false);
+    }
+  }, [summary, saving, article, feedTitle, selectedModel]);
 
   if (!isOpen) return null;
 
@@ -361,6 +392,22 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent })
                     </button>
                     <button className="btn btn-ghost btn-sm" onClick={shareToTwitter} title="Share to X / Twitter">
                       Share on X
+                    </button>
+                    <div className="ai-summary-actions-divider" />
+                    <button
+                      className={`btn btn-sm ${saved ? 'btn-ghost' : 'btn-primary'} ai-save-btn`}
+                      onClick={handleSaveSummary}
+                      disabled={saving || saved}
+                      title={saved ? 'Saved to library' : 'Save to Summaries library'}
+                    >
+                      {saving ? (
+                        <span className="spinner" style={{ width: 12, height: 12 }} />
+                      ) : saved ? (
+                        <HiOutlineCheck style={{ color: 'var(--accent)' }} />
+                      ) : (
+                        <HiOutlineBookmarkSquare />
+                      )}
+                      {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
                     </button>
                   </>
                 )}

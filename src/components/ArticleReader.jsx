@@ -399,6 +399,7 @@ export default function ArticleReader({
           onClose={() => setShowAI(false)}
           article={article}
           extractedContent={extractedContent}
+          feedTitle={feed?.title || null}
         />
 
         <div className="reader-content" ref={contentRef} style={readerCSSVars}>

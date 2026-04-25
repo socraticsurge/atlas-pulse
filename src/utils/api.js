@@ -52,6 +52,41 @@ export async function extractArticle(url) {
   return res.json();
 }
 
+export async function saveSummary(data) {
+  const res = await fetch(`${API_BASE}/summaries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to save' }));
+    throw new Error(err.error || 'Failed to save summary');
+  }
+  return res.json();
+}
+
+export async function fetchSummaries() {
+  const res = await fetch(`${API_BASE}/summaries`);
+  if (!res.ok) throw new Error('Failed to fetch summaries');
+  return res.json();
+}
+
+export async function deleteSummary(id) {
+  const res = await fetch(`${API_BASE}/summaries/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete summary');
+  return res.json();
+}
+
+export function getSummariesExportURL() {
+  return `${API_BASE}/summaries/export`;
+}
+
+export async function fetchDBPath() {
+  const res = await fetch(`${API_BASE}/summaries/db-path`);
+  if (!res.ok) throw new Error('Failed to get DB path');
+  return res.json();
+}
+
 export async function fetchAIModels() {
   const res = await fetch(`${API_BASE}/ai/models`);
   if (!res.ok) throw new Error('Could not reach Ollama');
