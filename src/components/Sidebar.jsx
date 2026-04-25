@@ -251,7 +251,7 @@ export default function Sidebar({
           <HiOutlineBars3 />
         </button>
         <div className="sidebar-logo">
-          <img src="/atlas-pulse-icon.png" alt="Atlas Pulse" className="sidebar-logo-img" />
+          <img src="/atlas-pulse-icon.svg" alt="Atlas Pulse" className="sidebar-logo-img" />
           <h1>Atlas Pulse</h1>
         </div>
         <div className="sidebar-header-actions">

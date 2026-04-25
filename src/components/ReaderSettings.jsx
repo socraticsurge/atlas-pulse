@@ -2,9 +2,17 @@ import { useState, useRef, useEffect } from 'react';
 import { HiOutlineMinusSmall, HiOutlinePlusSmall } from 'react-icons/hi2';
 
 const FONT_FAMILIES = [
-  { id: 'sans', label: 'Sans Serif', value: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" },
-  { id: 'serif', label: 'Serif', value: "'Merriweather', Georgia, 'Times New Roman', serif" },
-  { id: 'mono', label: 'Monospace', value: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace" },
+  { id: 'sans',         label: 'Inter',         value: "'Inter', -apple-system, sans-serif" },
+  { id: 'poppins',      label: 'Poppins',        value: "'Poppins', sans-serif" },
+  { id: 'lato',         label: 'Lato',           value: "'Lato', sans-serif" },
+  { id: 'nunito',       label: 'Nunito',         value: "'Nunito', sans-serif" },
+  { id: 'merriweather', label: 'Merriweather',   value: "'Merriweather', Georgia, serif" },
+  { id: 'garamond',     label: 'Garamond',       value: "'EB Garamond', Garamond, serif" },
+  { id: 'playfair',     label: 'Playfair',       value: "'Playfair Display', Georgia, serif" },
+  { id: 'source-serif', label: 'Source Serif',   value: "'Source Serif 4', Georgia, serif" },
+  { id: 'georgia',      label: 'Georgia',        value: "Georgia, 'Times New Roman', serif" },
+  { id: 'times',        label: 'Times NR',       value: "'Times New Roman', Times, serif" },
+  { id: 'mono',         label: 'Monospace',      value: "'JetBrains Mono', monospace" },
 ];
 
 const LINE_HEIGHTS = [
@@ -91,10 +99,7 @@ export default function ReaderSettings({ settings, onSettingsChange }) {
                   key={f.id}
                   className={`reader-chip ${settings.fontFamily === f.id ? 'active' : ''}`}
                   onClick={() => updateSetting('fontFamily', f.id)}
-                  style={{
-                    fontFamily: f.id === 'sans' ? 'Inter, sans-serif' :
-                      f.id === 'serif' ? 'Georgia, serif' : 'monospace'
-                  }}
+                  style={{ fontFamily: f.value }}
                 >
                   {f.label}
                 </button>
