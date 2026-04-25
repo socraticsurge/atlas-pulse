@@ -15,6 +15,7 @@ import {
   HiOutlineArrowsPointingOut,
   HiOutlineArrowsPointingIn,
   HiOutlineEnvelope,
+  HiOutlineSparkles,
 } from 'react-icons/hi2';
 import { SiX } from 'react-icons/si';
 import { FaLinkedinIn } from 'react-icons/fa';
@@ -24,6 +25,7 @@ import { formatDate, estimateReadTime } from '../utils/helpers.js';
 import * as api from '../utils/api.js';
 import ReaderSettings, { getReaderSettings, getReaderCSSVars } from './ReaderSettings.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
+import AIDrawer from './AIDrawer.jsx';
 
 export default function ArticleReader({
   article,
@@ -46,6 +48,7 @@ export default function ArticleReader({
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [showAI, setShowAI] = useState(false);
 
   const contentRef = useRef(null);
   const shareMenuRef = useRef(null);
@@ -323,6 +326,15 @@ export default function ArticleReader({
           </div>
 
           <div className="reader-toolbar-right">
+            {/* AI Assistant */}
+            <button
+              className={`btn btn-ghost btn-sm ${showAI ? 'active' : ''}`}
+              onClick={() => setShowAI((s) => !s)}
+              title="AI Assistant — summary & chat"
+            >
+              <HiOutlineSparkles /> AI
+            </button>
+
             {/* Zen / focus mode */}
             <button
               className={`btn btn-ghost btn-icon ${zenMode ? 'active' : ''}`}
@@ -381,6 +393,13 @@ export default function ArticleReader({
             </a>
           </div>
         </div>
+
+        <AIDrawer
+          isOpen={showAI}
+          onClose={() => setShowAI(false)}
+          article={article}
+          extractedContent={extractedContent}
+        />
 
         <div className="reader-content" ref={contentRef} style={readerCSSVars}>
           <h1 className="article-title">{article.title}</h1>
