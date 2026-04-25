@@ -262,8 +262,10 @@ export default function SettingsPanel({
                       {group.tones.map((t) => (
                         <button
                           key={t.id}
-                          className={`tone-chip ${aiSettings.tone === t.id ? 'active' : ''}`}
-                          onClick={() => updateAISettings({ tone: t.id })}
+                          className={`tone-chip ${aiSettings.tone[group.id] === t.id ? 'active' : ''}`}
+                          onClick={() =>
+                            updateAISettings({ tone: { ...aiSettings.tone, [group.id]: t.id } })
+                          }
                           title={t.instruction}
                         >
                           {t.label}
