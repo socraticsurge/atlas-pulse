@@ -14,6 +14,7 @@ import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat, saveSummary } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
+import OllamaSetup from './OllamaSetup.jsx';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 
@@ -39,15 +40,51 @@ const BASE_SUMMARY = `You are an editorial reading assistant. Read the article a
 
 const BASE_CHAT = `You are a reading assistant. Answer questions about the article clearly and concisely. Stay grounded in the article content. If something is not covered in the article, say so briefly.`;
 
+// Mapping for analysis badge display
+const ANALYSIS_LABELS = {
+  sentiment:   { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative', mixed: '🔀 Mixed' },
+  urgency:     { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' },
+  frame:       { conflict: '⚔️ Conflict', human_interest: '👤 Human Interest', economic: '📊 Economic', analytical: '🔬 Analytical', moral: '⚖️ Moral', informational: '📰 Info' },
+  tone:        { alarming: '🚨 Alarming', cautionary: '⚠️ Cautionary', neutral: '〰️ Neutral', optimistic: '✨ Optimistic', critical: '💭 Critical', satirical: '🎭 Satirical' },
+  depth:       { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' },
+  subjectivity:{ objective: '🎯 Objective', balanced: '⚖️ Balanced', opinion: '💬 Opinion' },
+};
+
+function AnalysisBadges({ aiAnalysis }) {
+  if (!aiAnalysis) return null;
+  let analysis;
+  try { analysis = typeof aiAnalysis === 'string' ? JSON.parse(aiAnalysis) : aiAnalysis; }
+  catch { return null; }
+
+  const badges = [];
+  for (const [dim, valueMap] of Object.entries(ANALYSIS_LABELS)) {
+    const val = analysis[dim];
+    if (val && valueMap[val]) badges.push(valueMap[val]);
+  }
+  if (analysis.topics?.length) {
+    analysis.topics.slice(0, 3).forEach(t => badges.push(`# ${t}`));
+  }
+
+  if (badges.length === 0) return null;
+  return (
+    <div className="ai-analysis-badges">
+      {badges.map((b, i) => (
+        <span key={i} className="ai-analysis-badge">{b}</span>
+      ))}
+    </div>
+  );
+}
+
 export default function AIDrawer({ isOpen, onClose, article, extractedContent, feedTitle }) {
-  const [tab, setTab] = useState('summary'); // 'summary' | 'chat'
+  const [tab, setTab] = useState('summary');
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
-  const [modelsError, setModelsError] = useState(null);
+  const [ollamaReady, setOllamaReady] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
 
   // Summary state
   const [summary, setSummary] = useState('');
+  const [isBatchSummary, setIsBatchSummary] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [summaryCopied, setSummaryCopied] = useState(false);
@@ -55,7 +92,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const [saved, setSaved] = useState(false);
 
   // Chat state
-  const [messages, setMessages] = useState([]); // [{role, content}]
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState(null);
@@ -63,21 +100,25 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const chatEndRef = useRef(null);
   const inputRef = useRef(null);
   const modelPickerRef = useRef(null);
-  const abortRef = useRef(null); // tracks whether current stream should stop
+  const abortRef = useRef(null);
 
-  // Load models on mount
-  useEffect(() => {
-    fetchAIModels()
-      .then(({ models: list }) => {
-        setModels(list);
-        setSelectedModel(pickDefaultModel(list));
-      })
-      .catch((err) => setModelsError(err.message));
+  // Load models
+  const loadModels = useCallback((modelList) => {
+    setModels(modelList);
+    setSelectedModel(prev => prev || pickDefaultModel(modelList));
+    setOllamaReady(modelList.length > 0);
   }, []);
 
-  // Reset when article changes
+  useEffect(() => {
+    fetchAIModels()
+      .then(({ models: list }) => loadModels(list))
+      .catch(() => setOllamaReady(false));
+  }, [loadModels]);
+
+  // When article changes: reset summary state, then pre-populate from batch if available
   useEffect(() => {
     setSummary('');
+    setIsBatchSummary(false);
     setSummaryError(null);
     setSummarizing(false);
     setSaved(false);
@@ -86,19 +127,24 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     setChatLoading(false);
   }, [article?.id]);
 
-  // Scroll chat to bottom on new messages
+  // Pre-populate from batch-generated summary (runs after the reset above)
+  useEffect(() => {
+    if (article?.aiSummary) {
+      setSummary(article.aiSummary);
+      setIsBatchSummary(true);
+    }
+  }, [article?.id, article?.aiSummary]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Focus input when switching to chat tab
   useEffect(() => {
     if (tab === 'chat' && isOpen) {
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [tab, isOpen]);
 
-  // Close model picker on outside click
   useEffect(() => {
     if (!showModelPicker) return;
     const handler = (e) => {
@@ -114,6 +160,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     if (!article || !selectedModel || summarizing) return;
     setSummarizing(true);
     setSummary('');
+    setIsBatchSummary(false);
     setSummaryError(null);
     abortRef.current = false;
 
@@ -155,7 +202,6 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     const systemMsg = { role: 'system', content: `${systemPrompt}\n\nARTICLE:\n${articleContext}` };
     const ollamaMsgs = [systemMsg, ...nextMessages];
 
-    // Add placeholder for streaming assistant reply
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
     try {
@@ -172,7 +218,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
       }
     } catch (err) {
       setChatError(err.message);
-      setMessages((prev) => prev.slice(0, -1)); // remove empty assistant placeholder
+      setMessages((prev) => prev.slice(0, -1));
     } finally {
       setChatLoading(false);
     }
@@ -203,22 +249,14 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const shareToLinkedIn = () => {
     if (!article?.link) return;
     const url = encodeURIComponent(article.link);
-    window.open(
-      `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
-      '_blank',
-      'width=600,height=600,noopener'
-    );
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank', 'width=600,height=600,noopener');
   };
 
   const shareToTwitter = () => {
     if (!article?.link) return;
     const url = encodeURIComponent(article.link);
     const text = encodeURIComponent(summary ? summary.slice(0, 200) + '…' : article.title || '');
-    window.open(
-      `https://x.com/intent/tweet?url=${url}&text=${text}`,
-      '_blank',
-      'width=600,height=400,noopener'
-    );
+    window.open(`https://x.com/intent/tweet?url=${url}&text=${text}`, '_blank', 'width=600,height=400,noopener');
   };
 
   const handleSaveSummary = useCallback(async () => {
@@ -254,7 +292,6 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     ? selectedModel.split(':')[0].replace(/-/g, ' ')
     : 'No model';
 
-  // Read current settings for the config badge (re-reads each render when open)
   const activeSettings = getAISettings();
   const activePersonas = PERSONAS.filter((p) => activeSettings.personas.includes(p.id));
   const activeTones = TONE_GROUPS.map((group) => {
@@ -272,32 +309,32 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         </div>
 
         <div className="ai-drawer-header-right">
-          {/* Model picker */}
-          <div className="ai-model-picker" ref={modelPickerRef}>
-            <button
-              className="ai-model-btn"
-              onClick={() => setShowModelPicker((s) => !s)}
-              disabled={!!modelsError}
-              title="Select model"
-            >
-              {modelsError ? 'Ollama offline' : modelLabel}
-              <HiOutlineChevronDown className={showModelPicker ? 'rotated' : ''} />
-            </button>
-            {showModelPicker && models.length > 0 && (
-              <div className="ai-model-dropdown">
-                {models.map((m) => (
-                  <button
-                    key={m.name}
-                    className={`ai-model-option ${m.name === selectedModel ? 'active' : ''}`}
-                    onClick={() => { setSelectedModel(m.name); setShowModelPicker(false); }}
-                  >
-                    <span className="ai-model-option-name">{m.name.split(':')[0]}</span>
-                    <span className="ai-model-option-meta">{m.parameterSize}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {ollamaReady && (
+            <div className="ai-model-picker" ref={modelPickerRef}>
+              <button
+                className="ai-model-btn"
+                onClick={() => setShowModelPicker((s) => !s)}
+                title="Select model"
+              >
+                {modelLabel}
+                <HiOutlineChevronDown className={showModelPicker ? 'rotated' : ''} />
+              </button>
+              {showModelPicker && models.length > 0 && (
+                <div className="ai-model-dropdown">
+                  {models.map((m) => (
+                    <button
+                      key={m.name}
+                      className={`ai-model-option ${m.name === selectedModel ? 'active' : ''}`}
+                      onClick={() => { setSelectedModel(m.name); setShowModelPicker(false); }}
+                    >
+                      <span className="ai-model-option-name">{m.name.split(':')[0]}</span>
+                      <span className="ai-model-option-meta">{m.parameterSize}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} title="Close AI panel">
             <HiOutlineXMark />
@@ -305,188 +342,198 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div className="ai-drawer-tabs">
-        <button
-          className={`ai-tab ${tab === 'summary' ? 'active' : ''}`}
-          onClick={() => setTab('summary')}
-        >
-          Summary
-        </button>
-        <button
-          className={`ai-tab ${tab === 'chat' ? 'active' : ''}`}
-          onClick={() => setTab('chat')}
-        >
-          Chat
-        </button>
-      </div>
-
-      {/* Active persona + tone badge strip */}
-      <div className="ai-config-strip">
-        {activePersonas.map((p) => (
-          <span key={p.id} className="ai-config-badge">
-            {p.emoji} {p.label}
-          </span>
-        ))}
-        {activeTones.map((t) => (
-          <span key={t.id} className="ai-config-badge ai-config-tone-badge">
-            {t.label}
-          </span>
-        ))}
-        {activeSettings.customInstructions.trim() && (
-          <span className="ai-config-badge ai-config-custom-badge" title={activeSettings.customInstructions}>
-            + Custom
-          </span>
-        )}
-      </div>
-
-      {/* ── Summary Tab ── */}
-      {tab === 'summary' && (
-        <div className="ai-drawer-body">
-          {!summary && !summarizing && !summaryError && (
-            <div className="ai-summary-prompt">
-              <p className="ai-summary-hint">
-                Generate a concise summary of this article, ready to share.
-              </p>
-              <button
-                className="btn btn-primary ai-generate-btn"
-                onClick={generateSummary}
-                disabled={!selectedModel || !!modelsError}
-              >
-                <HiOutlineSparkles /> Generate Summary
-              </button>
-            </div>
-          )}
-
-          {summaryError && (
-            <div className="ai-error">
-              <HiOutlineExclamationCircle />
-              <span>{summaryError}</span>
-              <button className="btn btn-ghost btn-sm" onClick={generateSummary}>Retry</button>
-            </div>
-          )}
-
-          {(summary || summarizing) && (
-            <div className="ai-summary-result">
-              <div className="ai-summary-text">
-                {summary || <span className="ai-typing-cursor" />}
-                {summarizing && <span className="ai-typing-cursor" />}
-              </div>
-
-              <div className="ai-summary-actions">
-                {summarizing ? (
-                  <button className="btn btn-ghost btn-sm" onClick={stopGeneration}>
-                    Stop
-                  </button>
-                ) : (
-                  <>
-                    <button className="btn btn-ghost btn-sm" onClick={generateSummary} title="Regenerate">
-                      <HiOutlineArrowPath /> Regenerate
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={copySummary} title="Copy summary">
-                      {summaryCopied ? <HiOutlineCheck style={{ color: 'var(--accent)' }} /> : <HiOutlineClipboardDocument />}
-                      {summaryCopied ? 'Copied!' : 'Copy'}
-                    </button>
-                    <button className="btn btn-ghost btn-sm ai-linkedin-btn" onClick={shareToLinkedIn} title="Share to LinkedIn">
-                      <FaLinkedinIn style={{ color: '#0a66c2' }} /> LinkedIn
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={shareToTwitter} title="Share to X / Twitter">
-                      Share on X
-                    </button>
-                    <div className="ai-summary-actions-divider" />
-                    <button
-                      className={`btn btn-sm ${saved ? 'btn-ghost' : 'btn-primary'} ai-save-btn`}
-                      onClick={handleSaveSummary}
-                      disabled={saving || saved}
-                      title={saved ? 'Saved to library' : 'Save to Summaries library'}
-                    >
-                      {saving ? (
-                        <span className="spinner" style={{ width: 12, height: 12 }} />
-                      ) : saved ? (
-                        <HiOutlineCheck style={{ color: 'var(--accent)' }} />
-                      ) : (
-                        <HiOutlineBookmarkSquare />
-                      )}
-                      {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+      {/* Ollama setup gate — shown when Ollama isn't ready */}
+      {!ollamaReady && (
+        <div className="ai-drawer-setup">
+          <OllamaSetup compact onReady={loadModels} />
         </div>
       )}
 
-      {/* ── Chat Tab ── */}
-      {tab === 'chat' && (
-        <div className="ai-chat-container">
-          <div className="ai-chat-messages">
-            {messages.length === 0 && (
-              <div className="ai-chat-empty">
-                <HiOutlineSparkles />
-                <p>Ask anything about this article</p>
-                <div className="ai-chat-suggestions">
-                  {['What are the key takeaways?', 'Explain this in simple terms', 'What\'s the author\'s main argument?'].map((s) => (
-                    <button
-                      key={s}
-                      className="ai-suggestion-chip"
-                      onClick={() => { setInput(s); inputRef.current?.focus(); }}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {messages.map((msg, i) => (
-              <div key={i} className={`ai-message ai-message-${msg.role}`}>
-                {msg.role === 'assistant' && (
-                  <div className="ai-message-avatar">
-                    <HiOutlineSparkles />
-                  </div>
-                )}
-                <div className="ai-message-bubble">
-                  {msg.content || (chatLoading && i === messages.length - 1
-                    ? <span className="ai-typing-cursor" />
-                    : null)}
-                </div>
-              </div>
-            ))}
-
-            {chatError && (
-              <div className="ai-error">
-                <HiOutlineExclamationCircle />
-                <span>{chatError}</span>
-              </div>
-            )}
-
-            <div ref={chatEndRef} />
-          </div>
-
-          <div className="ai-chat-input-row">
-            <textarea
-              ref={inputRef}
-              className="ai-chat-input"
-              placeholder="Ask about this article…"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={1}
-              disabled={chatLoading}
-            />
-            <button
-              className="btn btn-primary ai-send-btn"
-              onClick={chatLoading ? stopGeneration : sendMessage}
-              disabled={!chatLoading && !input.trim()}
-              title={chatLoading ? 'Stop' : 'Send'}
-            >
-              {chatLoading
-                ? <HiOutlineXMark />
-                : <HiOutlinePaperAirplane />}
+      {/* Normal drawer content — shown only when Ollama is ready */}
+      {ollamaReady && (
+        <>
+          {/* Tab bar */}
+          <div className="ai-drawer-tabs">
+            <button className={`ai-tab ${tab === 'summary' ? 'active' : ''}`} onClick={() => setTab('summary')}>
+              Summary
+            </button>
+            <button className={`ai-tab ${tab === 'chat' ? 'active' : ''}`} onClick={() => setTab('chat')}>
+              Chat
             </button>
           </div>
-        </div>
+
+          {/* Active persona + tone badge strip */}
+          <div className="ai-config-strip">
+            {activePersonas.map((p) => (
+              <span key={p.id} className="ai-config-badge">{p.emoji} {p.label}</span>
+            ))}
+            {activeTones.map((t) => (
+              <span key={t.id} className="ai-config-badge ai-config-tone-badge">{t.label}</span>
+            ))}
+            {activeSettings.customInstructions.trim() && (
+              <span className="ai-config-badge ai-config-custom-badge" title={activeSettings.customInstructions}>
+                + Custom
+              </span>
+            )}
+          </div>
+
+          {/* ── Summary Tab ── */}
+          {tab === 'summary' && (
+            <div className="ai-drawer-body">
+              {!summary && !summarizing && !summaryError && article?.aiStatus === 'queued' && (
+                <div className="ai-batch-pending">
+                  <span className="spinner" style={{ width: 14, height: 14 }} />
+                  <span>AI analysis queued — will appear here shortly</span>
+                </div>
+              )}
+
+              {!summary && !summarizing && !summaryError && article?.aiStatus !== 'queued' && (
+                <div className="ai-summary-prompt">
+                  <p className="ai-summary-hint">Generate a concise summary of this article, ready to share.</p>
+                  <button
+                    className="btn btn-primary ai-generate-btn"
+                    onClick={generateSummary}
+                    disabled={!selectedModel}
+                  >
+                    <HiOutlineSparkles /> Generate Summary
+                  </button>
+                </div>
+              )}
+
+              {summaryError && (
+                <div className="ai-error">
+                  <HiOutlineExclamationCircle />
+                  <span>{summaryError}</span>
+                  <button className="btn btn-ghost btn-sm" onClick={generateSummary}>Retry</button>
+                </div>
+              )}
+
+              {(summary || summarizing) && (
+                <div className="ai-summary-result">
+                  {/* Analysis badges from batch processing */}
+                  {isBatchSummary && article?.aiAnalysis && (
+                    <AnalysisBadges aiAnalysis={article.aiAnalysis} />
+                  )}
+
+                  {isBatchSummary && (
+                    <div className="ai-batch-label">Batch summary · <span>regenerate for custom persona</span></div>
+                  )}
+
+                  <div className="ai-summary-text">
+                    {summary || <span className="ai-typing-cursor" />}
+                    {summarizing && <span className="ai-typing-cursor" />}
+                  </div>
+
+                  <div className="ai-summary-actions">
+                    {summarizing ? (
+                      <button className="btn btn-ghost btn-sm" onClick={stopGeneration}>Stop</button>
+                    ) : (
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={generateSummary} title="Regenerate">
+                          <HiOutlineArrowPath /> Regenerate
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={copySummary} title="Copy summary">
+                          {summaryCopied ? <HiOutlineCheck style={{ color: 'var(--accent)' }} /> : <HiOutlineClipboardDocument />}
+                          {summaryCopied ? 'Copied!' : 'Copy'}
+                        </button>
+                        <button className="btn btn-ghost btn-sm ai-linkedin-btn" onClick={shareToLinkedIn}>
+                          <FaLinkedinIn style={{ color: '#0a66c2' }} /> LinkedIn
+                        </button>
+                        <button className="btn btn-ghost btn-sm" onClick={shareToTwitter}>
+                          Share on X
+                        </button>
+                        <div className="ai-summary-actions-divider" />
+                        <button
+                          className={`btn btn-sm ${saved ? 'btn-ghost' : 'btn-primary'} ai-save-btn`}
+                          onClick={handleSaveSummary}
+                          disabled={saving || saved}
+                          title={saved ? 'Saved to library' : 'Save to Summaries library'}
+                        >
+                          {saving ? (
+                            <span className="spinner" style={{ width: 12, height: 12 }} />
+                          ) : saved ? (
+                            <HiOutlineCheck style={{ color: 'var(--accent)' }} />
+                          ) : (
+                            <HiOutlineBookmarkSquare />
+                          )}
+                          {saving ? 'Saving…' : saved ? 'Saved' : 'Save'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Chat Tab ── */}
+          {tab === 'chat' && (
+            <div className="ai-chat-container">
+              <div className="ai-chat-messages">
+                {messages.length === 0 && (
+                  <div className="ai-chat-empty">
+                    <HiOutlineSparkles />
+                    <p>Ask anything about this article</p>
+                    <div className="ai-chat-suggestions">
+                      {['What are the key takeaways?', 'Explain this in simple terms', "What's the author's main argument?"].map((s) => (
+                        <button
+                          key={s}
+                          className="ai-suggestion-chip"
+                          onClick={() => { setInput(s); inputRef.current?.focus(); }}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {messages.map((msg, i) => (
+                  <div key={i} className={`ai-message ai-message-${msg.role}`}>
+                    {msg.role === 'assistant' && (
+                      <div className="ai-message-avatar"><HiOutlineSparkles /></div>
+                    )}
+                    <div className="ai-message-bubble">
+                      {msg.content || (chatLoading && i === messages.length - 1
+                        ? <span className="ai-typing-cursor" />
+                        : null)}
+                    </div>
+                  </div>
+                ))}
+
+                {chatError && (
+                  <div className="ai-error">
+                    <HiOutlineExclamationCircle />
+                    <span>{chatError}</span>
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+
+              <div className="ai-chat-input-row">
+                <textarea
+                  ref={inputRef}
+                  className="ai-chat-input"
+                  placeholder="Ask about this article…"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={1}
+                  disabled={chatLoading}
+                />
+                <button
+                  className="btn btn-primary ai-send-btn"
+                  onClick={chatLoading ? stopGeneration : sendMessage}
+                  disabled={!chatLoading && !input.trim()}
+                  title={chatLoading ? 'Stop' : 'Send'}
+                >
+                  {chatLoading ? <HiOutlineXMark /> : <HiOutlinePaperAirplane />}
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

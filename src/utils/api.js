@@ -1,5 +1,53 @@
 const API_BASE = '/api';
 
+// ── Ollama management ────────────────────────────────────────────────────────
+
+export async function fetchOllamaStatus() {
+  const res = await fetch(`${API_BASE}/ollama/status`);
+  if (!res.ok) throw new Error('Could not reach server');
+  return res.json(); // { installed, running, models[] }
+}
+
+export async function startOllama() {
+  const res = await fetch(`${API_BASE}/ollama/start`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to start Ollama');
+  return res.json();
+}
+
+/**
+ * Streams ollama pull progress. Calls onProgress({ status, completed, total }) for each chunk.
+ * @param {string} model
+ * @param {(progress: object) => void} onProgress
+ */
+export async function streamModelPull(model, onProgress) {
+  const res = await fetch(`${API_BASE}/ollama/pull`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model }),
+  });
+  if (!res.ok) throw new Error('Pull request failed');
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const chunk = JSON.parse(line);
+        onProgress(chunk);
+        if (chunk.status === 'success') return;
+      } catch { /* ignore malformed lines */ }
+    }
+  }
+}
+
 export async function parseFeed(url) {
   const res = await fetch(`${API_BASE}/feeds/parse`, {
     method: 'POST',

@@ -324,7 +324,25 @@ export const POPULAR_FEEDS = [
   },
 ];
 
-export const DEFAULT_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes
+export const DEFAULT_REFRESH_INTERVAL = 30 * 60 * 1000; // 30 minutes (legacy, kept for fallback)
+
+export const AUTO_REFRESH_OPTIONS = [
+  { label: 'Off',        value: 0   },
+  { label: '15 minutes', value: 15  },
+  { label: '30 minutes', value: 30  },
+  { label: '1 hour',     value: 60  },
+  { label: '2 hours',    value: 120 },
+];
+
+export function getAutoRefreshMinutes() {
+  const stored = localStorage.getItem('atlas-pulse-auto-refresh');
+  if (stored !== null) return parseInt(stored, 10);
+  return 30; // default
+}
+
+export function saveAutoRefreshMinutes(minutes) {
+  localStorage.setItem('atlas-pulse-auto-refresh', String(minutes));
+}
 
 export const VIEW_TYPES = {
   ALL: 'all',
@@ -332,4 +350,5 @@ export const VIEW_TYPES = {
   SAVED: 'saved',
   FEED: 'feed',
   FOLDER: 'folder',
+  LIBRARY: 'library',
 };

@@ -3,6 +3,48 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/database.js';
 import * as api from '../utils/api.js';
 import { getFaviconUrl } from '../utils/helpers.js';
+import { getBatchSettings } from '../utils/batchSettings.js';
+
+async function queueArticlesForBatch(feedId) {
+  const settings = getBatchSettings();
+  if (!settings.enabled) return;
+
+  // Check scope
+  const [scopeType, scopeIdStr] = settings.scope.split(':');
+  const scopeId = scopeIdStr ? parseInt(scopeIdStr, 10) : null;
+
+  let shouldQueue = false;
+  if (scopeType === 'all') {
+    shouldQueue = true;
+  } else if (scopeType === 'feed' && scopeId === feedId) {
+    shouldQueue = true;
+  } else if (scopeType === 'folder' && scopeId !== null) {
+    const feed = await db.feeds.get(feedId);
+    shouldQueue = feed?.folderId === scopeId;
+  }
+
+  if (!shouldQueue) return;
+
+  // Respect maxPerCycle — don't over-queue
+  const alreadyQueued = await db.articles.where('aiStatus').equals('queued').count();
+  const remaining = settings.maxPerCycle - alreadyQueued;
+  if (remaining <= 0) return;
+
+  // Find newest unprocessed articles for this feed
+  const candidates = await db.articles
+    .where('feedId').equals(feedId)
+    .toArray()
+    .then(arr =>
+      arr
+        .filter(a => !a.aiStatus || a.aiStatus === 'none')
+        .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+        .slice(0, remaining)
+    );
+
+  if (candidates.length === 0) return;
+  const ids = candidates.map(a => a.id);
+  await db.articles.where('id').anyOf(ids).modify({ aiStatus: 'queued' });
+}
 
 /**
  * Hook for feed CRUD operations and live queries.
@@ -143,6 +185,7 @@ export function useFeeds() {
 
       if (newArticles.length > 0) {
         await db.articles.bulkAdd(newArticles).catch(() => {});
+        await queueArticlesForBatch(feedId);
       }
 
       await db.feeds.update(feedId, {
