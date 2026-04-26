@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, Component } from 'react';
 import Sidebar from './components/Sidebar.jsx';
 import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
@@ -11,6 +11,30 @@ import { useFolders } from './hooks/useFolders.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 import { getAutoRefreshMinutes } from './utils/constants.js';
 import { fetchSummaries } from './utils/api.js';
+
+class ReaderErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err) { console.error('[ArticleReader]', err); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="article-reader-panel visible" style={{ width: this.props.width }}>
+          <div className="empty-state" style={{ padding: '60px 32px', textAlign: 'center' }}>
+            <p style={{ marginBottom: 16 }}>Something went wrong displaying this article.</p>
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => { this.setState({ hasError: false }); this.props.onClose(); }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 400;
@@ -310,19 +334,21 @@ function App() {
       )}
 
       {!isLibraryView && selectedArticle && (
-        <ArticleReader
-          article={selectedArticle}
-          isOpen={!!selectedArticle}
-          isModalOpen={showSettings || showAddFeed}
-          onClose={() => setSelectedArticle(null)}
-          onNavigate={handleNavigateArticle}
-          hasPrev={hasPrev}
-          hasNext={hasNext}
-          currentIndex={currentArticleIndex}
-          totalCount={visibleArticles.length}
-          width={readerWidth}
-          onResize={handleReaderResize}
-        />
+        <ReaderErrorBoundary width={readerWidth} onClose={() => setSelectedArticle(null)}>
+          <ArticleReader
+            article={selectedArticle}
+            isOpen={!!selectedArticle}
+            isModalOpen={showSettings || showAddFeed}
+            onClose={() => setSelectedArticle(null)}
+            onNavigate={handleNavigateArticle}
+            hasPrev={hasPrev}
+            hasNext={hasNext}
+            currentIndex={currentArticleIndex}
+            totalCount={visibleArticles.length}
+            width={readerWidth}
+            onResize={handleReaderResize}
+          />
+        </ReaderErrorBoundary>
       )}
 
       <AddFeedModal

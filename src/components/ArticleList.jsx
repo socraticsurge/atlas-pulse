@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineCheckCircle,
@@ -154,10 +154,16 @@ export default function ArticleList({
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
   const hasAnyAnalysis = articles.some(a => a.aiAnalysis);
 
-  // Notify parent of the unfiltered article list (for navigation)
+  // Notify parent of the filtered article list (for prev/next navigation).
+  // Debounced so rapid search keystrokes don't re-render App on every character.
+  const notifyTimerRef = useRef(null);
   useEffect(() => {
-    if (onArticlesLoaded) onArticlesLoaded(articles);
-  }, [articles, onArticlesLoaded]);
+    clearTimeout(notifyTimerRef.current);
+    notifyTimerRef.current = setTimeout(() => {
+      if (onArticlesLoaded) onArticlesLoaded(filteredArticles);
+    }, 150);
+    return () => clearTimeout(notifyTimerRef.current);
+  }, [filteredArticles, onArticlesLoaded]);
 
   const viewTitle = useMemo(() => {
     switch (activeView.type) {
