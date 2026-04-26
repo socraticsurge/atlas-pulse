@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../db/database.js';
 import * as api from '../utils/api.js';
-import { getFaviconUrl } from '../utils/helpers.js';
+import { getFaviconUrl, canonicalizeUrl } from '../utils/helpers.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 
 async function queueArticlesForBatch(feedId) {
@@ -74,11 +74,12 @@ export function useFeeds() {
       createdAt: new Date().toISOString(),
     });
 
-    // Save articles
+    // Save articles, skipping any whose canonical URL already exists in another feed
     if (feedData.items && feedData.items.length > 0) {
       const articles = feedData.items.map((item) => ({
         feedId: feedId,
         guid: item.guid || item.link,
+        canonicalLink: canonicalizeUrl(item.link) || item.link || '',
         title: item.title,
         link: item.link,
         content: item.content || '',
@@ -91,9 +92,13 @@ export function useFeeds() {
         imageUrl: item.imageUrl || '',
       }));
 
-      await db.articles.bulkAdd(articles).catch(() => {
-        // Some articles may already exist, that's fine
-      });
+      const canonicals = articles.map(a => a.canonicalLink).filter(Boolean);
+      const existingCanonicals = canonicals.length
+        ? new Set((await db.articles.where('canonicalLink').anyOf(canonicals).toArray()).map(a => a.canonicalLink))
+        : new Set();
+      const deduped = articles.filter(a => !existingCanonicals.has(a.canonicalLink));
+
+      await db.articles.bulkAdd(deduped).catch(() => {});
     }
 
     return feedId;
@@ -167,12 +172,13 @@ export function useFeeds() {
       const existingArticles = await db.articles.where('feedId').equals(feedId).toArray();
       const existingGuids = new Set(existingArticles.map((a) => a.guid));
 
-      // Add only new articles
-      const newArticles = (feedData.items || [])
+      // Filter out articles already in this feed by GUID, then compute canonical links
+      const candidates = (feedData.items || [])
         .filter((item) => !existingGuids.has(item.guid || item.link))
         .map((item) => ({
           feedId: feedId,
           guid: item.guid || item.link,
+          canonicalLink: canonicalizeUrl(item.link) || item.link || '',
           title: item.title,
           link: item.link,
           content: item.content || '',
@@ -184,6 +190,13 @@ export function useFeeds() {
           aiStatus: 'none',
           imageUrl: item.imageUrl || '',
         }));
+
+      // Cross-feed dedup: skip articles whose canonical URL already exists in any feed
+      const canonicals = candidates.map(a => a.canonicalLink).filter(Boolean);
+      const existingCanonicals = canonicals.length
+        ? new Set((await db.articles.where('canonicalLink').anyOf(canonicals).toArray()).map(a => a.canonicalLink))
+        : new Set();
+      const newArticles = candidates.filter(a => !existingCanonicals.has(a.canonicalLink));
 
       if (newArticles.length > 0) {
         await db.articles.bulkAdd(newArticles).catch(() => {});

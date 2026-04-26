@@ -76,3 +76,31 @@ export function normalizeUrl(url) {
   }
   return url;
 }
+
+const TRACKING_PARAMS = new Set([
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
+  'fbclid', 'gclid', 'msclkid', '_ga', 'mc_cid', 'mc_eid', 'ref', 'source',
+]);
+
+/**
+ * Produce a canonical URL for cross-feed deduplication.
+ * Strips tracking params, removes www prefix, removes fragment, sorts params.
+ */
+export function canonicalizeUrl(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
+    u.hash = '';
+    for (const key of [...u.searchParams.keys()]) {
+      if (TRACKING_PARAMS.has(key.toLowerCase())) u.searchParams.delete(key);
+    }
+    u.searchParams.sort();
+    if (u.pathname !== '/' && u.pathname.endsWith('/')) {
+      u.pathname = u.pathname.slice(0, -1);
+    }
+    return u.toString();
+  } catch {
+    return url;
+  }
+}
