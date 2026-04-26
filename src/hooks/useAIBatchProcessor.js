@@ -151,9 +151,9 @@ export function useAIBatchProcessor() {
       if (mountedRef.current) setProgress(p => ({ ...p, failed: p.failed + 1 }));
     } finally {
       processingRef.current = false;
-      // Schedule the next article with a short gap to keep UI responsive
+      // Yield to the event loop between articles so the UI stays responsive
       if (mountedRef.current && !pausedRef.current) {
-        setTimeout(processOne, 400);
+        setTimeout(processOne, 50);
       }
     }
   }, [availableModels]);
@@ -186,11 +186,10 @@ export function useAIBatchProcessor() {
   const triggerBatch = useCallback(async () => {
     const settings = getBatchSettings();
     const n = settings.maxPerCycle || 10;
-    const all = await db.articles.toArray();
-    const unprocessed = all
-      .filter(a => a.aiStatus !== 'done' && a.aiStatus !== 'processing')
-      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
-      .slice(0, n);
+    const unprocessed = await db.articles
+      .where('aiStatus').anyOf(['none', 'queued', 'error'])
+      .toArray()
+      .then(arr => arr.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, n));
     if (unprocessed.length === 0) return 0;
     await db.articles.where('id').anyOf(unprocessed.map(a => a.id)).modify({ aiStatus: 'queued' });
     return unprocessed.length;

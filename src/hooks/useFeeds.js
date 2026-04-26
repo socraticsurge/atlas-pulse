@@ -87,6 +87,7 @@ export function useFeeds() {
         publishedAt: item.publishedAt || new Date().toISOString(),
         isRead: 0,
         isBookmarked: 0,
+        aiStatus: 'none',
         imageUrl: item.imageUrl || '',
       }));
 
@@ -180,6 +181,7 @@ export function useFeeds() {
           publishedAt: item.publishedAt || new Date().toISOString(),
           isRead: 0,
           isBookmarked: 0,
+          aiStatus: 'none',
           imageUrl: item.imageUrl || '',
         }));
 

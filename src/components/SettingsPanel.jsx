@@ -7,7 +7,7 @@ import {
   HiOutlineArrowUpTray,
   HiOutlineCheck,
 } from 'react-icons/hi2';
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import db from '../db/database.js';
 import { parseOPML, generateOPML } from '../utils/opml.js';
 import {
@@ -99,14 +99,22 @@ export default function SettingsPanel({
 
   if (!isOpen) return null;
 
-  const handleClearData = async () => {
-    if (window.confirm('Are you sure you want to delete ALL data? This cannot be undone.')) {
+  const [confirmClear, setConfirmClear] = useState(false);
+  const confirmClearTimerRef = useRef(null);
+
+  const handleClearData = useCallback(async () => {
+    if (confirmClear) {
+      clearTimeout(confirmClearTimerRef.current);
+      setConfirmClear(false);
       await db.articles.clear();
       await db.feeds.clear();
       await db.folders.clear();
       onClose();
+    } else {
+      setConfirmClear(true);
+      confirmClearTimerRef.current = setTimeout(() => setConfirmClear(false), 3000);
     }
-  };
+  }, [confirmClear, onClose]);
 
   const handleExport = () => {
     const opmlString = generateOPML(feeds, folders);
@@ -502,7 +510,7 @@ export default function SettingsPanel({
             <div className="settings-row" style={{ borderBottom: 'none' }}>
               <label>Delete all feeds, articles, and folders</label>
               <button className="btn btn-danger btn-sm" onClick={handleClearData}>
-                <HiOutlineTrash /> Clear All Data
+                <HiOutlineTrash /> {confirmClear ? 'Click again to confirm' : 'Clear All Data'}
               </button>
             </div>
           </div>

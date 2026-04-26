@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineNewspaper,
@@ -94,12 +94,23 @@ export default function Sidebar({
     }
   }, [renameValue, renamingFolderId, onRenameFolder]);
 
-  const uncategorizedFeeds = feeds.filter((f) => !f.folderId);
+  const uncategorizedFeeds = useMemo(() => feeds.filter((f) => !f.folderId), [feeds]);
 
-  const getFolderUnread = (folderId) => {
-    const folderFeeds = feeds.filter(f => f.folderId === folderId);
+  const feedsByFolderId = useMemo(() => {
+    const map = {};
+    for (const f of feeds) {
+      if (f.folderId) {
+        if (!map[f.folderId]) map[f.folderId] = [];
+        map[f.folderId].push(f);
+      }
+    }
+    return map;
+  }, [feeds]);
+
+  const getFolderUnread = useCallback((folderId) => {
+    const folderFeeds = feedsByFolderId[folderId] || [];
     return folderFeeds.reduce((sum, f) => sum + (unreadCounts.byFeed[f.id] || 0), 0);
-  };
+  }, [feedsByFolderId, unreadCounts.byFeed]);
 
   const capBadge = (n) => (n > 99 ? '99+' : n);
 
