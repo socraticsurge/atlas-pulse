@@ -87,11 +87,12 @@ export async function discoverFeeds(url) {
   return res.json();
 }
 
-export async function extractArticle(url) {
+export async function extractArticle(url, signal) {
   const res = await fetch(`${API_BASE}/articles/extract`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Network error' }));

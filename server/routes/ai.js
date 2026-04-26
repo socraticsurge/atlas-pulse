@@ -8,8 +8,11 @@ const router = Router();
  * Returns list of locally available Ollama models.
  */
 router.get('/models', async (req, res) => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const response = await fetch(`${OLLAMA_BASE}/api/tags`);
+    const response = await fetch(`${OLLAMA_BASE}/api/tags`, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!response.ok) throw new Error(`Ollama responded with ${response.status}`);
     const data = await response.json();
     const models = (data.models || []).map((m) => ({
@@ -20,6 +23,10 @@ router.get('/models', async (req, res) => {
     }));
     res.json({ models });
   } catch (err) {
+    clearTimeout(timeout);
+    if (err.name === 'AbortError') {
+      return res.status(504).json({ error: 'Ollama did not respond in time' });
+    }
     res.status(503).json({ error: 'Ollama is not reachable', detail: err.message });
   }
 });
@@ -36,12 +43,17 @@ router.post('/chat', async (req, res) => {
     return res.status(400).json({ error: 'model and messages[] are required' });
   }
 
+  const connectController = new AbortController();
+  const connectTimeout = setTimeout(() => connectController.abort(), 15000);
+
   try {
     const ollamaRes = await fetch(`${OLLAMA_BASE}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ model, messages, stream }),
+      signal: connectController.signal,
     });
+    clearTimeout(connectTimeout);
 
     if (!ollamaRes.ok) {
       const text = await ollamaRes.text();
@@ -77,7 +89,11 @@ router.post('/chat', async (req, res) => {
       res.json(data);
     }
   } catch (err) {
+    clearTimeout(connectTimeout);
     if (!res.headersSent) {
+      if (err.name === 'AbortError') {
+        return res.status(504).json({ error: 'Ollama did not respond in time. Is the model loaded?' });
+      }
       res.status(503).json({ error: 'Ollama is not reachable', detail: err.message });
     }
   }

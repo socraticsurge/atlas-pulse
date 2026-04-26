@@ -57,6 +57,7 @@ export default function SettingsPanel({
   feeds, folders, onImportOPML, onRefreshAll,
   onAutoRefreshChange,
   availableModels = [],
+  onShowToast,
 }) {
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -130,13 +131,13 @@ export default function SettingsPanel({
       const count = await onImportOPML(parsedFeeds);
       if (count > 0) {
         onRefreshAll();
-        alert(`Successfully imported ${count} feeds! Articles are downloading in the background.`);
+        onShowToast?.(`Imported ${count} feed${count !== 1 ? 's' : ''}! Articles are downloading in the background.`);
       } else {
-        alert('No new feeds were found to import.');
+        onShowToast?.('No new feeds found — all are already added.', 'error');
       }
       onClose();
     } catch (err) {
-      alert(`Failed to import OPML: ${err.message}`);
+      onShowToast?.(`Failed to import OPML: ${err.message}`, 'error');
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';

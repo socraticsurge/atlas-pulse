@@ -30,6 +30,7 @@ import AIDrawer from './AIDrawer.jsx';
 export default function ArticleReader({
   article,
   isOpen,
+  isModalOpen,
   onClose,
   onNavigate,
   hasNext,
@@ -99,6 +100,7 @@ export default function ArticleReader({
     if (!isOpen) return;
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (isModalOpen) return;
       switch (e.key) {
         case 'ArrowUp':
         case 'ArrowLeft':
@@ -135,7 +137,7 @@ export default function ArticleReader({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, hasPrev, hasNext, onNavigate, onClose, article?.link, zenMode]);
+  }, [isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, article?.link, zenMode]);
 
   // Slide animation
   useEffect(() => {
@@ -161,23 +163,24 @@ export default function ArticleReader({
     }
   }, [article?.id]);
 
-  // Auto-extract full article
+  // Auto-extract full article — AbortController cancels the in-flight request on article change
   useEffect(() => {
     if (!article?.link) return;
-    let cancelled = false;
+    const controller = new AbortController();
     const extractFull = async () => {
       setExtracting(true);
       try {
-        const data = await api.extractArticle(article.link);
-        if (!cancelled && data.content) setExtractedContent(data.content);
+        const data = await api.extractArticle(article.link, controller.signal);
+        if (data.content) setExtractedContent(data.content);
       } catch (err) {
-        if (!cancelled) setExtractError(err.message);
+        if (err.name === 'AbortError') return;
+        setExtractError(err.message);
       } finally {
-        if (!cancelled) setExtracting(false);
+        if (!controller.signal.aborted) setExtracting(false);
       }
     };
     extractFull();
-    return () => { cancelled = true; };
+    return () => controller.abort();
   }, [article?.id, article?.link]);
 
   const toggleBookmark = useCallback(async () => {

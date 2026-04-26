@@ -313,6 +313,7 @@ function App() {
         <ArticleReader
           article={selectedArticle}
           isOpen={!!selectedArticle}
+          isModalOpen={showSettings || showAddFeed}
           onClose={() => setSelectedArticle(null)}
           onNavigate={handleNavigateArticle}
           hasPrev={hasPrev}
@@ -351,6 +352,7 @@ function App() {
         onRefreshAll={handleRefreshAll}
         onAutoRefreshChange={setAutoRefreshMinutes}
         availableModels={availableModels}
+        onShowToast={showToast}
       />
 
       {toast && (
