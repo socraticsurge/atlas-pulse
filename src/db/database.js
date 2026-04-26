@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { canonicalizeUrl } from '../utils/helpers.js';
 
 const db = new Dexie('RSSFeedReader');
 
@@ -38,6 +39,17 @@ db.version(5).stores({
 }).upgrade(tx =>
   tx.table('articles').toCollection().modify(article => {
     if (!article.aiStatus) article.aiStatus = 'none';
+  })
+);
+
+// v6: add canonicalLink index for cross-feed URL-based deduplication
+db.version(6).stores({
+  folders: '++id, name, order, createdAt',
+  feeds: '++id, folderId, title, url, siteUrl, lastRefreshed, createdAt',
+  articles: '++id, feedId, guid, title, link, canonicalLink, publishedAt, isRead, isBookmarked, aiStatus, [feedId+guid]',
+}).upgrade(tx =>
+  tx.table('articles').toCollection().modify(article => {
+    article.canonicalLink = canonicalizeUrl(article.link) || article.link || '';
   })
 );
 

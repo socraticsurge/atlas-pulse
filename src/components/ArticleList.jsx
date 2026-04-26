@@ -138,16 +138,46 @@ export default function ArticleList({
     }
   }, [activeView.type, activeView.id]) || [];
 
-  // Filter articles by search query
+  // Filter articles by search query — AND logic, quoted phrase support, relevance ranking
   const articles = useMemo(() => {
     if (!searchQuery.trim()) return rawArticles;
-    const q = searchQuery.toLowerCase().trim();
-    return rawArticles.filter((article) => {
+
+    // Parse: "quoted phrase" stays as one token, unquoted words split individually
+    const tokens = [];
+    const tokenRe = /"([^"]+)"|(\S+)/g;
+    let m;
+    while ((m = tokenRe.exec(searchQuery)) !== null) {
+      tokens.push((m[1] || m[2]).toLowerCase());
+    }
+
+    const scored = [];
+    for (const article of rawArticles) {
       const title = (article.title || '').toLowerCase();
-      const summary = stripHtml(article.summary || article.content || '').toLowerCase();
-      const feedTitle = (feedMap[article.feedId]?.title || '').toLowerCase();
-      return title.includes(q) || summary.includes(q) || feedTitle.includes(q);
-    });
+      const body = stripHtml(article.summary || article.content || '').toLowerCase();
+      const source = (feedMap[article.feedId]?.title || '').toLowerCase();
+      let topics = '';
+      if (article.aiAnalysis) {
+        try { topics = (JSON.parse(article.aiAnalysis).topics || []).join(' ').toLowerCase(); } catch {}
+      }
+
+      let score = 0;
+      let allMatch = true;
+      for (const token of tokens) {
+        const inTitle = title.includes(token);
+        const inBody = body.includes(token);
+        const inSource = source.includes(token);
+        const inTopics = topics.includes(token);
+        if (!inTitle && !inBody && !inSource && !inTopics) { allMatch = false; break; }
+        if (inTitle) score += 10;
+        if (inSource) score += 5;
+        if (inTopics) score += 3;
+        if (inBody) score += 1;
+      }
+      if (allMatch) scored.push({ article, score });
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map(s => s.article);
   }, [rawArticles, searchQuery, feedMap]);
 
   // Derive which filter values are present in the current article set
