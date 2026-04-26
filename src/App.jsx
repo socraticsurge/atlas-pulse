@@ -5,6 +5,7 @@ import ArticleReader from './components/ArticleReader.jsx';
 import AddFeedModal from './components/AddFeedModal.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import LibraryView from './components/LibraryView.jsx';
+import MultiArticlePanel from './components/MultiArticlePanel.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
@@ -97,6 +98,7 @@ function App() {
   });
 
   const [librarySummaryCount, setLibrarySummaryCount] = useState(0);
+  const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
 
   const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
@@ -334,10 +336,22 @@ function App() {
           batchProgress={batchProgress}
           batchQueuedCount={batchQueuedCount}
           onTriggerBatch={handleTriggerBatch}
+          onOpenAIPanel={(articles, operation) => {
+            setMultiPanel({ articles, operation });
+            setSelectedArticle(null);
+          }}
         />
       )}
 
-      {!isLibraryView && selectedArticle && (
+      {!isLibraryView && multiPanel ? (
+        <MultiArticlePanel
+          articles={multiPanel.articles}
+          initialOperation={multiPanel.operation}
+          onClose={() => setMultiPanel(null)}
+          width={readerWidth}
+          onResize={handleReaderResize}
+        />
+      ) : !isLibraryView && selectedArticle ? (
         <ReaderErrorBoundary width={readerWidth} onClose={() => setSelectedArticle(null)}>
           <ArticleReader
             article={selectedArticle}
@@ -354,7 +368,7 @@ function App() {
             onSummarySaved={handleSummarySaved}
           />
         </ReaderErrorBoundary>
-      )}
+      ) : null}
 
       <AddFeedModal
         isOpen={showAddFeed}
