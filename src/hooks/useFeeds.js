@@ -202,10 +202,13 @@ export function useFeeds() {
 
   const refreshAllFeeds = useCallback(async () => {
     const allFeeds = await db.feeds.toArray();
+    if (allFeeds.length === 0) return 0;
+    const CONCURRENCY = 5;
     let totalNew = 0;
-    for (const feed of allFeeds) {
-      const count = await refreshFeed(feed.id);
-      totalNew += count || 0;
+    for (let i = 0; i < allFeeds.length; i += CONCURRENCY) {
+      const batch = allFeeds.slice(i, i + CONCURRENCY);
+      const results = await Promise.allSettled(batch.map(f => refreshFeed(f.id)));
+      totalNew += results.reduce((sum, r) => sum + (r.status === 'fulfilled' ? r.value || 0 : 0), 0);
     }
     return totalNew;
   }, [refreshFeed]);
