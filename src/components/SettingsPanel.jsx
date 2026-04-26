@@ -53,13 +53,15 @@ export default function SettingsPanel({
   theme, onToggleTheme,
   appFont, onChangeFont,
   appColor, customAccentHex, onChangeColor,
-  appTextColor, onChangeTextColor,
+  appTextColor, customTextColorHex, onChangeTextColor,
   feeds, folders, onImportOPML, onRefreshAll,
   onAutoRefreshChange,
+  availableModels = [],
 }) {
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
   const [pickerColor, setPickerColor] = useState(customAccentHex || '#00d4aa');
+  const [pickerTextColor, setPickerTextColor] = useState(customTextColorHex || '#e8eaed');
   const [aiSettings, setAISettings] = useState(getAISettings);
   const [autoRefreshMinutes, setAutoRefreshMinutes] = useState(getAutoRefreshMinutes);
   const [batchSettings, setBatchSettings] = useState(getBatchSettings);
@@ -231,18 +233,41 @@ export default function SettingsPanel({
             {/* Text Color */}
             <div className="settings-row settings-row-col">
               <label>Text Color</label>
-              <div className="text-color-row">
+              <div className="color-swatch-row">
                 {TEXT_COLORS.map(t => (
                   <button
                     key={t.id}
-                    className={`text-color-option ${appTextColor === t.id ? 'active' : ''}`}
+                    className="color-swatch"
+                    style={{ background: t.preview }}
                     onClick={() => onChangeTextColor(t.id)}
                     title={t.label}
                   >
-                    <span className="text-color-dot" style={{ background: t.preview }} />
-                    <span>{t.label}</span>
+                    {appTextColor === t.id && <HiOutlineCheck className="swatch-check" />}
                   </button>
                 ))}
+
+                {/* Custom text color picker */}
+                <div className="color-swatch-custom-wrapper" title="Custom text color">
+                  <div
+                    className="color-swatch"
+                    style={{
+                      background: appTextColor === 'custom'
+                        ? customTextColorHex
+                        : 'conic-gradient(red,yellow,lime,aqua,blue,magenta,red)',
+                    }}
+                  >
+                    {appTextColor === 'custom' && <HiOutlineCheck className="swatch-check" />}
+                  </div>
+                  <input
+                    type="color"
+                    className="color-native-input"
+                    value={pickerTextColor}
+                    onChange={(e) => {
+                      setPickerTextColor(e.target.value);
+                      onChangeTextColor(e.target.value);
+                    }}
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -346,6 +371,29 @@ export default function SettingsPanel({
           <div className="settings-group">
             <h3>AI Processing</h3>
 
+            {/* Ollama — always first, shows status or setup wizard */}
+            <div className="settings-row settings-row-col">
+              <label>Ollama</label>
+              <OllamaSetup compact showReady />
+            </div>
+
+            {/* Model — only shown once Ollama is confirmed running with models */}
+            {availableModels && availableModels.length > 0 && (
+              <div className="settings-row">
+                <label>Model</label>
+                <select
+                  className="settings-select"
+                  value={batchSettings.model || ''}
+                  onChange={(e) => updateBatchSettings({ model: e.target.value })}
+                >
+                  <option value="">Auto (first available)</option>
+                  {availableModels.map((m) => (
+                    <option key={m.name} value={m.name}>{m.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {/* Enable / disable batch */}
             <div className="settings-row">
               <label>
@@ -383,10 +431,10 @@ export default function SettingsPanel({
                 </div>
 
                 {/* Articles per cycle */}
-                <div className="settings-row">
+                <div className="settings-row" style={{ borderBottom: 'none' }}>
                   <label>
                     Articles per cycle
-                    <span className="settings-sublabel"> — processed after each feed refresh</span>
+                    <span className="settings-sublabel"> — processed per on-demand run</span>
                   </label>
                   <div className="settings-segmented">
                     {[5, 10, 20, 50].map((n) => (
@@ -400,28 +448,8 @@ export default function SettingsPanel({
                     ))}
                   </div>
                 </div>
-
-                {/* Model override */}
-                <div className="settings-row">
-                  <label>
-                    Model
-                    <span className="settings-sublabel"> — leave blank to use the first available</span>
-                  </label>
-                  <input
-                    className="settings-text-input"
-                    placeholder="Auto"
-                    value={batchSettings.model}
-                    onChange={(e) => updateBatchSettings({ model: e.target.value })}
-                  />
-                </div>
               </>
             )}
-
-            {/* Ollama setup wizard — always visible so users can configure Ollama */}
-            <div className="settings-row settings-row-col" style={{ borderBottom: 'none' }}>
-              <label>Ollama</label>
-              <OllamaSetup compact />
-            </div>
           </div>
 
           {/* ── Data Management ──────────────────────────────────────── */}

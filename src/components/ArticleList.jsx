@@ -10,6 +10,7 @@ import {
   HiOutlineDocumentText,
   HiOutlineSparkles,
   HiOutlineBars3,
+  HiOutlineChevronDown,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
@@ -29,6 +30,9 @@ export default function ArticleList({
   onArticlesLoaded,
   sidebarHidden = false,
   onShowSidebar,
+  batchProgress,
+  batchQueuedCount = 0,
+  onTriggerBatch,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -36,6 +40,8 @@ export default function ArticleList({
     localStorage.getItem('atlas-pulse-view-mode') || 'magazine'
   );
   const [activeFilters, setActiveFilters] = useState({});
+  const [openFilterDim, setOpenFilterDim] = useState(null);
+  const [showAiOnly, setShowAiOnly] = useState(false);
 
   const feeds = useLiveQuery(() => db.feeds.toArray()) || [];
   const feedMap = useMemo(() => {
@@ -126,16 +132,18 @@ export default function ArticleList({
 
   // Apply active AI filters on top of search-filtered articles
   const filteredArticles = useMemo(() => {
+    let result = articles;
+    if (showAiOnly) result = result.filter(a => a.aiStatus === 'done');
     const filterKeys = Object.keys(activeFilters).filter(k => activeFilters[k]);
-    if (filterKeys.length === 0) return articles;
-    return articles.filter((a) => {
+    if (filterKeys.length === 0) return result;
+    return result.filter((a) => {
       if (!a.aiAnalysis) return false;
       try {
         const analysis = JSON.parse(a.aiAnalysis);
         return filterKeys.every(k => analysis[k] === activeFilters[k]);
       } catch { return false; }
     });
-  }, [articles, activeFilters]);
+  }, [articles, activeFilters, showAiOnly]);
 
   const toggleFilter = (dimKey, value) => {
     setActiveFilters(prev =>
@@ -216,6 +224,32 @@ export default function ArticleList({
             </button>
           </div>
 
+          {/* AI Only filter toggle */}
+          <button
+            className={`btn btn-ghost btn-sm view-toggle-btn ${showAiOnly ? 'active' : ''}`}
+            onClick={() => setShowAiOnly(prev => !prev)}
+            title={showAiOnly ? 'Showing AI-analyzed only — click to show all' : 'Show only AI-analyzed articles'}
+          >
+            <HiOutlineSparkles />
+            <span className="view-toggle-label">AI</span>
+          </button>
+
+          {/* AI batch indicator / trigger */}
+          {batchProgress?.running || batchQueuedCount > 0 ? (
+            <div className="batch-running-indicator" title={`AI analyzing · ${batchQueuedCount} remaining`}>
+              <span className="spinner" style={{ width: 12, height: 12, flexShrink: 0 }} />
+              <span>{batchQueuedCount}</span>
+            </div>
+          ) : (
+            <button
+              className="btn btn-ghost btn-icon btn-sm"
+              onClick={onTriggerBatch}
+              title="Run AI analysis on recent articles"
+            >
+              <HiOutlineSparkles />
+            </button>
+          )}
+
           <button
             className={`btn btn-ghost btn-icon btn-sm ${showSearch ? 'active' : ''}`}
             onClick={() => {
@@ -265,36 +299,72 @@ export default function ArticleList({
         </div>
       )}
 
-      {/* AI filter chips — only shown when analysis data exists */}
+      {/* AI content filters — per-dimension dropdown pills */}
       {hasAnyAnalysis && (
-        <div className="ai-filter-row">
-          {FILTER_DIMS.map((dim) => {
-            const presentValues = availableFilters[dim.key];
-            if (!presentValues || presentValues.size === 0) return null;
-            return [...presentValues].map((val) => {
-              const label = dim.values[val] || val;
-              const isActive = activeFilters[dim.key] === val;
-              return (
-                <button
-                  key={`${dim.key}-${val}`}
-                  className={`ai-filter-chip ${isActive ? 'active' : ''}`}
-                  onClick={() => toggleFilter(dim.key, val)}
-                  title={`Filter by ${dim.label}: ${val}`}
-                >
-                  {label}
-                </button>
-              );
-            });
-          })}
-          {hasActiveFilters && (
-            <button
-              className="ai-filter-chip ai-filter-clear"
-              onClick={() => setActiveFilters({})}
-            >
-              ✕ Clear
-            </button>
+        <>
+          {openFilterDim && (
+            <div
+              style={{ position: 'fixed', inset: 0, zIndex: 99 }}
+              onClick={() => setOpenFilterDim(null)}
+            />
           )}
-        </div>
+          <div className="ai-filter-row">
+            <span className="ai-filter-label">Filter</span>
+            {FILTER_DIMS.map((dim) => {
+              const presentValues = availableFilters[dim.key];
+              if (!presentValues || presentValues.size === 0) return null;
+              const activeVal = activeFilters[dim.key];
+              const isOpen = openFilterDim === dim.key;
+              return (
+                <div key={dim.key} className="ai-filter-pill-wrap">
+                  <button
+                    className={`ai-filter-pill ${activeVal ? 'active' : ''}`}
+                    onClick={() => setOpenFilterDim(isOpen ? null : dim.key)}
+                  >
+                    <span>
+                      {dim.label}
+                      {activeVal ? `: ${dim.values[activeVal] || activeVal}` : ''}
+                    </span>
+                    <HiOutlineChevronDown className={`ai-filter-chevron ${isOpen ? 'open' : ''}`} />
+                  </button>
+                  {isOpen && (
+                    <div className="ai-filter-dropdown">
+                      <button
+                        className={`ai-filter-option ${!activeVal ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveFilters(prev => ({ ...prev, [dim.key]: null }));
+                          setOpenFilterDim(null);
+                        }}
+                      >
+                        All
+                      </button>
+                      {[...presentValues].map((val) => (
+                        <button
+                          key={val}
+                          className={`ai-filter-option ${activeVal === val ? 'active' : ''}`}
+                          onClick={() => {
+                            toggleFilter(dim.key, val);
+                            setOpenFilterDim(null);
+                          }}
+                        >
+                          {dim.values[val] || val}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {hasActiveFilters && (
+              <button
+                className="ai-filter-clear-btn"
+                onClick={() => setActiveFilters({})}
+              >
+                ✕ Clear
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       <div className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
@@ -347,6 +417,9 @@ export default function ArticleList({
                   )}
                   <span className="compact-source">{feed?.title || 'Unknown'}</span>
                   <span className="compact-title">{article.title}</span>
+                  <span className="compact-ai-col">
+                    {article.aiStatus === 'done' && <HiOutlineSparkles title="AI analyzed" />}
+                  </span>
                   <span className="compact-time">{timeAgo(article.publishedAt)}</span>
                 </div>
               );
@@ -371,6 +444,11 @@ export default function ArticleList({
                     )}
                     <span className="excerpt-source">{feed?.title || 'Unknown'}</span>
                     <span className="excerpt-time">{timeAgo(article.publishedAt)}</span>
+                    {article.aiStatus === 'done' && (
+                      <span className="excerpt-ai-badge" title="AI analyzed">
+                        <HiOutlineSparkles /> AI
+                      </span>
+                    )}
                   </div>
                   <div className="excerpt-body">
                     <div className="excerpt-text">
@@ -413,6 +491,9 @@ export default function ArticleList({
                     <div className="card-image-placeholder">
                       <HiOutlineNewspaper />
                     </div>
+                  )}
+                  {article.aiStatus === 'done' && (
+                    <span className="card-ai-badge" title="AI analyzed"><HiOutlineSparkles /></span>
                   )}
                 </div>
                 <div className="card-body">

@@ -10,6 +10,7 @@ import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 import { getAutoRefreshMinutes } from './utils/constants.js';
+import { fetchSummaries } from './utils/api.js';
 
 const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 400;
@@ -55,6 +56,9 @@ function App() {
   const [appTextColor, setAppTextColor] = useState(() =>
     localStorage.getItem('atlas-pulse-text') || 'default'
   );
+  const [customTextColorHex, setCustomTextColorHex] = useState(() =>
+    localStorage.getItem('atlas-pulse-custom-text') || '#e8eaed'
+  );
   const [sidebarMode, setSidebarMode] = useState(() =>
     localStorage.getItem('atlas-pulse-sidebar-mode') || 'expanded'
   );
@@ -68,10 +72,17 @@ function App() {
     return stored ? parseInt(stored, 10) : 600;
   });
 
+  const [librarySummaryCount, setLibrarySummaryCount] = useState(0);
+
   const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
-  const { queuedCount } = useAIBatchProcessor();
+  const { availableModels, progress: batchProgress, queuedCount: batchQueuedCount, triggerBatch } = useAIBatchProcessor();
   const refreshIntervalRef = useRef(null);
+
+  // Keep sidebar library badge in sync with the server-side summaries count
+  useEffect(() => {
+    fetchSummaries().then(rows => setLibrarySummaryCount(rows.length)).catch(() => {});
+  }, [activeView.type]);
 
   const effectiveSidebarWidth = sidebarMode === 'hidden' ? 0
     : sidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH
@@ -80,10 +91,19 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-font', appFont);
-    document.documentElement.setAttribute('data-text', appTextColor);
     localStorage.setItem('atlas-pulse-theme', theme);
     localStorage.setItem('atlas-pulse-font', appFont);
-    localStorage.setItem('atlas-pulse-text', appTextColor);
+
+    if (appTextColor === 'custom') {
+      document.documentElement.setAttribute('data-text', 'custom');
+      document.documentElement.style.setProperty('--text-primary', customTextColorHex);
+      localStorage.setItem('atlas-pulse-text', 'custom');
+      localStorage.setItem('atlas-pulse-custom-text', customTextColorHex);
+    } else {
+      document.documentElement.setAttribute('data-text', appTextColor);
+      document.documentElement.style.removeProperty('--text-primary');
+      localStorage.setItem('atlas-pulse-text', appTextColor);
+    }
 
     if (appColor === 'custom') {
       document.documentElement.setAttribute('data-color', 'custom');
@@ -103,7 +123,7 @@ function App() {
       document.documentElement.style.removeProperty('--shadow-glow');
       localStorage.setItem('atlas-pulse-color', appColor);
     }
-  }, [theme, appFont, appColor, appTextColor, customAccentHex]);
+  }, [theme, appFont, appColor, appTextColor, customAccentHex, customTextColorHex]);
 
   const toggleTheme = useCallback(() => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -115,6 +135,15 @@ function App() {
       setCustomAccentHex(colorOrHex);
     } else {
       setAppColor(colorOrHex);
+    }
+  }, []);
+
+  const handleChangeTextColor = useCallback((colorOrHex) => {
+    if (colorOrHex.startsWith('#')) {
+      setAppTextColor('custom');
+      setCustomTextColorHex(colorOrHex);
+    } else {
+      setAppTextColor(colorOrHex);
     }
   }, []);
 
@@ -207,6 +236,12 @@ function App() {
     }
   }, [folders, deleteFolder, showToast, activeView]);
 
+  const handleTriggerBatch = useCallback(async () => {
+    const count = await triggerBatch();
+    if (count > 0) showToast(`Queued ${count} article${count !== 1 ? 's' : ''} for AI analysis`);
+    else showToast('All recent articles are already analyzed', 'error');
+  }, [triggerBatch, showToast]);
+
   const handleSidebarResize = useCallback((delta) => {
     setSidebarWidth(prev => {
       const next = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, prev + delta));
@@ -252,7 +287,7 @@ function App() {
         onToggleTheme={toggleTheme}
         refreshing={refreshing}
         onToggleMode={toggleSidebarMode}
-        batchQueuedCount={queuedCount}
+        librarySummaryCount={librarySummaryCount}
         style={{ width: effectiveSidebarWidth, minWidth: effectiveSidebarWidth }}
       />
 
@@ -268,6 +303,9 @@ function App() {
           onArticlesLoaded={setVisibleArticles}
           sidebarHidden={sidebarMode === 'hidden'}
           onShowSidebar={toggleSidebarMode}
+          batchProgress={batchProgress}
+          batchQueuedCount={batchQueuedCount}
+          onTriggerBatch={handleTriggerBatch}
         />
       )}
 
@@ -305,12 +343,14 @@ function App() {
         customAccentHex={customAccentHex}
         onChangeColor={handleChangeColor}
         appTextColor={appTextColor}
-        onChangeTextColor={setAppTextColor}
+        customTextColorHex={customTextColorHex}
+        onChangeTextColor={handleChangeTextColor}
         feeds={feeds}
         folders={folders}
         onImportOPML={importFeedsFromOPML}
         onRefreshAll={handleRefreshAll}
         onAutoRefreshChange={setAutoRefreshMinutes}
+        availableModels={availableModels}
       />
 
       {toast && (

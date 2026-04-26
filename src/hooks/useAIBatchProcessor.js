@@ -33,7 +33,7 @@ function parseAnalysis(response) {
 
 export function useAIBatchProcessor() {
   const [progress, setProgress] = useState({ total: 0, done: 0, failed: 0, running: false });
-  const [availableModels, setAvailableModels] = useState([]);
+  const [availableModels, setAvailableModels] = useState(null); // null = not yet loaded
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -66,7 +66,7 @@ export function useAIBatchProcessor() {
     const settings = getBatchSettings();
     if (!settings.enabled) return;
 
-    const model = settings.model || availableModels[0]?.name || '';
+    const model = settings.model || availableModels?.[0]?.name || '';
     if (!model) return; // No model available — wait for user to set up Ollama
 
     processingRef.current = true;
@@ -167,5 +167,19 @@ export function useAIBatchProcessor() {
     setProgress({ total: 0, done: 0, failed: 0, running: false });
   }, []);
 
-  return { progress, queuedCount, pause, resume, resetProgress, availableModels };
+  // Queue the N most recent unprocessed articles on demand
+  const triggerBatch = useCallback(async () => {
+    const settings = getBatchSettings();
+    const n = settings.maxPerCycle || 10;
+    const all = await db.articles.toArray();
+    const unprocessed = all
+      .filter(a => a.aiStatus !== 'done' && a.aiStatus !== 'processing')
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+      .slice(0, n);
+    if (unprocessed.length === 0) return 0;
+    await db.articles.where('id').anyOf(unprocessed.map(a => a.id)).modify({ aiStatus: 'queued' });
+    return unprocessed.length;
+  }, []);
+
+  return { progress, queuedCount, pause, resume, resetProgress, triggerBatch, availableModels };
 }

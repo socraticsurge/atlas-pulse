@@ -9,7 +9,7 @@ const RECOMMENDED_MODELS = [
   { name: 'deepseek-r1:7b',label: 'DeepSeek R1 7B',  size: '4.7 GB', badge: '🎯 Quality'  },
 ];
 
-export default function OllamaSetup({ onReady, compact = false }) {
+export default function OllamaSetup({ onReady, compact = false, showReady = false }) {
   const [status, setStatus] = useState(null); // null = loading
   const [starting, setStarting] = useState(false);
   const [pulling, setPulling] = useState(null);
@@ -181,6 +181,18 @@ export default function OllamaSetup({ onReady, compact = false }) {
     );
   }
 
-  // Running with models — parent should not render this component
+  // Running with models
+  if (showReady) {
+    return (
+      <div className="ollama-ready-status">
+        <span className="ollama-ready-dot" />
+        <span>Running · {status.models.length} model{status.models.length !== 1 ? 's' : ''} available</span>
+        <button className="btn btn-ghost btn-sm" onClick={checkStatus} title="Refresh">
+          <HiOutlineArrowPath />
+        </button>
+      </div>
+    );
+  }
+
   return null;
 }
