@@ -85,7 +85,7 @@ export function useFeeds() {
         summary: item.summary || '',
         author: item.author || '',
         publishedAt: item.publishedAt || new Date().toISOString(),
-        isRead: false,
+        isRead: 0,
         isBookmarked: false,
         imageUrl: item.imageUrl || '',
       }));
@@ -178,7 +178,7 @@ export function useFeeds() {
           summary: item.summary || '',
           author: item.author || '',
           publishedAt: item.publishedAt || new Date().toISOString(),
-          isRead: false,
+          isRead: 0,
           isBookmarked: false,
           imageUrl: item.imageUrl || '',
         }));

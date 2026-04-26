@@ -25,6 +25,7 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
   const [url, setUrl] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
+  const [addingUrl, setAddingUrl] = useState(null);
   const [error, setError] = useState('');
   const [discoveredFeeds, setDiscoveredFeeds] = useState([]);
   const [feedPreview, setFeedPreview] = useState(null);
@@ -138,13 +139,18 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
   }, []);
 
   const handleAddFeed = useCallback(async (feedUrl) => {
+    if (addingUrl) return;
+    setAddingUrl(feedUrl);
+    setError('');
     try {
       await onAddFeed(feedUrl, selectedFolder ? parseInt(selectedFolder) : null);
       setAddedUrls((prev) => new Set([...prev, feedUrl]));
     } catch (err) {
       setError(err.message);
+    } finally {
+      setAddingUrl(null);
     }
-  }, [onAddFeed, selectedFolder]);
+  }, [onAddFeed, selectedFolder, addingUrl]);
 
   const handleAddFromPreview = useCallback(async () => {
     if (!feedPreview) return;
@@ -272,10 +278,12 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
                     <button
                       className="btn btn-primary"
                       onClick={handleAddFromPreview}
-                      disabled={addedUrls.has(feedPreview.feedUrl)}
+                      disabled={addedUrls.has(feedPreview.feedUrl) || addingUrl === feedPreview.feedUrl}
                       style={{ width: '100%' }}
                     >
-                      {addedUrls.has(feedPreview.feedUrl) ? (
+                      {addingUrl === feedPreview.feedUrl ? (
+                        <><span className="spinner" style={{ width: 14, height: 14 }} /> Adding…</>
+                      ) : addedUrls.has(feedPreview.feedUrl) ? (
                         <><HiOutlineCheckCircle /> Already Added</>
                       ) : (
                         <><HiOutlinePlus /> Add This Feed</>
@@ -306,9 +314,11 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
                         <button
                           className="btn btn-primary btn-sm"
                           onClick={() => handleAddFeed(feed.url)}
-                          disabled={addedUrls.has(feed.url)}
+                          disabled={addedUrls.has(feed.url) || !!addingUrl}
                         >
-                          {addedUrls.has(feed.url) ? '✓ Added' : 'Add'}
+                          {addingUrl === feed.url
+                            ? <span className="spinner" style={{ width: 12, height: 12 }} />
+                            : addedUrls.has(feed.url) ? '✓ Added' : 'Add'}
                         </button>
                       </div>
                     </div>
@@ -381,10 +391,12 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
                       <button
                         className={`btn btn-sm ${addedUrls.has(feed.url) ? 'btn-ghost' : 'btn-primary'}`}
                         onClick={() => !addedUrls.has(feed.url) && handleAddFeed(feed.url)}
-                        disabled={addedUrls.has(feed.url)}
+                        disabled={addedUrls.has(feed.url) || !!addingUrl}
                         style={{ flexShrink: 0 }}
                       >
-                        {addedUrls.has(feed.url) ? <><HiOutlineCheckCircle /> Added</> : <><HiOutlinePlus /> Add</>}
+                        {addingUrl === feed.url
+                          ? <span className="spinner" style={{ width: 12, height: 12 }} />
+                          : addedUrls.has(feed.url) ? <><HiOutlineCheckCircle /> Added</> : <><HiOutlinePlus /> Add</>}
                       </button>
                     </div>
                   ))}
@@ -502,14 +514,12 @@ export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedU
                           <button
                             className={`btn btn-sm ${addedUrls.has(feed.url) ? 'btn-ghost' : 'btn-primary'}`}
                             onClick={() => !addedUrls.has(feed.url) && handleAddFeed(feed.url)}
-                            disabled={addedUrls.has(feed.url)}
+                            disabled={addedUrls.has(feed.url) || !!addingUrl}
                             style={{ flexShrink: 0 }}
                           >
-                            {addedUrls.has(feed.url) ? (
-                              <><HiOutlineCheckCircle /> Added</>
-                            ) : (
-                              <><HiOutlinePlus /> Add</>
-                            )}
+                            {addingUrl === feed.url
+                              ? <span className="spinner" style={{ width: 12, height: 12 }} />
+                              : addedUrls.has(feed.url) ? <><HiOutlineCheckCircle /> Added</> : <><HiOutlinePlus /> Add</>}
                           </button>
                         </div>
                       ))}

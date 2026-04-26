@@ -61,17 +61,32 @@ const ANALYSIS_DIMS = [
 ];
 
 function parseAnalysisJSON(raw) {
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('No JSON in response');
-  const parsed = JSON.parse(match[0]);
-  return {
-    sentiment: parsed.sentiment || 'neutral',
-    urgency:   parsed.urgency   || 'evergreen',
-    frame:     parsed.frame     || 'analytical',
-    tone:      parsed.tone      || 'analytical',
-    depth:     parsed.depth     || 'standard',
-    topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
-  };
+  // Strip markdown code fences (models sometimes wrap JSON in ```json ... ```)
+  const stripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+  // Collect all balanced {} blocks using bracket depth tracking
+  const candidates = [];
+  let depth = 0, start = -1;
+  for (let i = 0; i < stripped.length; i++) {
+    if (stripped[i] === '{') { if (depth === 0) start = i; depth++; }
+    else if (stripped[i] === '}') { depth--; if (depth === 0 && start !== -1) { candidates.push(stripped.slice(start, i + 1)); start = -1; } }
+  }
+  // Try from last to first — reasoning models often output reasoning prose then JSON at the end
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    try {
+      const parsed = JSON.parse(candidates[i]);
+      if (parsed.sentiment || parsed.urgency || parsed.frame) {
+        return {
+          sentiment: parsed.sentiment || 'neutral',
+          urgency:   parsed.urgency   || 'evergreen',
+          frame:     parsed.frame     || 'analytical',
+          tone:      parsed.tone      || 'analytical',
+          depth:     parsed.depth     || 'standard',
+          topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
+        };
+      }
+    } catch { /* try next candidate */ }
+  }
+  throw new Error('Could not extract valid analysis from model response');
 }
 
 // Grouped analysis display — shown inside the Summary tab

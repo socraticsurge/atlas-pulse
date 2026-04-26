@@ -266,7 +266,7 @@ export default function ArticleList({
               onClick={() => {
                 const ids = rawArticles.filter(a => !a.isRead).map(a => a.id);
                 if (ids.length > 0) {
-                  db.articles.where('id').anyOf(ids).modify({ isRead: true });
+                  db.articles.where('id').anyOf(ids).modify({ isRead: 1 });
                 }
               }}
               title="Mark all as read"
