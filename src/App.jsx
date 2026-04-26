@@ -108,6 +108,10 @@ function App() {
     fetchSummaries().then(rows => setLibrarySummaryCount(rows.length)).catch(() => {});
   }, [activeView.type]);
 
+  const handleSummarySaved = useCallback(() => {
+    fetchSummaries().then(rows => setLibrarySummaryCount(rows.length)).catch(() => {});
+  }, []);
+
   const effectiveSidebarWidth = sidebarMode === 'hidden' ? 0
     : sidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH
     : sidebarWidth;
@@ -347,6 +351,7 @@ function App() {
             totalCount={visibleArticles.length}
             width={readerWidth}
             onResize={handleReaderResize}
+            onSummarySaved={handleSummarySaved}
           />
         </ReaderErrorBoundary>
       )}

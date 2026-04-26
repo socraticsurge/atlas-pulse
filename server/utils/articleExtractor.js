@@ -4,13 +4,20 @@ import { extract } from '@extractus/article-extractor';
  * Extract the full article content from a URL.
  * Returns cleaned, readable HTML content.
  */
+const EXTRACTION_TIMEOUT_MS = 15000;
+
 export async function extractArticle(url) {
   try {
-    const article = await extract(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      },
-    });
+    const article = await Promise.race([
+      extract(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Article extraction timed out')), EXTRACTION_TIMEOUT_MS)
+      ),
+    ]);
 
     if (!article) {
       throw new Error('Could not extract article content');

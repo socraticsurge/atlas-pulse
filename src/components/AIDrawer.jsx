@@ -181,7 +181,7 @@ function AnalysisPanel({ analysis, analyzing, error, onRun, canRun }) {
   );
 }
 
-export default function AIDrawer({ isOpen, onClose, article, extractedContent, feedTitle }) {
+export default function AIDrawer({ isOpen, onClose, article, extractedContent, feedTitle, onSummarySaved }) {
   const [tab, setTab] = useState('summary');
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
@@ -431,6 +431,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         ai_custom_instructions: settings.customInstructions || null,
       });
       setSaved(true);
+      onSummarySaved?.();
     } catch (err) {
       console.error('Failed to save summary:', err);
     } finally {
