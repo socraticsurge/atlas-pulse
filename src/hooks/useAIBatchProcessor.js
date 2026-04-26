@@ -17,18 +17,30 @@ const BATCH_SYSTEM_PROMPT = `Analyze the article and respond with ONLY a valid J
 }`;
 
 function parseAnalysis(response) {
-  const match = response.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('No JSON found in model response');
-  const parsed = JSON.parse(match[0]);
-  return {
-    summary:   typeof parsed.summary === 'string' ? parsed.summary : '',
-    sentiment: parsed.sentiment || 'neutral',
-    urgency:   parsed.urgency   || 'evergreen',
-    frame:     parsed.frame     || 'analytical',
-    tone:      parsed.tone      || 'analytical',
-    depth:     parsed.depth     || 'standard',
-    topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
-  };
+  const stripped = response.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+  const candidates = [];
+  let depth = 0, start = -1;
+  for (let i = 0; i < stripped.length; i++) {
+    if (stripped[i] === '{') { if (depth === 0) start = i; depth++; }
+    else if (stripped[i] === '}') { depth--; if (depth === 0 && start !== -1) { candidates.push(stripped.slice(start, i + 1)); start = -1; } }
+  }
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    try {
+      const parsed = JSON.parse(candidates[i]);
+      if (parsed.sentiment || parsed.urgency || parsed.summary) {
+        return {
+          summary:   typeof parsed.summary === 'string' ? parsed.summary : '',
+          sentiment: parsed.sentiment || 'neutral',
+          urgency:   parsed.urgency   || 'evergreen',
+          frame:     parsed.frame     || 'analytical',
+          tone:      parsed.tone      || 'analytical',
+          depth:     parsed.depth     || 'standard',
+          topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
+        };
+      }
+    } catch { /* try next candidate */ }
+  }
+  throw new Error('No valid JSON found in model response');
 }
 
 export function useAIBatchProcessor() {
@@ -66,7 +78,10 @@ export function useAIBatchProcessor() {
     const settings = getBatchSettings();
     if (!settings.enabled) return;
 
-    const model = settings.model || availableModels?.[0]?.name || '';
+    const savedModel = settings.model;
+    const model = (savedModel && availableModels?.some(m => m.name === savedModel))
+      ? savedModel
+      : availableModels?.[0]?.name || '';
     if (!model) return; // No model available — wait for user to set up Ollama
 
     processingRef.current = true;

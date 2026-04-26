@@ -159,7 +159,7 @@ export default function ArticleReader({
   // Mark as read when opened
   useEffect(() => {
     if (article && !article.isRead) {
-      db.articles.update(article.id, { isRead: true });
+      db.articles.update(article.id, { isRead: 1 });
     }
   }, [article?.id]);
 
@@ -192,7 +192,7 @@ export default function ArticleReader({
   const toggleRead = useCallback(async () => {
     if (!article) return;
     const current = liveArticle || article;
-    await db.articles.update(article.id, { isRead: !current.isRead });
+    await db.articles.update(article.id, { isRead: current.isRead ? 0 : 1 });
   }, [article, liveArticle]);
 
   const handleCopyLink = useCallback(() => {

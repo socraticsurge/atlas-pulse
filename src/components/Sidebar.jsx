@@ -51,27 +51,22 @@ export default function Sidebar({
   const [contextMenu, setContextMenu] = useState(null);
 
   const unreadCounts = useLiveQuery(async () => {
-    const articles = await db.articles.toArray();
+    const unread = await db.articles.where('isRead').equals(0).toArray();
     const counts = {};
-    let total = 0;
-    for (const a of articles) {
-      if (!a.isRead) {
-        counts[a.feedId] = (counts[a.feedId] || 0) + 1;
-        total++;
-      }
+    for (const a of unread) {
+      counts[a.feedId] = (counts[a.feedId] || 0) + 1;
     }
-    return { byFeed: counts, total };
+    return { byFeed: counts, total: unread.length };
   }) || { byFeed: {}, total: 0 };
 
   const savedCount = useLiveQuery(
     () => db.articles.where('isBookmarked').equals(1).count()
   ) || 0;
 
-  const todayCount = useLiveQuery(async () => {
+  const todayCount = useLiveQuery(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    const all = await db.articles.toArray();
-    return all.filter(a => new Date(a.publishedAt) >= start).length;
+    return db.articles.where('publishedAt').aboveOrEqual(start.toISOString()).count();
   }) || 0;
 
   const toggleFolder = useCallback((folderId) => {

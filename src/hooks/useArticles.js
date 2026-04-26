@@ -4,9 +4,7 @@ import db from '../db/database.js';
 
 /**
  * Hook for article queries and state management.
- * Note: IndexedDB cannot index boolean values (true/false are not valid IDB keys).
- * We store isRead as truthy/falsy and use JS filtering where needed.
- * isBookmarked uses 0/1 integers for indexing.
+ * isRead and isBookmarked are stored as 0/1 integers for IDB indexability.
  */
 export function useArticles(viewType, viewId) {
   const articles = useLiveQuery(() => {
@@ -39,14 +37,12 @@ export function useArticles(viewType, viewId) {
       case 'today': {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        const todayStr = todayStart.toISOString();
         return db.articles
-          .toArray()
-          .then((arts) =>
-            arts
-              .filter((a) => a.publishedAt >= todayStr)
-              .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
-          );
+          .where('publishedAt')
+          .aboveOrEqual(todayStart.toISOString())
+          .reverse()
+          .sortBy('publishedAt')
+          .then(arts => arts.reverse());
       }
 
       case 'saved':
@@ -69,11 +65,11 @@ export function useArticles(viewType, viewId) {
   }, [viewType, viewId]) || [];
 
   const markAsRead = useCallback(async (articleId) => {
-    await db.articles.update(articleId, { isRead: true });
+    await db.articles.update(articleId, { isRead: 1 });
   }, []);
 
   const markAsUnread = useCallback(async (articleId) => {
-    await db.articles.update(articleId, { isRead: false });
+    await db.articles.update(articleId, { isRead: 0 });
   }, []);
 
   const toggleBookmark = useCallback(async (articleId) => {
@@ -89,7 +85,7 @@ export function useArticles(viewType, viewId) {
     if (!articles || articles.length === 0) return;
     const ids = articles.filter((a) => !a.isRead).map((a) => a.id);
     if (ids.length > 0) {
-      await db.articles.where('id').anyOf(ids).modify({ isRead: true });
+      await db.articles.where('id').anyOf(ids).modify({ isRead: 1 });
     }
   }, [articles]);
 
