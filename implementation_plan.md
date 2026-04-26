@@ -71,6 +71,32 @@ All items below have been implemented and shipped. This document records what wa
 
 ---
 
+## v1.3.0 — Multi-Article AI Actions, Search & Feed Quality
+
+| Feature | Status |
+|---|---|
+| Multi-select article checkboxes (position:absolute, all three views) | ✅ Done |
+| Floating action bar — Mark Read, Bookmark, CSV, AI Actions (slides up from bottom) | ✅ Done |
+| `MultiArticlePanel` — Compare Sources (2–5), Newsletter (3–15), AI Briefing (2–15) | ✅ Done |
+| Streaming output in MultiArticlePanel (RAF-batched, same pattern as AIDrawer) | ✅ Done |
+| Newsletter templates: Daily Digest, Weekly Roundup, Executive Brief | ✅ Done |
+| AI persona + tone + custom instructions applied in MultiArticlePanel (`buildSystemPrompt`) | ✅ Done |
+| Active AI config strip in MultiArticlePanel (persona/tone/custom badges) | ✅ Done |
+| Multi-article export: Copy · Markdown (`.md`) · Word (`.docx`) · Email | ✅ Done |
+| `docx.js` — client-side Markdown → `.docx` via `docx` npm package | ✅ Done |
+| AND-logic tokenized search — multi-word queries require all terms to match | ✅ Done |
+| Quoted phrase support in search — `"exact phrase"` matches literally | ✅ Done |
+| Relevance ranking — title (10pts) › source (5pts) › AI topics (3pts) › body (1pt) | ✅ Done |
+| AI topics searched — `aiAnalysis.topics[]` included in search scoring | ✅ Done |
+| Cross-feed URL deduplication — `canonicalLink` field + IndexedDB index (DB v6) | ✅ Done |
+| `canonicalizeUrl` — strips `utm_*`/`fbclid`/tracking params, `www.`, fragment; sorts params | ✅ Done |
+| Dedup at insert time in `addFeed` and `refreshFeed` via `anyOf(canonicals)` query | ✅ Done |
+| DB v6 migration — backfills `canonicalLink` for all existing articles | ✅ Done |
+| `/` keyboard shortcut — focuses search box | ✅ Done |
+| `Escape` priority order — clears selection → clears search → exits zen → closes reader | ✅ Done |
+
+---
+
 ## Architecture Decisions
 
 **Why IndexedDB for articles, SQLite for summaries?**

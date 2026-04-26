@@ -1,6 +1,6 @@
 # Atlas Pulse — Personal RSS Feed Reader
 
-**Version 1.2.0**
+**Version 1.3.0**
 
 A modern, privacy-first RSS feed reader that runs entirely on your local machine. No cloud services, no subscriptions, no accounts — your data stays in your browser's IndexedDB. Powered by React, Express, and (optionally) a local Ollama LLM for AI-powered summaries, content analysis, and article chat.
 
@@ -57,7 +57,7 @@ Press `Ctrl + C` to stop everything.
 | **Folders** | Create folders, move feeds into them, right-click to rename or delete |
 | **Saved / Bookmarks** | Bookmark any article; find them under "Saved" in the sidebar |
 | **Today view** | Shows only articles published today |
-| **Search** | Instant local search across title, content, and source name |
+| **Search** | AND-logic tokenized search — "cloud AI" matches articles containing both terms anywhere; quoted phrases for exact match; results ranked by relevance (title › source › AI topics › body) |
 | **Mark all read** | One-click button in the article list header |
 | **AI Only filter** | Toggle in the article list header to show only AI-analyzed articles |
 | **Content filters** | Per-dimension dropdown pills (Sentiment · Urgency · Frame · Tone · Depth) — shown when AI analysis data is available |
@@ -98,6 +98,19 @@ Press `Ctrl + C` to stop everything.
 | **AI Summaries Library** | Save any AI summary to a persistent SQLite library; search, browse, and export as CSV |
 | **Model selector** | Dropdown populated from your installed Ollama models |
 | **AI processed badge** | Sparkle icon appears on analyzed articles in all three list views |
+
+### Multi-Article AI Actions
+
+| Feature | Details |
+|---------|---------|
+| **Multi-select** | Click the checkbox on any article card to select it (or click blank space); `Escape` clears selection |
+| **Floating action bar** | Appears at the bottom of the article list when ≥1 article is selected — Mark Read, Bookmark, CSV export, AI Actions |
+| **Compare Sources** | 2–5 articles → AI side-by-side analysis of angle, framing, key claims, what's missing, tone, and evidence |
+| **Generate Newsletter** | 3–15 articles → AI-written Daily Digest, Weekly Roundup, or Executive Brief in Markdown |
+| **AI Briefing** | 2–15 articles → free-form prompt answered using only the selected articles as context |
+| **Streaming output** | All multi-article AI operations stream token by token with a live cursor |
+| **Active config strip** | Shows the active AI personas, tone settings, and custom instructions before generating |
+| **Export** | Copy, download as Markdown (`.md`), download as Word (`.docx`), or open in email client |
 
 ---
 
@@ -169,7 +182,8 @@ curl http://localhost:11434   # should print "Ollama is running"
 | `b` | Toggle bookmark |
 | `o` | Open article in original tab |
 | `f` | Toggle zen / focus mode |
-| `Esc` | Exit zen mode / close reader |
+| `/` | Focus search box |
+| `Esc` | Clear selection · clear search · exit zen mode · close reader |
 
 ---
 
@@ -203,9 +217,10 @@ RSS Feed Reader/
     │
     ├── components/
     │   ├── Sidebar.jsx           # Left panel — nav, folders, feeds, library badge
-    │   ├── ArticleList.jsx       # Middle panel — grid/list/compact + AI filters + batch trigger
+    │   ├── ArticleList.jsx       # Middle panel — grid/list/compact + multi-select + AI filters
     │   ├── ArticleReader.jsx     # Right panel — reader, toolbar, progress bar, sharing
     │   ├── AIDrawer.jsx          # AI panel — Summary / Analysis / Chat tabs
+    │   ├── MultiArticlePanel.jsx # Multi-article AI panel — Compare / Newsletter / Briefing
     │   ├── OllamaSetup.jsx       # Guided Ollama install/start/model-pull wizard
     │   ├── LibraryView.jsx       # Full-panel saved summaries library
     │   ├── AddFeedModal.jsx      # Add feeds via URL / search / popular
@@ -214,19 +229,20 @@ RSS Feed Reader/
     │   └── ResizableHandle.jsx   # Draggable panel resize handle
     │
     ├── db/
-    │   └── database.js           # Dexie.js IndexedDB schema v3 (feeds, articles, folders)
-    │                             # Articles carry: aiStatus, aiSummary, aiAnalysis fields
+    │   └── database.js           # Dexie.js IndexedDB schema v6 (feeds, articles, folders)
+    │                             # Articles carry: aiStatus, aiSummary, aiAnalysis, canonicalLink
     │
-    └── utils/
-        ├── api.js                # HTTP client — all /api/* calls + streamChat() generator
-        ├── batchSettings.js      # Batch processor config (enabled, model, features, maxPerCycle)
-        ├── helpers.js            # Date formatting, read time, HTML stripping
-        ├── aiSettings.js         # AI persona + tone configuration
-        ├── constants.js          # Auto-refresh options, popular feeds
-        └── opml.js               # OPML import/export
-
+    ├── utils/
+    │   ├── api.js                # HTTP client — all /api/* calls + streamChat() generator
+    │   ├── batchSettings.js      # Batch processor config (enabled, model, features, maxPerCycle)
+    │   ├── helpers.js            # Date formatting, read time, HTML stripping, canonicalizeUrl
+    │   ├── aiSettings.js         # AI persona + tone configuration, buildSystemPrompt
+    │   ├── constants.js          # Auto-refresh options, popular feeds
+    │   ├── opml.js               # OPML import/export
+    │   └── docx.js               # Client-side Markdown → .docx export
+    │
     └── hooks/
-        ├── useFeeds.js           # Feed CRUD + refresh (queues new articles for batch)
+        ├── useFeeds.js           # Feed CRUD + refresh (dedup by canonicalLink, queues for batch)
         ├── useFolders.js         # Folder management
         └── useAIBatchProcessor.js # Background AI engine — queue watcher, processOne loop,
                                   # triggerBatch (on-demand), pause/resume, progress tracking
@@ -362,6 +378,18 @@ npm run dev
 ---
 
 ## Changelog
+
+### v1.3.0
+- **Multi-select with AI Actions** — Select 2–15 articles via checkboxes; floating action bar appears with Mark Read, Bookmark, CSV, and AI Actions menu
+- **Compare Sources** — AI side-by-side comparison of 2–5 articles across angle, framing, key claims, omissions, tone, and evidence
+- **Generate Newsletter** — AI-written Daily Digest, Weekly Roundup, or Executive Brief from 3–15 articles
+- **AI Briefing** — Free-form prompt answered using 2–15 selected articles as grounded context
+- **Multi-article export** — Copy, download as Markdown (`.md`), download as Word (`.docx`), or email from the AI panel
+- **Active AI config strip** — MultiArticlePanel shows the currently active personas, tone presets, and custom instructions before generating
+- **Improved search** — AND-logic tokenized search: "cloud AI" finds both terms anywhere in the article; "quoted phrases" for exact match; results ranked by title › source › AI topics › body weight
+- **Cross-feed deduplication** — Wire stories appearing in multiple feeds are stored only once; canonical URL normalization strips tracking params (`utm_*`, `fbclid`, etc.), `www.` prefix, fragments, and sorts query params (DB v6 migration with backfill)
+- **`/` shortcut** — Press `/` anywhere to focus the search box
+- **`Escape` improvements** — Clears multi-select → clears search → exits zen mode, in priority order
 
 ### v1.2.0
 - **Background AI batch processing** — Automatically summarizes and classifies new articles using a local Ollama model; configurable in Settings
