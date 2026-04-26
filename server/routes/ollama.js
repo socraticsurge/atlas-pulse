@@ -45,12 +45,14 @@ async function getOllamaStatus() {
  * Returns { installed, running, models[] }
  */
 router.get('/status', async (req, res) => {
-  const installed = await isOllamaInstalled();
-  if (!installed) {
-    return res.json({ installed: false, running: false, models: [] });
-  }
+  // Fast path: if Ollama is already responding, skip the slow `which ollama` check entirely
   const { running, models } = await getOllamaStatus();
-  res.json({ installed: true, running, models });
+  if (running) {
+    return res.json({ installed: true, running: true, models });
+  }
+  // Slow path: only exec when Ollama isn't responding
+  const installed = await isOllamaInstalled();
+  res.json({ installed, running: false, models: [] });
 });
 
 /**
