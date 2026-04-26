@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
 import {
   HiOutlineSparkles,
   HiOutlineTrash,
@@ -41,14 +41,22 @@ function ToneBadge({ label }) {
   return <span className="sum-badge sum-badge-tone">{label}</span>;
 }
 
-function SummaryCard({ row, onDelete }) {
+const SummaryCard = memo(function SummaryCard({ row, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmTimerRef = useRef(null);
 
-  const handleDelete = async () => {
-    if (!window.confirm('Delete this summary? This cannot be undone.')) return;
-    setDeleting(true);
-    try { await onDelete(row.id); } finally { setDeleting(false); }
+  const handleDeleteClick = async () => {
+    if (confirmDelete) {
+      clearTimeout(confirmTimerRef.current);
+      setConfirmDelete(false);
+      setDeleting(true);
+      try { await onDelete(row.id); } finally { setDeleting(false); }
+    } else {
+      setConfirmDelete(true);
+      confirmTimerRef.current = setTimeout(() => setConfirmDelete(false), 3000);
+    }
   };
 
   return (
@@ -99,17 +107,17 @@ function SummaryCard({ row, onDelete }) {
 
       <div className="lib-card-actions">
         <button
-          className="btn btn-ghost btn-icon btn-sm"
-          onClick={handleDelete}
+          className={`btn btn-ghost btn-icon btn-sm${confirmDelete ? ' btn-danger-confirm' : ''}`}
+          onClick={handleDeleteClick}
           disabled={deleting}
-          title="Delete summary"
+          title={confirmDelete ? 'Click again to confirm delete' : 'Delete summary'}
         >
-          <HiOutlineTrash />
+          {confirmDelete ? <HiOutlineExclamationCircle /> : <HiOutlineTrash />}
         </button>
       </div>
     </div>
   );
-}
+});
 
 export default function LibraryView() {
   const [summaries, setSummaries] = useState([]);
@@ -142,16 +150,15 @@ export default function LibraryView() {
     setSummaries((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
-  const filtered = search.trim()
-    ? summaries.filter((r) => {
-        const q = search.toLowerCase();
-        return (
-          (r.article_title || '').toLowerCase().includes(q) ||
-          (r.summary_text || '').toLowerCase().includes(q) ||
-          (r.article_source || '').toLowerCase().includes(q)
-        );
-      })
-    : summaries;
+  const filtered = useMemo(() => {
+    if (!search.trim()) return summaries;
+    const q = search.toLowerCase();
+    return summaries.filter((r) =>
+      (r.article_title || '').toLowerCase().includes(q) ||
+      (r.summary_text || '').toLowerCase().includes(q) ||
+      (r.article_source || '').toLowerCase().includes(q)
+    );
+  }, [summaries, search]);
 
   return (
     <div className="library-panel">

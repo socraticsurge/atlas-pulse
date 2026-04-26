@@ -30,4 +30,15 @@ db.version(4).stores({
   })
 );
 
+// v5: ensure aiStatus is always a string so indexed queries work reliably
+db.version(5).stores({
+  folders: '++id, name, order, createdAt',
+  feeds: '++id, folderId, title, url, siteUrl, lastRefreshed, createdAt',
+  articles: '++id, feedId, guid, title, link, publishedAt, isRead, isBookmarked, aiStatus, [feedId+guid]',
+}).upgrade(tx =>
+  tx.table('articles').toCollection().modify(article => {
+    if (!article.aiStatus) article.aiStatus = 'none';
+  })
+);
+
 export default db;

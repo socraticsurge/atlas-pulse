@@ -36,6 +36,7 @@ export default function ArticleList({
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const searchInputRef = useRef(null);
   const [viewMode, setViewMode] = useState(() =>
     localStorage.getItem('atlas-pulse-view-mode') || 'magazine'
   );
@@ -165,6 +166,22 @@ export default function ArticleList({
     return () => clearTimeout(notifyTimerRef.current);
   }, [filteredArticles, onArticlesLoaded]);
 
+  // '/' focuses search; Escape closes it
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        setShowSearch(true);
+        setTimeout(() => searchInputRef.current?.focus(), 0);
+      } else if (e.key === 'Escape' && showSearch) {
+        setShowSearch(false);
+        setSearchQuery('');
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [showSearch]);
+
   const viewTitle = useMemo(() => {
     switch (activeView.type) {
       case 'all': return 'All Articles';
@@ -288,6 +305,7 @@ export default function ArticleList({
         <div className="article-search-bar">
           <HiOutlineMagnifyingGlass className="search-icon" />
           <input
+            ref={searchInputRef}
             className="search-input"
             placeholder="Search articles..."
             value={searchQuery}
@@ -374,7 +392,15 @@ export default function ArticleList({
       )}
 
       <div className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
-        {filteredArticles.length === 0 ? (
+        {rawArticles === undefined ? (
+          Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="article-card-skeleton">
+              <div className="skeleton-line skeleton-short" />
+              <div className="skeleton-line" />
+              <div className="skeleton-line skeleton-medium" />
+            </div>
+          ))
+        ) : filteredArticles.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">
               {searchQuery ? <HiOutlineMagnifyingGlass /> : <HiOutlineSparkles />}

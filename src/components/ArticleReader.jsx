@@ -54,6 +54,7 @@ export default function ArticleReader({
 
   const contentRef = useRef(null);
   const shareMenuRef = useRef(null);
+  const scrollMapRef = useRef({});
 
   // Live DB queries
   const feed = useLiveQuery(
@@ -78,10 +79,16 @@ export default function ArticleReader({
     return () => el.removeEventListener('scroll', onScroll);
   }, [isOpen, article?.id]);
 
-  // Reset scroll + progress when article changes
+  // Save scroll position when leaving an article; restore it when returning
   useEffect(() => {
+    const el = contentRef.current;
+    const id = article?.id;
+    if (!id) return;
+    el.scrollTop = scrollMapRef.current[id] || 0;
     setScrollProgress(0);
-    if (contentRef.current) contentRef.current.scrollTop = 0;
+    return () => {
+      if (el && id) scrollMapRef.current[id] = el.scrollTop;
+    };
   }, [article?.id]);
 
   // Close share menu on outside click

@@ -213,6 +213,8 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const inputRef = useRef(null);
   const modelPickerRef = useRef(null);
   const abortRef = useRef(null);
+  const tokenBufferRef = useRef('');
+  const rafRef = useRef(null);
 
   const loadModels = useCallback((modelList) => {
     setModels(modelList);
@@ -354,19 +356,35 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     const ollamaMsgs = [systemMsg, ...nextMessages];
 
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
+    tokenBufferRef.current = '';
+    rafRef.current = null;
+
+    const flushTokens = () => {
+      const buffered = tokenBufferRef.current;
+      tokenBufferRef.current = '';
+      rafRef.current = null;
+      if (!buffered) return;
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: updated[updated.length - 1].content + buffered,
+        };
+        return updated.length > MAX_CHAT_MESSAGES ? updated.slice(-MAX_CHAT_MESSAGES) : updated;
+      });
+    };
 
     try {
       for await (const token of streamChat(selectedModel, ollamaMsgs)) {
         if (abortRef.current) break;
-        setMessages((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            role: 'assistant',
-            content: updated[updated.length - 1].content + token,
-          };
-          return updated.length > MAX_CHAT_MESSAGES ? updated.slice(-MAX_CHAT_MESSAGES) : updated;
-        });
+        tokenBufferRef.current += token;
+        if (!rafRef.current) {
+          rafRef.current = requestAnimationFrame(flushTokens);
+        }
       }
+      // Flush any remaining tokens after stream ends
+      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
+      flushTokens();
     } catch (err) {
       setChatError(err.message);
       setMessages((prev) => prev.slice(0, -1));
