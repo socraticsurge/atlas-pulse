@@ -15,12 +15,11 @@ import db from '../db/database.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
 
 const FILTER_DIMS = [
-  { key: 'sentiment',    label: 'Sentiment',    values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative', mixed: '🔀 Mixed' } },
-  { key: 'urgency',      label: 'Urgency',      values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
-  { key: 'frame',        label: 'Frame',        values: { conflict: '⚔️ Conflict', human_interest: '👤 Human', economic: '📊 Economic', analytical: '🔬 Analytical', moral: '⚖️ Moral', informational: '📰 Info' } },
-  { key: 'tone',         label: 'Tone',         values: { alarming: '🚨 Alarming', cautionary: '⚠️ Cautionary', neutral: '〰️ Neutral', optimistic: '✨ Optimistic', critical: '💭 Critical', satirical: '🎭 Satirical' } },
-  { key: 'depth',        label: 'Depth',        values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
-  { key: 'subjectivity', label: 'Subjectivity', values: { objective: '🎯 Objective', balanced: '⚖️ Balanced', opinion: '💬 Opinion' } },
+  { key: 'sentiment', label: 'Sentiment', values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative' } },
+  { key: 'urgency',   label: 'Urgency',   values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
+  { key: 'frame',     label: 'Frame',     values: { conflict: '⚔️ Conflict', human_interest: '👤 Human', economic: '📊 Economic', analytical: '🔬 Analytical' } },
+  { key: 'tone',      label: 'Tone',      values: { alarming: '🚨 Alarming', analytical: '💡 Analytical', optimistic: '✨ Optimistic', opinion: '💭 Opinion' } },
+  { key: 'depth',     label: 'Depth',     values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
 ];
 
 export default function ArticleList({

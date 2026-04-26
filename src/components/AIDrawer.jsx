@@ -44,22 +44,20 @@ const BASE_CHAT = `You are a reading assistant. Answer questions about the artic
 
 const ANALYSIS_PROMPT = `Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
 {
-  "sentiment": "positive|neutral|negative|mixed",
+  "sentiment": "positive|neutral|negative",
   "urgency": "breaking|developing|evergreen",
-  "frame": "conflict|human_interest|economic|analytical|moral|informational",
-  "tone": "alarming|cautionary|neutral|optimistic|critical|satirical",
+  "frame": "conflict|human_interest|economic|analytical",
+  "tone": "alarming|analytical|optimistic|opinion",
   "depth": "brief|standard|deep_dive",
-  "subjectivity": "objective|balanced|opinion",
   "topics": ["tag1", "tag2", "tag3"]
 }`;
 
 const ANALYSIS_DIMS = [
-  { key: 'sentiment',    label: 'Sentiment',    values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative', mixed: '🔀 Mixed' } },
-  { key: 'urgency',      label: 'Urgency',      values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
-  { key: 'frame',        label: 'Frame',        values: { conflict: '⚔️ Conflict', human_interest: '👤 Human Interest', economic: '📊 Economic', analytical: '🔬 Analytical', moral: '⚖️ Moral', informational: '📰 Info' } },
-  { key: 'tone',         label: 'Tone',         values: { alarming: '🚨 Alarming', cautionary: '⚠️ Cautionary', neutral: '〰️ Neutral', optimistic: '✨ Optimistic', critical: '💭 Critical', satirical: '🎭 Satirical' } },
-  { key: 'depth',        label: 'Depth',        values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
-  { key: 'subjectivity', label: 'Subjectivity', values: { objective: '🎯 Objective', balanced: '⚖️ Balanced', opinion: '💬 Opinion' } },
+  { key: 'sentiment', label: 'Sentiment', values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative' } },
+  { key: 'urgency',   label: 'Urgency',   values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
+  { key: 'frame',     label: 'Frame',     values: { conflict: '⚔️ Conflict', human_interest: '👤 Human Interest', economic: '📊 Economic', analytical: '🔬 Analytical' } },
+  { key: 'tone',      label: 'Tone',      values: { alarming: '🚨 Alarming', analytical: '💡 Analytical', optimistic: '✨ Optimistic', opinion: '💭 Opinion' } },
+  { key: 'depth',     label: 'Depth',     values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
 ];
 
 function parseAnalysisJSON(raw) {
@@ -67,13 +65,12 @@ function parseAnalysisJSON(raw) {
   if (!match) throw new Error('No JSON in response');
   const parsed = JSON.parse(match[0]);
   return {
-    sentiment:    parsed.sentiment    || 'neutral',
-    urgency:      parsed.urgency      || 'evergreen',
-    frame:        parsed.frame        || 'informational',
-    tone:         parsed.tone         || 'neutral',
-    depth:        parsed.depth        || 'standard',
-    subjectivity: parsed.subjectivity || 'balanced',
-    topics:       Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
+    sentiment: parsed.sentiment || 'neutral',
+    urgency:   parsed.urgency   || 'evergreen',
+    frame:     parsed.frame     || 'analytical',
+    tone:      parsed.tone      || 'analytical',
+    depth:     parsed.depth     || 'standard',
+    topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
   };
 }
 
@@ -142,12 +139,14 @@ function AnalysisPanel({ analysis, analyzing, error, onRun, canRun }) {
       <div className="analysis-grid">
         {ANALYSIS_DIMS.map(({ key, label, values }) => {
           const val = analysis[key];
-          if (!val) return null;
-          const display = values[val] || val;
+          const display = val ? (values[val] || val) : null;
           return (
             <div key={key} className="analysis-row">
               <span className="analysis-dim-label">{label}</span>
-              <span className={`analysis-value-badge analysis-badge-${key}-${val}`}>{display}</span>
+              {display
+                ? <span className={`analysis-value-badge analysis-badge-${key}-${val}`}>{display}</span>
+                : <span className="analysis-no-value">—</span>
+              }
             </div>
           );
         })}
@@ -501,6 +500,9 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
             <button className={`ai-tab ${tab === 'summary' ? 'active' : ''}`} onClick={() => setTab('summary')}>
               Summary
             </button>
+            <button className={`ai-tab ${tab === 'analysis' ? 'active' : ''}`} onClick={() => setTab('analysis')}>
+              Analysis
+            </button>
             <button className={`ai-tab ${tab === 'chat' ? 'active' : ''}`} onClick={() => setTab('chat')}>
               Chat
             </button>
@@ -525,18 +527,6 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
           {tab === 'summary' && (
             <div className="ai-drawer-body">
 
-              {/* Analysis section — always at the top */}
-              <AnalysisPanel
-                analysis={analysis}
-                analyzing={analyzing}
-                error={analysisError}
-                onRun={runAnalysis}
-                canRun={!!selectedModel && !summarizing}
-              />
-
-              <div className="ai-section-divider" />
-
-              {/* Summary section */}
               {!summary && !summarizing && !summaryError && article?.aiStatus === 'queued' && (
                 <div className="ai-batch-pending">
                   <span className="spinner" style={{ width: 14, height: 14 }} />
@@ -615,6 +605,19 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ── Analysis Tab ── */}
+          {tab === 'analysis' && (
+            <div className="ai-drawer-body">
+              <AnalysisPanel
+                analysis={analysis}
+                analyzing={analyzing}
+                error={analysisError}
+                onRun={runAnalysis}
+                canRun={!!selectedModel && !summarizing}
+              />
             </div>
           )}
 
