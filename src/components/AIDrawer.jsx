@@ -9,12 +9,14 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineChevronDown,
   HiOutlineBookmarkSquare,
+  HiOutlineBeaker,
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat, saveSummary } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 import OllamaSetup from './OllamaSetup.jsx';
+import db from '../db/database.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 
@@ -40,37 +42,126 @@ const BASE_SUMMARY = `You are an editorial reading assistant. Read the article a
 
 const BASE_CHAT = `You are a reading assistant. Answer questions about the article clearly and concisely. Stay grounded in the article content. If something is not covered in the article, say so briefly.`;
 
-// Mapping for analysis badge display
-const ANALYSIS_LABELS = {
-  sentiment:   { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative', mixed: '🔀 Mixed' },
-  urgency:     { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' },
-  frame:       { conflict: '⚔️ Conflict', human_interest: '👤 Human Interest', economic: '📊 Economic', analytical: '🔬 Analytical', moral: '⚖️ Moral', informational: '📰 Info' },
-  tone:        { alarming: '🚨 Alarming', cautionary: '⚠️ Cautionary', neutral: '〰️ Neutral', optimistic: '✨ Optimistic', critical: '💭 Critical', satirical: '🎭 Satirical' },
-  depth:       { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' },
-  subjectivity:{ objective: '🎯 Objective', balanced: '⚖️ Balanced', opinion: '💬 Opinion' },
-};
+const ANALYSIS_PROMPT = `Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
+{
+  "sentiment": "positive|neutral|negative|mixed",
+  "urgency": "breaking|developing|evergreen",
+  "frame": "conflict|human_interest|economic|analytical|moral|informational",
+  "tone": "alarming|cautionary|neutral|optimistic|critical|satirical",
+  "depth": "brief|standard|deep_dive",
+  "subjectivity": "objective|balanced|opinion",
+  "topics": ["tag1", "tag2", "tag3"]
+}`;
 
-function AnalysisBadges({ aiAnalysis }) {
-  if (!aiAnalysis) return null;
-  let analysis;
-  try { analysis = typeof aiAnalysis === 'string' ? JSON.parse(aiAnalysis) : aiAnalysis; }
-  catch { return null; }
+const ANALYSIS_DIMS = [
+  { key: 'sentiment',    label: 'Sentiment',    values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative', mixed: '🔀 Mixed' } },
+  { key: 'urgency',      label: 'Urgency',      values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
+  { key: 'frame',        label: 'Frame',        values: { conflict: '⚔️ Conflict', human_interest: '👤 Human Interest', economic: '📊 Economic', analytical: '🔬 Analytical', moral: '⚖️ Moral', informational: '📰 Info' } },
+  { key: 'tone',         label: 'Tone',         values: { alarming: '🚨 Alarming', cautionary: '⚠️ Cautionary', neutral: '〰️ Neutral', optimistic: '✨ Optimistic', critical: '💭 Critical', satirical: '🎭 Satirical' } },
+  { key: 'depth',        label: 'Depth',        values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
+  { key: 'subjectivity', label: 'Subjectivity', values: { objective: '🎯 Objective', balanced: '⚖️ Balanced', opinion: '💬 Opinion' } },
+];
 
-  const badges = [];
-  for (const [dim, valueMap] of Object.entries(ANALYSIS_LABELS)) {
-    const val = analysis[dim];
-    if (val && valueMap[val]) badges.push(valueMap[val]);
+function parseAnalysisJSON(raw) {
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('No JSON in response');
+  const parsed = JSON.parse(match[0]);
+  return {
+    sentiment:    parsed.sentiment    || 'neutral',
+    urgency:      parsed.urgency      || 'evergreen',
+    frame:        parsed.frame        || 'informational',
+    tone:         parsed.tone         || 'neutral',
+    depth:        parsed.depth        || 'standard',
+    subjectivity: parsed.subjectivity || 'balanced',
+    topics:       Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
+  };
+}
+
+// Grouped analysis display — shown inside the Summary tab
+function AnalysisPanel({ analysis, analyzing, error, onRun, canRun }) {
+  if (analyzing) {
+    return (
+      <div className="analysis-panel">
+        <div className="analysis-panel-header">
+          <span className="analysis-panel-title"><HiOutlineBeaker /> Content Analysis</span>
+        </div>
+        <div className="analysis-loading">
+          <span className="spinner" style={{ width: 14, height: 14 }} />
+          <span>Analyzing…</span>
+        </div>
+      </div>
+    );
   }
-  if (analysis.topics?.length) {
-    analysis.topics.slice(0, 3).forEach(t => badges.push(`# ${t}`));
+
+  if (!analysis && !error) {
+    return (
+      <div className="analysis-panel analysis-panel-empty">
+        <div className="analysis-empty-body">
+          <HiOutlineBeaker className="analysis-empty-icon" />
+          <div>
+            <p className="analysis-empty-label">Content Analysis</p>
+            <p className="analysis-empty-hint">Classify sentiment, urgency, framing, and tone</p>
+          </div>
+          <button
+            className="btn btn-secondary btn-sm"
+            onClick={onRun}
+            disabled={!canRun}
+          >
+            Analyze
+          </button>
+        </div>
+      </div>
+    );
   }
 
-  if (badges.length === 0) return null;
+  if (error) {
+    return (
+      <div className="analysis-panel">
+        <div className="analysis-panel-header">
+          <span className="analysis-panel-title"><HiOutlineBeaker /> Content Analysis</span>
+          <button className="btn btn-ghost btn-sm" onClick={onRun} disabled={!canRun}>
+            <HiOutlineArrowPath /> Retry
+          </button>
+        </div>
+        <div className="ai-error" style={{ margin: 0 }}>
+          <HiOutlineExclamationCircle />
+          <span>{error}</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="ai-analysis-badges">
-      {badges.map((b, i) => (
-        <span key={i} className="ai-analysis-badge">{b}</span>
-      ))}
+    <div className="analysis-panel">
+      <div className="analysis-panel-header">
+        <span className="analysis-panel-title"><HiOutlineBeaker /> Content Analysis</span>
+        <button className="btn btn-ghost btn-sm" onClick={onRun} disabled={!canRun} title="Re-analyze">
+          <HiOutlineArrowPath />
+        </button>
+      </div>
+      <div className="analysis-grid">
+        {ANALYSIS_DIMS.map(({ key, label, values }) => {
+          const val = analysis[key];
+          if (!val) return null;
+          const display = values[val] || val;
+          return (
+            <div key={key} className="analysis-row">
+              <span className="analysis-dim-label">{label}</span>
+              <span className={`analysis-value-badge analysis-badge-${key}-${val}`}>{display}</span>
+            </div>
+          );
+        })}
+        {analysis.topics?.length > 0 && (
+          <div className="analysis-row analysis-row-topics">
+            <span className="analysis-dim-label">Topics</span>
+            <div className="analysis-topics">
+              {analysis.topics.map((t) => (
+                <span key={t} className="analysis-topic-tag">#{t}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -80,6 +171,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [ollamaReady, setOllamaReady] = useState(false);
+  const [ollamaChecked, setOllamaChecked] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
 
   // Summary state
@@ -90,6 +182,11 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const [summaryCopied, setSummaryCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Analysis state
+  const [analysis, setAnalysis] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
 
   // Chat state
   const [messages, setMessages] = useState([]);
@@ -102,20 +199,21 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const modelPickerRef = useRef(null);
   const abortRef = useRef(null);
 
-  // Load models
   const loadModels = useCallback((modelList) => {
     setModels(modelList);
     setSelectedModel(prev => prev || pickDefaultModel(modelList));
     setOllamaReady(modelList.length > 0);
+    setOllamaChecked(true);
   }, []);
 
+  // Initial model check — set ollamaChecked regardless of outcome to avoid flash
   useEffect(() => {
     fetchAIModels()
       .then(({ models: list }) => loadModels(list))
-      .catch(() => setOllamaReady(false));
+      .catch(() => { setOllamaReady(false); setOllamaChecked(true); });
   }, [loadModels]);
 
-  // When article changes: reset summary state, then pre-populate from batch if available
+  // Reset all state when article changes
   useEffect(() => {
     setSummary('');
     setIsBatchSummary(false);
@@ -125,15 +223,24 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     setMessages([]);
     setChatError(null);
     setChatLoading(false);
+    setAnalysis(null);
+    setAnalysisError(null);
   }, [article?.id]);
 
-  // Pre-populate from batch-generated summary (runs after the reset above)
+  // Pre-populate summary from batch
   useEffect(() => {
     if (article?.aiSummary) {
       setSummary(article.aiSummary);
       setIsBatchSummary(true);
     }
   }, [article?.id, article?.aiSummary]);
+
+  // Pre-populate analysis from batch
+  useEffect(() => {
+    if (article?.aiAnalysis) {
+      try { setAnalysis(JSON.parse(article.aiAnalysis)); } catch { /* ignore */ }
+    }
+  }, [article?.id, article?.aiAnalysis]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -155,6 +262,35 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showModelPicker]);
+
+  const runAnalysis = useCallback(async () => {
+    if (!article || !selectedModel || analyzing) return;
+    setAnalyzing(true);
+    setAnalysisError(null);
+    abortRef.current = false;
+
+    const rawText = stripHtml(extractedContent || article.content || article.summary || '');
+    const text = rawText.length > 4000 ? rawText.slice(0, 4000) + '…' : rawText;
+    const msgs = [
+      { role: 'system', content: ANALYSIS_PROMPT },
+      { role: 'user', content: `Title: ${article.title}\n\n${text}` },
+    ];
+
+    try {
+      let response = '';
+      for await (const token of streamChat(selectedModel, msgs)) {
+        if (abortRef.current) break;
+        response += token;
+      }
+      const parsed = parseAnalysisJSON(response);
+      setAnalysis(parsed);
+      await db.articles.update(article.id, { aiAnalysis: JSON.stringify(parsed) });
+    } catch (err) {
+      setAnalysisError(err.message);
+    } finally {
+      setAnalyzing(false);
+    }
+  }, [article, extractedContent, selectedModel, analyzing]);
 
   const generateSummary = useCallback(async () => {
     if (!article || !selectedModel || summarizing) return;
@@ -235,6 +371,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     abortRef.current = true;
     setSummarizing(false);
     setChatLoading(false);
+    setAnalyzing(false);
   };
 
   const copySummary = () => {
@@ -309,6 +446,13 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         </div>
 
         <div className="ai-drawer-header-right">
+          {/* Inline loading indicator while doing initial model check */}
+          {!ollamaChecked && (
+            <span className="ai-checking-label">
+              <span className="spinner" style={{ width: 11, height: 11 }} /> checking
+            </span>
+          )}
+
           {ollamaReady && (
             <div className="ai-model-picker" ref={modelPickerRef}>
               <button
@@ -342,14 +486,14 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         </div>
       </div>
 
-      {/* Ollama setup gate — shown when Ollama isn't ready */}
-      {!ollamaReady && (
+      {/* Ollama setup — only after check confirms it's NOT ready */}
+      {ollamaChecked && !ollamaReady && (
         <div className="ai-drawer-setup">
           <OllamaSetup compact onReady={loadModels} />
         </div>
       )}
 
-      {/* Normal drawer content — shown only when Ollama is ready */}
+      {/* Main content — only when Ollama is ready */}
       {ollamaReady && (
         <>
           {/* Tab bar */}
@@ -380,20 +524,33 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
           {/* ── Summary Tab ── */}
           {tab === 'summary' && (
             <div className="ai-drawer-body">
+
+              {/* Analysis section — always at the top */}
+              <AnalysisPanel
+                analysis={analysis}
+                analyzing={analyzing}
+                error={analysisError}
+                onRun={runAnalysis}
+                canRun={!!selectedModel && !summarizing}
+              />
+
+              <div className="ai-section-divider" />
+
+              {/* Summary section */}
               {!summary && !summarizing && !summaryError && article?.aiStatus === 'queued' && (
                 <div className="ai-batch-pending">
                   <span className="spinner" style={{ width: 14, height: 14 }} />
-                  <span>AI analysis queued — will appear here shortly</span>
+                  <span>Summary queued — will appear here shortly</span>
                 </div>
               )}
 
               {!summary && !summarizing && !summaryError && article?.aiStatus !== 'queued' && (
                 <div className="ai-summary-prompt">
-                  <p className="ai-summary-hint">Generate a concise summary of this article, ready to share.</p>
+                  <p className="ai-summary-hint">Generate a concise summary, ready to share.</p>
                   <button
                     className="btn btn-primary ai-generate-btn"
                     onClick={generateSummary}
-                    disabled={!selectedModel}
+                    disabled={!selectedModel || analyzing}
                   >
                     <HiOutlineSparkles /> Generate Summary
                   </button>
@@ -410,13 +567,8 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
 
               {(summary || summarizing) && (
                 <div className="ai-summary-result">
-                  {/* Analysis badges from batch processing */}
-                  {isBatchSummary && article?.aiAnalysis && (
-                    <AnalysisBadges aiAnalysis={article.aiAnalysis} />
-                  )}
-
                   {isBatchSummary && (
-                    <div className="ai-batch-label">Batch summary · <span>regenerate for custom persona</span></div>
+                    <div className="ai-batch-label">Batch summary · <span onClick={generateSummary}>regenerate for custom persona</span></div>
                   )}
 
                   <div className="ai-summary-text">

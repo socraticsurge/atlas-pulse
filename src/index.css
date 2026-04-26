@@ -3475,6 +3475,174 @@ a:hover {
   color: var(--text-tertiary);
 }
 
+/* ── AI drawer — checking label ─────────────────────────────── */
+.ai-checking-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 0 4px;
+}
+
+/* ── AI section divider ──────────────────────────────────────── */
+.ai-section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 10px 0;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CONTENT ANALYSIS PANEL (AIDrawer)
+   ═══════════════════════════════════════════════════════════════ */
+
+.analysis-panel {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.analysis-panel-empty {
+  border-style: dashed;
+}
+
+.analysis-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.analysis-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.analysis-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.analysis-empty-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.analysis-empty-icon {
+  font-size: 20px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.analysis-empty-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.analysis-empty-hint {
+  font-size: 11.5px;
+  color: var(--text-tertiary);
+  margin: 2px 0 0;
+}
+
+.analysis-empty-body > .btn {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.analysis-grid {
+  padding: 8px 0;
+}
+
+.analysis-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px;
+  min-height: 28px;
+}
+
+.analysis-row-topics {
+  align-items: flex-start;
+  padding-top: 6px;
+}
+
+.analysis-dim-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.analysis-value-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Sentiment-specific colours */
+.analysis-badge-sentiment-positive { background: rgba(34,197,94,0.12); border-color: rgba(34,197,94,0.3); color: #4ade80; }
+.analysis-badge-sentiment-negative { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.3);  color: #f87171; }
+.analysis-badge-sentiment-mixed    { background: rgba(234,179,8,0.12);  border-color: rgba(234,179,8,0.3);  color: #facc15; }
+.analysis-badge-sentiment-neutral  { background: var(--bg-secondary); border-color: var(--border); color: var(--text-secondary); }
+
+/* Urgency-specific colours */
+.analysis-badge-urgency-breaking   { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.3);  color: #f87171; }
+.analysis-badge-urgency-developing { background: rgba(234,179,8,0.12);  border-color: rgba(234,179,8,0.3);  color: #facc15; }
+.analysis-badge-urgency-evergreen  { background: rgba(34,197,94,0.12);  border-color: rgba(34,197,94,0.3);  color: #4ade80; }
+
+/* Accent tint for other dimensions */
+.analysis-badge-depth-deep_dive,
+.analysis-badge-subjectivity-opinion {
+  background: var(--accent-muted);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.analysis-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.analysis-topic-tag {
+  display: inline-flex;
+  padding: 1px 7px;
+  font-size: 11px;
+  border-radius: 20px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  font-weight: 500;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    AI FILTER CHIPS (ArticleList)
    ═══════════════════════════════════════════════════════════════ */
