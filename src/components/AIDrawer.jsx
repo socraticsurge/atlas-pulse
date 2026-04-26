@@ -19,6 +19,7 @@ import OllamaSetup from './OllamaSetup.jsx';
 import db from '../db/database.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
+const MAX_CHAT_MESSAGES = 40; // ~20 exchanges
 
 function pickDefaultModel(models) {
   for (const pref of PREFERRED_MODELS) {
@@ -363,7 +364,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
             role: 'assistant',
             content: updated[updated.length - 1].content + token,
           };
-          return updated;
+          return updated.length > MAX_CHAT_MESSAGES ? updated.slice(-MAX_CHAT_MESSAGES) : updated;
         });
       }
     } catch (err) {

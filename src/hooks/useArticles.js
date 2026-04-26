@@ -40,7 +40,6 @@ export function useArticles(viewType, viewId) {
         return db.articles
           .where('publishedAt')
           .aboveOrEqual(todayStart.toISOString())
-          .reverse()
           .sortBy('publishedAt')
           .then(arts => arts.reverse());
       }
