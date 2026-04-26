@@ -1,8 +1,8 @@
 # Atlas Pulse — Personal RSS Feed Reader
 
-**Version 1.1.0**
+**Version 1.2.0**
 
-A modern, privacy-first RSS feed reader that runs entirely on your local machine. No cloud services, no subscriptions, no accounts — your data stays in your browser's IndexedDB. Powered by React, Express, and (optionally) a local Ollama LLM for AI-powered summaries and article chat.
+A modern, privacy-first RSS feed reader that runs entirely on your local machine. No cloud services, no subscriptions, no accounts — your data stays in your browser's IndexedDB. Powered by React, Express, and (optionally) a local Ollama LLM for AI-powered summaries, content analysis, and article chat.
 
 ---
 
@@ -31,7 +31,7 @@ Open **http://localhost:5173** in your browser.
 
 > **What starts:**
 > - Vite dev server on **port 5173** (React frontend)
-> - Express API server on **port 3001** (CORS proxy + AI bridge)
+> - Express API server on **port 3001** (CORS proxy + Ollama bridge)
 > - Vite proxies all `/api/*` requests to Express automatically
 
 Press `Ctrl + C` to stop everything.
@@ -44,7 +44,7 @@ Press `Ctrl + C` to stop everything.
 
 | Feature | Details |
 |---------|---------|
-| **Three article views** | Magazine (card + image), Excerpt (title + snippet + thumbnail), Compact (dense list) |
+| **Three article views** | Grid (portrait thumbnail cards), List (title + excerpt + thumbnail), Compact (dense single-line rows) |
 | **Auto full-text extraction** | Full article pulled from source automatically on open |
 | **Reading progress bar** | Accent-colored bar at the top of the reader tracks scroll position |
 | **Zen / Focus mode** | Press `f` to expand the reader to full width, hiding all distractions |
@@ -54,18 +54,13 @@ Press `Ctrl + C` to stop everything.
 
 | Feature | Details |
 |---------|---------|
-| **Folders** | Create folders, drag feeds into them, right-click to rename or delete |
+| **Folders** | Create folders, move feeds into them, right-click to rename or delete |
 | **Saved / Bookmarks** | Bookmark any article; find them under "Saved" in the sidebar |
 | **Today view** | Shows only articles published today |
 | **Search** | Instant local search across title, content, and source name |
 | **Mark all read** | One-click button in the article list header |
-
-### Sharing
-
-| Feature | Details |
-|---------|---------|
-| **Share popover** | Share to LinkedIn, X/Twitter, Email, or Web Share API |
-| **Copy link** | Copy article URL to clipboard from the share menu |
+| **AI Only filter** | Toggle in the article list header to show only AI-analyzed articles |
+| **Content filters** | Per-dimension dropdown pills (Sentiment · Urgency · Frame · Tone · Depth) — shown when AI analysis data is available |
 
 ### Appearance
 
@@ -74,9 +69,9 @@ Press `Ctrl + C` to stop everything.
 | **Dark / Light theme** | Toggle in sidebar header or settings |
 | **Collapsible sidebar** | Three states: expanded → icon-only (56 px) → fully hidden |
 | **Resizable panels** | Drag the handle between article list and reader to resize |
-| **Font picker** | Inter, Serif (Merriweather), Mono (JetBrains Mono), System UI |
-| **Accent color** | 6 presets + custom color wheel picker |
-| **Text color** | Cool (default), Warm, Pure white, Soft grey |
+| **Font picker** | Inter, Poppins, Lato, Nunito, Merriweather, Garamond, Times, Mono, System UI |
+| **Accent color** | 6 presets + full custom color picker |
+| **Text color** | 4 presets (Cool, Warm, Pure, Soft) + full custom color picker |
 | **Reader typography** | Adjustable font size, line width, line height in reader settings |
 
 ### Feed Management
@@ -87,62 +82,81 @@ Press `Ctrl + C` to stop everything.
 | **Google News search** | Type a keyword to subscribe to a Google News RSS feed |
 | **Popular feeds catalog** | Curated feeds across Technology, AI, Business, Science, and more |
 | **OPML import / export** | Move your feeds to/from any other RSS reader |
-| **Auto-refresh** | Feeds refresh every 30 minutes in the background |
+| **Configurable auto-refresh** | Off, 15 min, 30 min, 1 hr, or 2 hr — set in Settings → Reading |
 
-### AI Assistant (requires Ollama)
+### AI Features (requires Ollama)
 
 | Feature | Details |
 |---------|---------|
-| **AI Summary** | One-click 3–4 sentence summary of the current article, streamed in real time |
-| **Share summary** | Copy or share the AI summary directly to LinkedIn / X |
+| **Guided Ollama setup** | Built-in wizard detects install status, starts Ollama, and pulls recommended models — no terminal needed |
+| **AI Summary** | On-demand 3–4 sentence summary of the current article, streamed in real time |
+| **Content Analysis** | On-demand classification across 5 dimensions: Sentiment, Urgency, Frame, Tone, Depth — with topic tags |
 | **Article Chat** | Ask any question about the article; streamed responses with full context |
-| **Model selector** | Pick any locally installed Ollama model from a dropdown |
-| **Suggestion chips** | Pre-built prompts: key takeaways, simple explanation, author's argument |
-| **Stop generation** | Cancel streaming mid-response |
+| **Background Batch Processing** | Automatically summarizes and classifies new articles in the background as you read |
+| **On-demand batch trigger** | `✨` button in the article list header queues the latest N articles for immediate processing |
+| **AI processing indicator** | Spinner with remaining count appears in the header while batch is running |
+| **AI Summaries Library** | Save any AI summary to a persistent SQLite library; search, browse, and export as CSV |
+| **Model selector** | Dropdown populated from your installed Ollama models |
+| **AI processed badge** | Sparkle icon appears on analyzed articles in all three list views |
 
 ---
 
 ## Setting Up AI Features
 
-The AI drawer uses [Ollama](https://ollama.com) — a free, local LLM runner. No API keys, no usage costs.
+The app uses [Ollama](https://ollama.com) — a free, local LLM runner. No API keys, no usage costs. The app has a built-in setup wizard, but you can also set up manually.
 
-### 1. Install Ollama
+### Option A: Built-in Wizard (recommended)
+
+1. Open **Settings → AI Processing**.
+2. The Ollama section detects whether Ollama is installed and running.
+3. Follow the prompts: download → start → pull a model. Done.
+
+### Option B: Manual Setup
+
+**1. Install Ollama**
 
 Download from [ollama.com](https://ollama.com) and follow the installer.
 
-### 2. Pull a Model
+**2. Pull a Model**
 
 ```bash
-# Fast and capable — recommended default
-ollama pull deepseek-r1:8b
+# Fast — good default for most machines
+ollama pull deepseek-r1:7b
 
-# Lightest option for older hardware
-ollama pull phi4-mini:3.8b
+# Lightweight — best for older hardware
+ollama pull qwen2.5:3b
 
-# Most powerful (needs ~20 GB RAM)
-ollama pull qwen3-coder:30b
+# Balanced quality/speed
+ollama pull llama3.1:8b
 ```
 
-### 3. Make Sure Ollama is Running
+**3. Make Sure Ollama is Running**
 
 ```bash
 ollama serve   # starts the API on http://localhost:11434
 ```
 
-Ollama usually starts automatically after install. Verify with:
+Verify with:
 
 ```bash
 curl http://localhost:11434   # should print "Ollama is running"
 ```
 
-### 4. Open the AI Drawer in the App
+**4. Open the AI Drawer**
 
 1. Open any article in the reader.
 2. Click the **✦ AI** button in the reader toolbar.
-3. The AI drawer slides up from the bottom of the reader.
-4. Choose **Summary** for a one-click summary, or **Chat** to ask questions.
+3. Choose a tab: **Summary**, **Analysis**, or **Chat**.
 
-The Express backend at `localhost:3001` acts as a bridge between the browser and Ollama (Ollama doesn't allow direct browser requests by default). No article content is ever sent to any external server.
+### Using Background Batch Processing
+
+1. Open **Settings → AI Processing**.
+2. Set your model, choose what to generate (Summary / Analysis / Both), and set articles-per-cycle.
+3. Enable **Background batch processing**.
+4. New articles will be automatically analyzed after each feed refresh.
+5. To process existing articles immediately, click the `✨` button in the article list header.
+
+> All AI queries go to your local Ollama instance. No article content is ever sent to any external server.
 
 ---
 
@@ -169,12 +183,14 @@ RSS Feed Reader/
 ├── index.html                    # HTML entry point
 │
 ├── server/                       # ── EXPRESS BACKEND (port 3001) ──
-│   ├── index.js                  # Server entry point — mounts all routes
+│   ├── index.js                  # Server entry — mounts all routes
 │   └── routes/
 │       ├── feeds.js              # POST /api/feeds/parse — parse RSS URL
 │       ├── discover.js           # POST /api/discover — auto-discover feeds
 │       ├── articles.js           # POST /api/articles/extract — full article extraction
-│       └── ai.js                 # GET /api/ai/models · POST /api/ai/chat (Ollama proxy)
+│       ├── ai.js                 # GET /api/ai/models · POST /api/ai/chat (Ollama proxy)
+│       ├── ollama.js             # GET /api/ollama/status · POST /api/ollama/start|pull
+│       └── summaries.js          # CRUD + export for saved AI summaries (SQLite)
 │   └── utils/
 │       ├── feedParser.js         # RSS/Atom parsing (rss-parser)
 │       ├── feedDiscovery.js      # HTML link tag + common path discovery
@@ -182,26 +198,38 @@ RSS Feed Reader/
 │
 └── src/                          # ── REACT FRONTEND (port 5173) ──
     ├── main.jsx                  # React entry — renders <App />
-    ├── App.jsx                   # Root component — state, routing, layout
+    ├── App.jsx                   # Root — state, layout, auto-refresh, batch wiring
     ├── index.css                 # Full design system (themes, typography, all components)
     │
     ├── components/
-    │   ├── Sidebar.jsx           # Left panel — nav, folders, feeds, three-state collapse
-    │   ├── ArticleList.jsx       # Middle panel — magazine/excerpt/compact views + search
+    │   ├── Sidebar.jsx           # Left panel — nav, folders, feeds, library badge
+    │   ├── ArticleList.jsx       # Middle panel — grid/list/compact + AI filters + batch trigger
     │   ├── ArticleReader.jsx     # Right panel — reader, toolbar, progress bar, sharing
-    │   ├── AIDrawer.jsx          # AI panel — summary + chat with local LLM via Ollama
-    │   ├── AddFeedModal.jsx      # Add feeds via URL / search / popular / alerts
-    │   ├── SettingsPanel.jsx     # Appearance + data management settings
-    │   ├── ReaderSettings.jsx    # Inline reader typography controls (font size, width, etc.)
+    │   ├── AIDrawer.jsx          # AI panel — Summary / Analysis / Chat tabs
+    │   ├── OllamaSetup.jsx       # Guided Ollama install/start/model-pull wizard
+    │   ├── LibraryView.jsx       # Full-panel saved summaries library
+    │   ├── AddFeedModal.jsx      # Add feeds via URL / search / popular
+    │   ├── SettingsPanel.jsx     # Appearance, Reading, AI Processing, Data settings
+    │   ├── ReaderSettings.jsx    # Inline reader typography controls
     │   └── ResizableHandle.jsx   # Draggable panel resize handle
     │
     ├── db/
-    │   └── database.js           # Dexie.js IndexedDB schema (feeds, articles, folders)
+    │   └── database.js           # Dexie.js IndexedDB schema v3 (feeds, articles, folders)
+    │                             # Articles carry: aiStatus, aiSummary, aiAnalysis fields
     │
     └── utils/
         ├── api.js                # HTTP client — all /api/* calls + streamChat() generator
-        ├── helpers.js            # Date formatting, read time estimation, HTML stripping
-        └── opml.js               # OPML import/export utilities
+        ├── batchSettings.js      # Batch processor config (enabled, model, features, maxPerCycle)
+        ├── helpers.js            # Date formatting, read time, HTML stripping
+        ├── aiSettings.js         # AI persona + tone configuration
+        ├── constants.js          # Auto-refresh options, popular feeds
+        └── opml.js               # OPML import/export
+
+    └── hooks/
+        ├── useFeeds.js           # Feed CRUD + refresh (queues new articles for batch)
+        ├── useFolders.js         # Folder management
+        └── useAIBatchProcessor.js # Background AI engine — queue watcher, processOne loop,
+                                  # triggerBatch (on-demand), pause/resume, progress tracking
 ```
 
 ---
@@ -209,35 +237,45 @@ RSS Feed Reader/
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                        BROWSER                          │
-│                                                         │
-│  ┌──────────┐  ┌─────────────┐  ┌────────────────────┐  │
-│  │ Sidebar  │  │ ArticleList │  │  ArticleReader     │  │
-│  │ 3 states │  │ 3 view modes│  │  + AI Drawer       │  │
-│  └──────────┘  └─────────────┘  └────────────────────┘  │
-│                        │                                │
-│                 ┌──────────────┐                        │
-│                 │  IndexedDB   │  All data local        │
-│                 │  (Dexie.js)  │  feeds · articles      │
-│                 └──────────────┘  folders · bookmarks   │
-│                        │                                │
-└────────────────────────┼────────────────────────────────┘
-                         │ /api/* (proxied by Vite)
-               ┌─────────────────┐
-               │   Express.js    │  port 3001
-               │  ┌───────────┐  │
-               │  │ feeds     │  │  Fetches RSS from internet
-               │  │ discover  │  │  Extracts full article text
-               │  │ articles  │  │
-               │  │ ai ───────┼──┼──► Ollama (localhost:11434)
-               │  └───────────┘  │     Local LLM — no data leaves
-               └─────────────────┘     your machine
+┌──────────────────────────────────────────────────────────────────┐
+│                            BROWSER                               │
+│                                                                  │
+│  ┌──────────┐  ┌───────────────────────┐  ┌──────────────────┐  │
+│  │ Sidebar  │  │     ArticleList       │  │  ArticleReader   │  │
+│  │ 3 states │  │  Grid/List/Compact    │  │  + AI Drawer     │  │
+│  │ lib badge│  │  AI filters + trigger │  │  Sum/Anal/Chat   │  │
+│  └──────────┘  └───────────────────────┘  └──────────────────┘  │
+│                              │                                   │
+│              ┌───────────────────────────┐                       │
+│              │         IndexedDB         │  All data local       │
+│              │  feeds · articles         │  aiStatus             │
+│              │  folders · bookmarks      │  aiSummary            │
+│              │  (Dexie.js)               │  aiAnalysis           │
+│              └───────────────────────────┘                       │
+│              ┌───────────────────────────┐                       │
+│              │   useAIBatchProcessor     │  Background engine    │
+│              │   watches queue depth     │  processes newest     │
+│              │   processOne() loop       │  articles first       │
+│              └───────────────────────────┘                       │
+│                              │                                   │
+└──────────────────────────────┼───────────────────────────────────┘
+                               │ /api/* (proxied by Vite)
+                    ┌──────────────────────┐
+                    │      Express.js      │  port 3001
+                    │  ┌────────────────┐  │
+                    │  │ feeds          │  │  Fetches RSS
+                    │  │ discover       │  │  Extracts full text
+                    │  │ articles       │  │
+                    │  │ ai ────────────┼──┼──► Ollama :11434
+                    │  │ ollama         │  │     Local LLM
+                    │  │ summaries ─────┼──┼──► SQLite (library)
+                    │  └────────────────┘  │
+                    └──────────────────────┘
 ```
 
 ### Why a Local Backend?
 
-Browsers block direct cross-origin requests (CORS). The Express server acts as a proxy so the browser can fetch RSS feeds from any website. For AI, it bridges between the browser and Ollama (which also blocks browser requests by default). Everything stays on your machine.
+Browsers block direct cross-origin requests (CORS). The Express server acts as a proxy so the browser can fetch RSS feeds from any website. For AI, it bridges between the browser and Ollama (which also blocks direct browser requests). Everything stays on your machine — including AI summaries saved to a local SQLite database.
 
 ---
 
@@ -247,13 +285,14 @@ Browsers block direct cross-origin requests (CORS). The Express server acts as a
 |-------|-----------|---------|
 | Frontend | React 19 + Vite 8 | UI + fast HMR dev server |
 | Styling | Vanilla CSS | Full design system, dark/light themes |
-| Storage | Dexie.js (IndexedDB) | Local-first data persistence |
+| Storage | Dexie.js (IndexedDB) | Local-first article/feed data |
+| Storage | SQLite (better-sqlite3) | Saved AI summaries library |
 | Backend | Express.js 5 | CORS proxy + Ollama bridge |
 | AI Runtime | Ollama | Local LLM inference — free, private |
 | Feed Parsing | rss-parser | RSS/Atom XML parsing |
 | Article Extraction | @extractus/article-extractor | Full-text extraction from any URL |
 | HTML Sanitization | DOMPurify | Safe HTML rendering in reader |
-| Icons | react-icons (hi2, fa, si) | UI iconography |
+| Icons | react-icons (hi2) | UI iconography |
 | Dev Runner | concurrently | Frontend + backend in one command |
 
 ---
@@ -272,58 +311,79 @@ Browsers block direct cross-origin requests (CORS). The Express server acts as a
 
 ## Data & Privacy
 
-All feeds, articles, folders, read state, and bookmarks are stored in **IndexedDB** inside your browser:
+| Data | Where stored |
+|------|-------------|
+| Feeds, articles, folders, bookmarks, read state | IndexedDB in your browser |
+| AI batch settings, view preferences | `localStorage` |
+| Manually saved AI summaries | SQLite file (server-side, local) |
 
-- **Zero cost** — no database server required
-- **Fully private** — nothing leaves your machine (including AI queries, which go to your local Ollama instance)
-- **Browser-specific** — data lives in the browser you use; switching browsers means starting fresh
-- **Clearable** — don't clear site data for `localhost` or you'll lose your feeds
-
-To back up your feeds, use **Settings → Export OPML**.
+- **Fully private** — nothing leaves your machine, including AI queries
+- **Browser-specific** — IndexedDB data is tied to the browser; switching browsers means starting fresh
+- **Backup** — use **Settings → Export OPML** to back up your feed list
 
 ---
 
 ## Troubleshooting
 
-### App shows a blank page or won't load
-- Check the terminal for errors.
-- `EADDRINUSE` means a port is already in use:
-  ```bash
-  kill -9 $(lsof -ti:3001) && kill -9 $(lsof -ti:5173)
-  npm run dev
-  ```
+### App won't load / blank page
+Check the terminal for errors. `EADDRINUSE` means a port is in use:
+```bash
+kill -9 $(lsof -ti:3001) && kill -9 $(lsof -ti:5173)
+npm run dev
+```
 
-### AI button shows "Ollama offline"
+### AI drawer shows "Checking Ollama…" for a long time
 - Make sure Ollama is running: `ollama serve`
 - Verify: `curl http://localhost:11434` → should return `Ollama is running`
-- Make sure you've pulled at least one model: `ollama list`
+- The app's built-in wizard (Settings → AI Processing) can start Ollama for you
+
+### No models in the model dropdown
+- Pull a model: `ollama pull qwen2.5:3b`
+- Or use the **Pull model** button in the Ollama setup section of Settings
+
+### Batch processing isn't analyzing the latest articles
+- Click the `✨` button in the article list header to trigger an on-demand run
+- This queues the N most recent unprocessed articles (N = Articles per cycle setting)
 
 ### AI responses are slow
-- Use a smaller model like `phi4-mini:3.8b` — select it in the model picker inside the AI drawer.
-- Larger models (14B+) need significant RAM; on machines with less than 16 GB, stick to 7–8B models.
+- Use a smaller model (3B–7B parameters) — select it in Settings → AI Processing or the AI drawer
+- Larger models (14B+) need significant RAM; stick to 7–8B on machines with less than 16 GB
 
 ### Feeds show an error when adding
-- Some sites block automated requests (403/429). Try the direct RSS URL instead of the homepage.
+- Some sites block automated requests (403/429). Try the direct RSS URL instead of the homepage
 - Example: `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`
 
-### Full article doesn't load ("Feed content only")
-- The source site blocked extraction. Click **Open** in the toolbar to read in a new tab.
+### Full article doesn't load
+- The source site blocked extraction. Click **Open** in the toolbar to read in a new tab
 
-### Need to reset everything
-- **Settings → Clear All Data** wipes all IndexedDB data and starts fresh.
+### Reset everything
+- **Settings → Clear All Data** wipes all IndexedDB data
 
 ---
 
 ## Changelog
 
+### v1.2.0
+- **Background AI batch processing** — Automatically summarizes and classifies new articles using a local Ollama model; configurable in Settings
+- **Content Analysis** — 5-dimension article classification (Sentiment, Urgency, Frame, Tone, Depth) + topic tags; available on-demand in the AI drawer's Analysis tab
+- **On-demand batch trigger** — `✨` button in the article list header queues the latest N articles for immediate analysis; shows live progress indicator while running
+- **AI Summaries Library** — Full-panel view for browsing, searching, and exporting manually saved summaries (SQLite-backed)
+- **Per-dimension filter pills** — Content filters organized by dimension with dropdown selectors; replaces flat chip list
+- **AI Only filter** — Toggle in article list header to show only AI-analyzed articles
+- **AI processed badge** — Sparkle indicator on analyzed articles; own column in compact view, badge pill in list view, image overlay in grid view
+- **Guided Ollama setup wizard** — Built-in UI for detecting, starting, and pulling models; no terminal required
+- **Model dropdown** — Settings shows a live dropdown of installed Ollama models instead of a text field
+- **Configurable auto-refresh** — Off / 15 min / 30 min / 1 hr / 2 hr (previously fixed at 30 min)
+- **Custom text color picker** — Full color picker for text color alongside the 4 presets
+
 ### v1.1.0
 - **AI Assistant** — Summary and chat powered by local Ollama models; streaming responses; model picker; LinkedIn/X sharing from summary
-- **Excerpt view** — New article list view with title, snippet, and thumbnail
+- **Excerpt view** — Article list view with title, snippet, and thumbnail
 - **Sidebar collapse** — Three-state sidebar: expanded → icon-only → hidden
-- **Settings expansion** — Font picker (4 options), accent color wheel (6 presets + custom hex), text color variants
-- **Reader enhancements** — Reading progress bar, zen/focus mode, expanded keyboard shortcuts (j/k/b/o/f)
+- **Settings expansion** — Font picker (9 options), accent color wheel (6 presets + custom hex), text color variants
+- **Reader enhancements** — Reading progress bar, zen/focus mode, expanded keyboard shortcuts
 - **Share popover** — LinkedIn, X/Twitter, Email, Web Share API, Copy Link
 - **OPML import/export** — Full feed portability
 
 ### v1.0.0
-- Initial release: RSS reading, full-text extraction, folders, bookmarks, dark/light theme, resizable panels, reader settings
+- Initial release: RSS reading, full-text extraction, folders, bookmarks, dark/light theme, resizable panels

@@ -1,22 +1,8 @@
-# FeedFlow — RSS Feed Reader Walkthrough
+# Atlas Pulse — RSS Feed Reader Walkthrough
 
 ## What Was Built
 
-A fully functional, Feedly-like RSS feed reader app running entirely locally at zero cost. Built with React + Vite frontend, Express.js backend, and IndexedDB for persistent storage.
-
-## Demo
-
-![Full app test flow demo](/Users/vinaychaganti/.gemini/antigravity/brain/1c0131c0-0fc2-4c07-927a-b51f11137ffe/feedflow_demo.webp)
-
-## Screenshots
-
-````carousel
-![Article selection — three-panel Feedly-style layout with sidebar, article list, and reader](/Users/vinaychaganti/.gemini/antigravity/brain/1c0131c0-0fc2-4c07-927a-b51f11137ffe/feedflow_article_select.png)
-<!-- slide -->
-![Full article extraction — "Load Full Article" pulls clean content from the original page](/Users/vinaychaganti/.gemini/antigravity/brain/1c0131c0-0fc2-4c07-927a-b51f11137ffe/feedflow_full_article.png)
-<!-- slide -->
-![Add Content modal — Discover feeds, browse popular feeds, or add Google Alerts RSS](/Users/vinaychaganti/.gemini/antigravity/brain/1c0131c0-0fc2-4c07-927a-b51f11137ffe/add_content_modal_1776848110947.png)
-````
+A fully functional, privacy-first RSS feed reader running entirely locally at zero cost. Built with React + Vite frontend, Express.js backend, IndexedDB for persistent article/feed storage, SQLite for saved AI summaries, and optional Ollama integration for local AI features (summaries, content analysis, article chat, background batch processing).
 
 ---
 
@@ -26,107 +12,81 @@ A fully functional, Feedly-like RSS feed reader app running entirely locally at 
 graph LR
     subgraph Browser
         React[React UI] --> IDB[(IndexedDB)]
+        React --> BatchEngine[useAIBatchProcessor]
     end
     React -->|"/api/*"| Express[Express.js :3001]
     Express --> RSS[rss-parser]
     Express --> Extract["article-extractor"]
     Express --> Discover[Feed Discovery]
+    Express --> OllamaProxy[Ollama Proxy]
+    Express --> SQLite[(SQLite — summaries)]
+    OllamaProxy --> Ollama[Ollama :11434]
     RSS --> Web((Internet))
     Extract --> Web
     Discover --> Web
 ```
 
-**Zero cost** — No cloud services, databases, or subscriptions. Everything runs on your machine.
+**Zero cost** — No cloud services, API keys, or subscriptions. All data and AI inference stay on your machine.
 
 ---
 
-## Features Implemented
+## Features
 
-### ✅ Feed Discovery & Adding
-- **URL auto-discovery**: Paste any website URL → auto-detects RSS/Atom feeds
+### Feed Discovery & Adding
+- **URL auto-discovery**: Paste any website URL → auto-detects RSS/Atom feeds from `<link>` tags and common paths
 - **Direct RSS URL**: Paste RSS feed URLs directly
-- **Popular feeds**: Curated categories (Tech, AI, Business, Science, Design, News)
-- **Google Alerts**: Step-by-step guide + direct URL input
-- **Folder assignment**: Choose which folder to add feeds to
+- **Google News search**: Type a keyword to subscribe to a live Google News RSS feed
+- **Popular feeds catalog**: Curated feeds across Technology, AI, Business, Science, Design, News
+- **OPML import/export**: Move your feeds to/from any other RSS reader
 
-### ✅ Three-Panel Layout
-- **Sidebar**: Navigation (All Articles, Today, Saved), folder tree with feeds, unread badges
-- **Article List**: Chronological feed with source labels, time-ago, preview text
-- **Article Reader**: Clean typography, metadata bar, action toolbar
+### Three-Panel Layout
+- **Sidebar**: Navigation (All Articles, Today, Saved, AI Summaries Library), folder tree with feeds, unread badges
+- **Article List**: Grid / List / Compact view modes; AI filter pills; batch trigger button
+- **Article Reader**: Clean typography, reading progress bar, toolbar, zen/focus mode
 
-### ✅ In-App Article Reader
-- RSS content rendered by default
-- **"Load Full Article"** extracts complete article from the original page
-- **"Open Original"** opens in a new tab as fallback
-- Reading time estimation
+### Article Views
+| View | Description |
+|------|-------------|
+| **Grid** | Portrait thumbnail cards in a responsive multi-column grid |
+| **List** | Title + excerpt + thumbnail rows |
+| **Compact** | Dense single-line rows with source, time, and AI badge column |
+
+### In-App Article Reader
+- RSS content rendered immediately on open
+- **Auto full-text extraction** — pulls clean content from the original page automatically
+- **Reading progress bar** — accent-colored bar at the top tracks scroll position
+- **Zen / Focus mode** — press `f` to expand reader to full width
 - DOMPurify sanitization for safe HTML rendering
 
-### ✅ Read/Unread & Bookmarks
-- Auto-marks articles as read when opened
-- Manual toggle for read/unread state
-- Bookmark articles to the "Saved" collection
-- Unread count badges on feeds, folders, and navigation
+### Organization
+- **Folders**: Create/rename/delete; right-click context menu; move feeds into folders
+- **Bookmarks**: Bookmark any article; find them under "Saved" in the sidebar
+- **Today view**: Shows only articles published today
+- **Search**: Instant local search across title, content, and source name
+- **Mark all read**: One-click button in the article list header
+- **AI Only filter**: Toggle to show only AI-analyzed articles
+- **Content filters**: Per-dimension dropdown pills (Sentiment · Urgency · Frame · Tone · Depth)
 
-### ✅ Feed Management
-- Create/rename/delete folders (right-click context menu)
-- Remove feeds (right-click context menu)
-- Cascading delete (removing a feed deletes its articles)
-- Folder deletion moves feeds to uncategorized
+### Appearance
+- **Dark / Light theme**: Toggle in sidebar header or settings
+- **Collapsible sidebar**: Three states — expanded → icon-only (56 px) → fully hidden
+- **Resizable panels**: Drag the handle between article list and reader
+- **Font picker**: Inter, Poppins, Lato, Nunito, Merriweather, Garamond, Times, Mono, System UI
+- **Accent color**: 6 presets + full custom color picker
+- **Text color**: 4 presets (Cool, Warm, Pure, Soft) + full custom color picker
+- **Reader typography**: Adjustable font size, line width, line height
 
-### ✅ Feed Refresh
-- Manual "Refresh All" button
-- Auto-refresh every 30 minutes while app is open
-- Only adds new articles (deduplication by GUID)
-
-### ✅ Dark/Light Theme
-- Dark mode by default
-- Toggle via sidebar sun/moon icon
-- Preference persisted in localStorage
-
-### ✅ Settings
-- Theme toggle
-- Clear all data (danger zone)
-
----
-
-## Files Created/Modified
-
-### Backend (6 files)
-| File | Purpose |
-|---|---|
-| [server/index.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/index.js) | Express server entry |
-| [server/routes/feeds.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/routes/feeds.js) | Parse & refresh feed endpoints |
-| [server/routes/discover.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/routes/discover.js) | Feed discovery endpoint |
-| [server/routes/articles.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/routes/articles.js) | Article extraction endpoint |
-| [server/utils/feedParser.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/utils/feedParser.js) | RSS/Atom parsing with media extraction |
-| [server/utils/feedDiscovery.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/utils/feedDiscovery.js) | Auto-discover feeds from URLs |
-| [server/utils/articleExtractor.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/server/utils/articleExtractor.js) | Full article content extraction |
-
-### Frontend (15 files)
-| File | Purpose |
-|---|---|
-| [src/db/database.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/db/database.js) | Dexie.js IndexedDB schema |
-| [src/utils/api.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/utils/api.js) | Backend API client |
-| [src/utils/helpers.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/utils/helpers.js) | Date, text, URL utilities |
-| [src/utils/constants.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/utils/constants.js) | Popular feeds & app constants |
-| [src/hooks/useFeeds.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/hooks/useFeeds.js) | Feed CRUD hook |
-| [src/hooks/useArticles.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/hooks/useArticles.js) | Article queries hook |
-| [src/hooks/useFolders.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/hooks/useFolders.js) | Folder management hook |
-| [src/components/Sidebar.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/components/Sidebar.jsx) | Navigation sidebar |
-| [src/components/ArticleList.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/components/ArticleList.jsx) | Article list panel |
-| [src/components/ArticleReader.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/components/ArticleReader.jsx) | Article reader panel |
-| [src/components/AddFeedModal.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/components/AddFeedModal.jsx) | Add feed modal |
-| [src/components/SettingsPanel.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/components/SettingsPanel.jsx) | Settings modal |
-| [src/App.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/App.jsx) | Root component |
-| [src/index.css](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/index.css) | Full design system |
-| [src/main.jsx](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/src/main.jsx) | React entry point |
-
-### Config (3 files)
-| File | Purpose |
-|---|---|
-| [package.json](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/package.json) | Dependencies & scripts |
-| [vite.config.js](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/vite.config.js) | Vite + API proxy config |
-| [index.html](file:///Users/vinaychaganti/Documents/RSS%20Feed%20Reader/index.html) | HTML entry with SEO meta |
+### AI Features (requires Ollama)
+- **Guided Ollama setup wizard**: Detects install status, starts Ollama, and pulls models — no terminal needed
+- **AI Summary**: On-demand 3–4 sentence summary, streamed in real time
+- **Content Analysis**: 5-dimension classification — Sentiment, Urgency, Frame, Tone, Depth + topic tags
+- **Article Chat**: Ask any question about the article; streamed responses
+- **Background batch processing**: Automatically summarizes and classifies new articles after each feed refresh
+- **On-demand batch trigger**: `✨` button in the article list header queues the latest N articles immediately
+- **AI processing indicator**: Spinner + remaining count in header while batch is running
+- **AI Summaries Library**: Save summaries to a persistent SQLite library; search, browse, export as CSV
+- **Model selector**: Live dropdown populated from your installed Ollama models
+- **AI processed badge**: Sparkle indicator on analyzed articles in all three list views
 
 ---
 
@@ -134,31 +94,78 @@ graph LR
 
 ```bash
 cd "/Users/vinaychaganti/Documents/RSS Feed Reader"
+npm install   # first time only
 npm run dev
 ```
 
-This starts both the Vite frontend (`:5173`) and Express backend (`:3001`) concurrently.
+Open **http://localhost:5173**. This starts both the Vite frontend (`:5173`) and Express backend (`:3001`) concurrently.
 
 ---
 
-## Validation Results
+## File Map
 
-| Test | Result |
+### Backend
+| File | Purpose |
 |---|---|
-| Feed adding (Hacker News) | ✅ 30 articles loaded |
-| Article selection & reading | ✅ Clean reader, auto mark-as-read |
-| Full article extraction | ✅ Complete content rendered in-app |
-| Unread count tracking | ✅ Badges update reactively |
-| Add Content modal | ✅ Three tabs (Discover, Popular, Google Alerts) |
-| View switching (All/Today/Saved) | ✅ Filters work correctly |
-| Dark theme | ✅ Premium dark design by default |
+| [server/index.js](server/index.js) | Express server entry — mounts all routes |
+| [server/routes/feeds.js](server/routes/feeds.js) | `POST /api/feeds/parse` — parse RSS URL |
+| [server/routes/discover.js](server/routes/discover.js) | `POST /api/discover` — auto-discover feeds |
+| [server/routes/articles.js](server/routes/articles.js) | `POST /api/articles/extract` — full article extraction |
+| [server/routes/ai.js](server/routes/ai.js) | `GET /api/ai/models` · `POST /api/ai/chat` — Ollama proxy |
+| [server/routes/ollama.js](server/routes/ollama.js) | `GET /api/ollama/status` · `POST /api/ollama/start\|pull` |
+| [server/routes/summaries.js](server/routes/summaries.js) | CRUD + export for saved AI summaries (SQLite) |
+| [server/utils/feedParser.js](server/utils/feedParser.js) | RSS/Atom parsing (rss-parser) |
+| [server/utils/feedDiscovery.js](server/utils/feedDiscovery.js) | HTML link tag + common path discovery |
+| [server/utils/articleExtractor.js](server/utils/articleExtractor.js) | Full text extraction |
+
+### Frontend
+| File | Purpose |
+|---|---|
+| [src/db/database.js](src/db/database.js) | Dexie.js IndexedDB schema v3 |
+| [src/utils/api.js](src/utils/api.js) | HTTP client — all `/api/*` calls + `streamChat()` generator |
+| [src/utils/batchSettings.js](src/utils/batchSettings.js) | Batch processor config (localStorage) |
+| [src/utils/helpers.js](src/utils/helpers.js) | Date formatting, read time, HTML stripping |
+| [src/utils/aiSettings.js](src/utils/aiSettings.js) | AI persona + tone configuration |
+| [src/utils/constants.js](src/utils/constants.js) | Auto-refresh options, popular feeds catalog |
+| [src/utils/opml.js](src/utils/opml.js) | OPML import/export |
+| [src/hooks/useFeeds.js](src/hooks/useFeeds.js) | Feed CRUD + refresh (queues new articles for batch) |
+| [src/hooks/useFolders.js](src/hooks/useFolders.js) | Folder management |
+| [src/hooks/useAIBatchProcessor.js](src/hooks/useAIBatchProcessor.js) | Background AI engine — queue watcher, processOne loop, triggerBatch |
+| [src/components/Sidebar.jsx](src/components/Sidebar.jsx) | Left panel — nav, folders, feeds, library badge |
+| [src/components/ArticleList.jsx](src/components/ArticleList.jsx) | Middle panel — grid/list/compact, AI filters, batch trigger |
+| [src/components/ArticleReader.jsx](src/components/ArticleReader.jsx) | Right panel — reader, toolbar, progress bar |
+| [src/components/AIDrawer.jsx](src/components/AIDrawer.jsx) | AI panel — Summary / Analysis / Chat tabs |
+| [src/components/OllamaSetup.jsx](src/components/OllamaSetup.jsx) | Guided Ollama install/start/model-pull wizard |
+| [src/components/LibraryView.jsx](src/components/LibraryView.jsx) | Full-panel saved summaries library |
+| [src/components/AddFeedModal.jsx](src/components/AddFeedModal.jsx) | Add feeds via URL / search / popular |
+| [src/components/SettingsPanel.jsx](src/components/SettingsPanel.jsx) | Appearance, Reading, AI Processing, Data settings |
+| [src/components/ReaderSettings.jsx](src/components/ReaderSettings.jsx) | Inline reader typography controls |
+| [src/components/ResizableHandle.jsx](src/components/ResizableHandle.jsx) | Draggable panel resize handle |
+| [src/App.jsx](src/App.jsx) | Root — state, layout, auto-refresh, batch wiring |
+| [src/index.css](src/index.css) | Full design system (themes, typography, all components) |
+| [src/main.jsx](src/main.jsx) | React entry point |
 
 ---
 
-## Future AI Integration
+## Keyboard Shortcuts
 
-The Express backend is ready for AI endpoints:
-- **Article summarization** → New route calling Ollama/local LLM
-- **Topic clustering** → Embed articles, cluster in IndexedDB
-- **Smart daily digest** → Scheduled server task generating briefings
-- **Sentiment analysis** → Pipeline step after extraction
+| Key | Action |
+|-----|--------|
+| `j` / `↓` / `→` | Next article |
+| `k` / `↑` / `←` | Previous article |
+| `b` | Toggle bookmark |
+| `o` | Open article in original tab |
+| `f` | Toggle zen / focus mode |
+| `Esc` | Exit zen mode / close reader |
+
+---
+
+## Data Storage
+
+| Data | Where |
+|------|-------|
+| Feeds, articles, folders, bookmarks, read state | IndexedDB (browser-local, via Dexie.js) |
+| AI batch settings, view preferences | `localStorage` |
+| Manually saved AI summaries | SQLite file (server-side, local) |
+
+All data stays on your machine — nothing is ever sent to an external server, including AI queries.
