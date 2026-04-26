@@ -4674,6 +4674,13 @@ a:hover {
   color: var(--accent);
 }
 
+/* Config strip inside multi-article panel */
+.map-config-strip {
+  padding: 6px 16px 2px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
 /* Instructions */
 .map-instructions {
   padding: 10px 16px;

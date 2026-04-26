@@ -13,7 +13,7 @@ import { streamChat } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
-import { getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
+import { getAISettings, buildSystemPrompt, PERSONAS, TONE_GROUPS } from '../utils/aiSettings.js';
 import ResizableHandle from './ResizableHandle.jsx';
 
 const OPERATIONS = {
@@ -224,6 +224,31 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
             ))}
           </div>
         )}
+
+        {/* Active AI config strip */}
+        {(() => {
+          const s = getAISettings();
+          const activePersonas = PERSONAS.filter(p => s.personas.includes(p.id));
+          const activeTones = TONE_GROUPS.map(g => {
+            const id = s.tone[g.id] || g.tones[0].id;
+            return g.tones.find(t => t.id === id) || g.tones[0];
+          });
+          return (
+            <div className="ai-config-strip map-config-strip">
+              {activePersonas.map(p => (
+                <span key={p.id} className="ai-config-badge">{p.emoji} {p.label}</span>
+              ))}
+              {activeTones.map(t => (
+                <span key={t.id} className="ai-config-badge ai-config-tone-badge">{t.label}</span>
+              ))}
+              {s.customInstructions?.trim() && (
+                <span className="ai-config-badge ai-config-custom-badge" title={s.customInstructions}>
+                  + Custom
+                </span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Instructions */}
         <div className="map-instructions">
