@@ -8,12 +8,11 @@ import { stripHtml } from '../utils/helpers.js';
 const BATCH_SYSTEM_PROMPT = `Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
 {
   "summary": "3-4 sentence summary in plain prose. Key finding/argument and one concrete takeaway. Do not start with 'This article'.",
-  "sentiment": "positive|neutral|negative|mixed",
+  "sentiment": "positive|neutral|negative",
   "urgency": "breaking|developing|evergreen",
-  "frame": "conflict|human_interest|economic|analytical|moral|informational",
-  "tone": "alarming|cautionary|neutral|optimistic|critical|satirical",
+  "frame": "conflict|human_interest|economic|analytical",
+  "tone": "alarming|analytical|optimistic|opinion",
   "depth": "brief|standard|deep_dive",
-  "subjectivity": "objective|balanced|opinion",
   "topics": ["tag1", "tag2", "tag3"]
 }`;
 
@@ -22,14 +21,13 @@ function parseAnalysis(response) {
   if (!match) throw new Error('No JSON found in model response');
   const parsed = JSON.parse(match[0]);
   return {
-    summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+    summary:   typeof parsed.summary === 'string' ? parsed.summary : '',
     sentiment: parsed.sentiment || 'neutral',
-    urgency: parsed.urgency || 'evergreen',
-    frame: parsed.frame || 'informational',
-    tone: parsed.tone || 'neutral',
-    depth: parsed.depth || 'standard',
-    subjectivity: parsed.subjectivity || 'balanced',
-    topics: Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
+    urgency:   parsed.urgency   || 'evergreen',
+    frame:     parsed.frame     || 'analytical',
+    tone:      parsed.tone      || 'analytical',
+    depth:     parsed.depth     || 'standard',
+    topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
   };
 }
 
