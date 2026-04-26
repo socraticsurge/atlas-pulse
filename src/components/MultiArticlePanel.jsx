@@ -13,6 +13,7 @@ import { streamChat } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
+import { getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 import ResizableHandle from './ResizableHandle.jsx';
 
 const OPERATIONS = {
@@ -37,11 +38,12 @@ function buildArticleContext(articles) {
 
 function buildMessages(operation, template, instructions, articles) {
   const articleContext = buildArticleContext(articles);
-  let systemPrompt = '';
+  const aiSettings = getAISettings();
+  let basePrompt = '';
   let userMessage = '';
 
   if (operation === 'compare') {
-    systemPrompt = `You are a media analyst comparing how different sources cover the same topic.\n\nFor each dimension below, show how each article approaches it — reference the source by name:\n\n1. **Angle & Framing** — What perspective does each source emphasize?\n2. **Key Claims** — What are the main factual claims?\n3. **What's Missing** — What does each source omit or downplay?\n4. **Tone** — How does the language differ?\n5. **Evidence** — What sources or data does each cite?\n\nUse markdown with clear headers. Be specific and grounded in the text.`;
+    basePrompt = `You are a media analyst comparing how different sources cover the same topic.\n\nFor each dimension below, show how each article approaches it — reference the source by name:\n\n1. **Angle & Framing** — What perspective does each source emphasize?\n2. **Key Claims** — What are the main factual claims?\n3. **What's Missing** — What does each source omit or downplay?\n4. **Tone** — How does the language differ?\n5. **Evidence** — What sources or data does each cite?\n\nUse markdown with clear headers. Be specific and grounded in the text.`;
     userMessage = `${articleContext}\n\n---\nCompare these ${articles.length} articles across the dimensions above.${instructions ? `\n\nAdditional focus: ${instructions}` : ''}`;
   } else if (operation === 'newsletter') {
     const templateInstructions = {
@@ -49,15 +51,15 @@ function buildMessages(operation, template, instructions, articles) {
       roundup:  'Write a weekly roundup. Include more context and commentary. Group related stories if applicable. Conversational yet professional.',
       brief:    'Write an executive briefing. Lead with the most critical stories. Use bullet points for key takeaways. Be direct; focus on strategic implications.',
     };
-    systemPrompt = `You are a professional newsletter writer creating a curated digest.\n\n${templateInstructions[template] || templateInstructions.digest}\n\nFormat with clear markdown headers (## for section titles), bullet points for takeaways, and attribution for each story.`;
+    basePrompt = `You are a professional newsletter writer creating a curated digest.\n\n${templateInstructions[template] || templateInstructions.digest}\n\nFormat with clear markdown headers (## for section titles), bullet points for takeaways, and attribution for each story.`;
     userMessage = `${articleContext}\n\n---\nWrite the newsletter from these ${articles.length} articles.${instructions ? `\n\nAdditional instructions: ${instructions}` : ''}`;
   } else {
-    systemPrompt = `You are an expert analyst. Answer the user's question using only information from the provided articles. Be precise. Cite which article supports each point by source name.`;
+    basePrompt = `You are an expert analyst. Answer the user's question using only information from the provided articles. Be precise. Cite which article supports each point by source name.`;
     userMessage = `${articleContext}\n\n---\n${instructions || 'Summarize the key themes across these articles.'}`;
   }
 
   return [
-    { role: 'system', content: systemPrompt },
+    { role: 'system', content: buildSystemPrompt(basePrompt, aiSettings) },
     { role: 'user',   content: userMessage },
   ];
 }
