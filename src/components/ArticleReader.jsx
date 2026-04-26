@@ -39,6 +39,7 @@ export default function ArticleReader({
   totalCount,
   width,
   onResize,
+  onSummarySaved,
 }) {
   const [extractedContent, setExtractedContent] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -403,6 +404,7 @@ export default function ArticleReader({
           article={liveArticle || article}
           extractedContent={extractedContent}
           feedTitle={feed?.title || null}
+          onSummarySaved={onSummarySaved}
         />
 
         <div className="reader-content" ref={contentRef} style={readerCSSVars}>

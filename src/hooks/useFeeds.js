@@ -9,8 +9,8 @@ async function queueArticlesForBatch(feedId) {
   const settings = getBatchSettings();
   if (!settings.enabled) return;
 
-  // Check scope
-  const [scopeType, scopeIdStr] = settings.scope.split(':');
+  // Check scope — guard against null/undefined from corrupted localStorage
+  const [scopeType, scopeIdStr] = (settings.scope || 'all').split(':');
   const scopeId = scopeIdStr ? parseInt(scopeIdStr, 10) : null;
 
   let shouldQueue = false;
