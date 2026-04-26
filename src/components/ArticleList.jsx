@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineCheckCircle,
@@ -11,6 +11,9 @@ import {
   HiOutlineSparkles,
   HiOutlineBars3,
   HiOutlineChevronDown,
+  HiOutlineCheck,
+  HiOutlineBookmark,
+  HiOutlineArrowDownTray,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
@@ -23,6 +26,34 @@ const FILTER_DIMS = [
   { key: 'depth',     label: 'Depth',     values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
 ];
 
+const OP_LIMITS = {
+  compare:    { min: 2, max: 5,  label: 'Compare',    hint: '2–5' },
+  newsletter: { min: 3, max: 15, label: 'Newsletter',  hint: '3–15' },
+  briefing:   { min: 2, max: 15, label: 'Briefing',    hint: '2–15' },
+};
+
+function exportAsCSV(articles, feedMap) {
+  const header = 'Title,Source,Published,URL,Read,Bookmarked';
+  const rows = articles.map(a => [
+    `"${(a.title || '').replace(/"/g, '""')}"`,
+    `"${(feedMap[a.feedId]?.title || '').replace(/"/g, '""')}"`,
+    a.publishedAt ? new Date(a.publishedAt).toISOString() : '',
+    `"${a.link || ''}"`,
+    a.isRead ? 'yes' : 'no',
+    a.isBookmarked ? 'yes' : 'no',
+  ].join(','));
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const el = document.createElement('a');
+  el.href = url;
+  el.download = 'atlas-pulse-articles.csv';
+  document.body.appendChild(el);
+  el.click();
+  document.body.removeChild(el);
+  URL.revokeObjectURL(url);
+}
+
 export default function ArticleList({
   activeView,
   selectedArticleId,
@@ -33,6 +64,7 @@ export default function ArticleList({
   batchProgress,
   batchQueuedCount = 0,
   onTriggerBatch,
+  onOpenAIPanel,
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -43,6 +75,9 @@ export default function ArticleList({
   const [activeFilters, setActiveFilters] = useState({});
   const [openFilterDim, setOpenFilterDim] = useState(null);
   const [showAiOnly, setShowAiOnly] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showAiMenu, setShowAiMenu] = useState(false);
+  const aiMenuRef = useRef(null);
 
   const feeds = useLiveQuery(() => db.feeds.toArray()) || [];
   const feedMap = useMemo(() => {
@@ -155,8 +190,7 @@ export default function ArticleList({
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
   const hasAnyAnalysis = articles.some(a => a.aiAnalysis);
 
-  // Notify parent of the filtered article list (for prev/next navigation).
-  // Debounced so rapid search keystrokes don't re-render App on every character.
+  // Notify parent of the filtered article list (for prev/next navigation)
   const notifyTimerRef = useRef(null);
   useEffect(() => {
     clearTimeout(notifyTimerRef.current);
@@ -166,21 +200,79 @@ export default function ArticleList({
     return () => clearTimeout(notifyTimerRef.current);
   }, [filteredArticles, onArticlesLoaded]);
 
-  // '/' focuses search; Escape closes it
+  // Clear selection when view changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeView.type, activeView.id]);
+
+  // Keyboard: '/' focuses search, Escape clears selection or closes search
   useEffect(() => {
     const handler = (e) => {
       if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
         e.preventDefault();
         setShowSearch(true);
         setTimeout(() => searchInputRef.current?.focus(), 0);
-      } else if (e.key === 'Escape' && showSearch) {
-        setShowSearch(false);
-        setSearchQuery('');
+      } else if (e.key === 'Escape') {
+        if (selectedIds.size > 0) {
+          setSelectedIds(new Set());
+        } else if (showSearch) {
+          setShowSearch(false);
+          setSearchQuery('');
+        }
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [showSearch]);
+  }, [showSearch, selectedIds]);
+
+  // Close AI menu on outside click
+  useEffect(() => {
+    if (!showAiMenu) return;
+    const handler = (e) => {
+      if (aiMenuRef.current && !aiMenuRef.current.contains(e.target)) setShowAiMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAiMenu]);
+
+  const toggleSelect = useCallback((e, articleId) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(articleId) ? next.delete(articleId) : next.add(articleId);
+      return next;
+    });
+  }, []);
+
+  const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(filteredArticles.map(a => a.id)));
+  }, [filteredArticles]);
+
+  const handleMarkReadSelected = useCallback(async () => {
+    await db.articles.where('id').anyOf([...selectedIds]).modify({ isRead: 1 });
+    clearSelection();
+  }, [selectedIds, clearSelection]);
+
+  const handleBookmarkSelected = useCallback(async () => {
+    await db.articles.where('id').anyOf([...selectedIds]).modify({ isBookmarked: 1 });
+    clearSelection();
+  }, [selectedIds, clearSelection]);
+
+  const handleExportSelected = useCallback(() => {
+    const selected = filteredArticles.filter(a => selectedIds.has(a.id));
+    exportAsCSV(selected, feedMap);
+    clearSelection();
+  }, [selectedIds, filteredArticles, feedMap, clearSelection]);
+
+  const handleOpenAIPanel = useCallback((operation) => {
+    const selected = filteredArticles
+      .filter(a => selectedIds.has(a.id))
+      .map(a => ({ ...a, feedTitle: feedMap[a.feedId]?.title || 'Unknown' }));
+    setShowAiMenu(false);
+    onOpenAIPanel?.(selected, operation);
+  }, [selectedIds, filteredArticles, feedMap, onOpenAIPanel]);
 
   const viewTitle = useMemo(() => {
     switch (activeView.type) {
@@ -194,14 +286,26 @@ export default function ArticleList({
   }, [activeView]);
 
   const unreadCount = rawArticles.filter(a => !a.isRead).length;
+  const selCount = selectedIds.size;
+  const showFab = selCount > 0;
 
   const handleViewModeChange = (mode) => {
     setViewMode(mode);
     localStorage.setItem('atlas-pulse-view-mode', mode);
   };
 
+  const renderCheckbox = (article, extraClass = '') => (
+    <button
+      className={`article-select-btn${selectedIds.has(article.id) ? ' selected' : ''}${extraClass ? ` ${extraClass}` : ''}`}
+      onClick={(e) => toggleSelect(e, article.id)}
+      title={selectedIds.has(article.id) ? 'Deselect' : 'Select'}
+    >
+      {selectedIds.has(article.id) ? <HiOutlineCheck /> : <span className="select-circle" />}
+    </button>
+  );
+
   return (
-    <div className="article-list-panel">
+    <div className={`article-list-panel${showFab ? ' has-fab' : ''}`}>
       <div className="article-list-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {sidebarHidden && (
@@ -219,7 +323,6 @@ export default function ArticleList({
           </h2>
         </div>
         <div className="article-list-actions">
-          {/* View mode toggle */}
           <div className="view-toggle-group">
             <button
               className={`btn btn-ghost btn-sm view-toggle-btn ${viewMode === 'magazine' ? 'active' : ''}`}
@@ -247,7 +350,6 @@ export default function ArticleList({
             </button>
           </div>
 
-          {/* AI Only filter toggle */}
           <button
             className={`btn btn-ghost btn-sm view-toggle-btn ${showAiOnly ? 'active' : ''}`}
             onClick={() => setShowAiOnly(prev => !prev)}
@@ -257,7 +359,6 @@ export default function ArticleList({
             <span className="view-toggle-label">AI</span>
           </button>
 
-          {/* AI batch indicator / trigger */}
           {batchProgress?.running || batchQueuedCount > 0 ? (
             <div className="batch-running-indicator" title={`AI analyzing · ${batchQueuedCount} remaining`}>
               <span className="spinner" style={{ width: 12, height: 12, flexShrink: 0 }} />
@@ -275,10 +376,7 @@ export default function ArticleList({
 
           <button
             className={`btn btn-ghost btn-icon btn-sm ${showSearch ? 'active' : ''}`}
-            onClick={() => {
-              setShowSearch(!showSearch);
-              if (showSearch) setSearchQuery('');
-            }}
+            onClick={() => { setShowSearch(!showSearch); if (showSearch) setSearchQuery(''); }}
             title="Search articles"
           >
             <HiOutlineMagnifyingGlass />
@@ -288,9 +386,7 @@ export default function ArticleList({
               className="btn btn-ghost btn-sm"
               onClick={() => {
                 const ids = rawArticles.filter(a => !a.isRead).map(a => a.id);
-                if (ids.length > 0) {
-                  db.articles.where('id').anyOf(ids).modify({ isRead: 1 });
-                }
+                if (ids.length > 0) db.articles.where('id').anyOf(ids).modify({ isRead: 1 });
               }}
               title="Mark all as read"
             >
@@ -313,24 +409,18 @@ export default function ArticleList({
             autoFocus
           />
           {searchQuery && (
-            <button
-              className="btn btn-ghost btn-icon btn-sm search-clear"
-              onClick={() => setSearchQuery('')}
-            >
+            <button className="btn btn-ghost btn-icon btn-sm search-clear" onClick={() => setSearchQuery('')}>
               <HiOutlineXMark />
             </button>
           )}
         </div>
       )}
 
-      {/* AI content filters — per-dimension dropdown pills */}
+      {/* AI content filters */}
       {hasAnyAnalysis && (
         <>
           {openFilterDim && (
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 99 }}
-              onClick={() => setOpenFilterDim(null)}
-            />
+            <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setOpenFilterDim(null)} />
           )}
           <div className="ai-filter-row">
             <span className="ai-filter-label">Filter</span>
@@ -345,20 +435,14 @@ export default function ArticleList({
                     className={`ai-filter-pill ${activeVal ? 'active' : ''}`}
                     onClick={() => setOpenFilterDim(isOpen ? null : dim.key)}
                   >
-                    <span>
-                      {dim.label}
-                      {activeVal ? `: ${dim.values[activeVal] || activeVal}` : ''}
-                    </span>
+                    <span>{dim.label}{activeVal ? `: ${dim.values[activeVal] || activeVal}` : ''}</span>
                     <HiOutlineChevronDown className={`ai-filter-chevron ${isOpen ? 'open' : ''}`} />
                   </button>
                   {isOpen && (
                     <div className="ai-filter-dropdown">
                       <button
                         className={`ai-filter-option ${!activeVal ? 'active' : ''}`}
-                        onClick={() => {
-                          setActiveFilters(prev => ({ ...prev, [dim.key]: null }));
-                          setOpenFilterDim(null);
-                        }}
+                        onClick={() => { setActiveFilters(prev => ({ ...prev, [dim.key]: null })); setOpenFilterDim(null); }}
                       >
                         All
                       </button>
@@ -366,10 +450,7 @@ export default function ArticleList({
                         <button
                           key={val}
                           className={`ai-filter-option ${activeVal === val ? 'active' : ''}`}
-                          onClick={() => {
-                            toggleFilter(dim.key, val);
-                            setOpenFilterDim(null);
-                          }}
+                          onClick={() => { toggleFilter(dim.key, val); setOpenFilterDim(null); }}
                         >
                           {dim.values[val] || val}
                         </button>
@@ -380,12 +461,7 @@ export default function ArticleList({
               );
             })}
             {hasActiveFilters && (
-              <button
-                className="ai-filter-clear-btn"
-                onClick={() => setActiveFilters({})}
-              >
-                ✕ Clear
-              </button>
+              <button className="ai-filter-clear-btn" onClick={() => setActiveFilters({})}>✕ Clear</button>
             )}
           </div>
         </>
@@ -406,42 +482,33 @@ export default function ArticleList({
               {searchQuery ? <HiOutlineMagnifyingGlass /> : <HiOutlineSparkles />}
             </span>
             <h3>
-              {hasActiveFilters
-                ? 'No matching articles'
-                : searchQuery
-                ? 'No matching articles'
-                : activeView.type === 'saved'
-                ? 'Nothing saved yet'
-                : activeView.type === 'today'
-                ? 'All caught up'
+              {hasActiveFilters ? 'No matching articles'
+                : searchQuery ? 'No matching articles'
+                : activeView.type === 'saved' ? 'Nothing saved yet'
+                : activeView.type === 'today' ? 'All caught up'
                 : 'Your feed is empty'}
             </h3>
             <p>
-              {hasActiveFilters
-                ? 'No articles match the active filters'
-                : searchQuery
-                ? `No articles match "${searchQuery}"`
-                : activeView.type === 'saved'
-                ? 'Bookmark articles to find them here'
-                : activeView.type === 'today'
-                ? 'No new articles published today'
+              {hasActiveFilters ? 'No articles match the active filters'
+                : searchQuery ? `No articles match "${searchQuery}"`
+                : activeView.type === 'saved' ? 'Bookmark articles to find them here'
+                : activeView.type === 'today' ? 'No new articles published today'
                 : 'Add feeds from the sidebar to start reading'}
             </p>
           </div>
         ) : (
           filteredArticles.map((article) => {
             const feed = feedMap[article.feedId];
+            const isSelected = selectedIds.has(article.id);
 
             if (viewMode === 'compact') {
               return (
                 <div
                   key={article.id}
-                  className={`article-card-compact ${article.isRead ? 'read' : ''} ${
-                    selectedArticleId === article.id ? 'active' : ''
-                  }`}
+                  className={`article-card-compact ${article.isRead ? 'read' : ''} ${selectedArticleId === article.id ? 'active' : ''} ${isSelected ? 'card-selected' : ''}`}
                   onClick={() => onSelectArticle(article)}
                 >
-                  {!article.isRead && <div className="unread-dot-compact" />}
+                  {renderCheckbox(article, 'compact-checkbox')}
                   {feed?.favicon ? (
                     <img className="compact-favicon" src={feed.favicon} alt="" />
                   ) : (
@@ -462,11 +529,10 @@ export default function ArticleList({
               return (
                 <div
                   key={article.id}
-                  className={`article-card-excerpt ${article.isRead ? 'read' : ''} ${
-                    selectedArticleId === article.id ? 'active' : ''
-                  }`}
+                  className={`article-card-excerpt ${article.isRead ? 'read' : ''} ${selectedArticleId === article.id ? 'active' : ''} ${isSelected ? 'card-selected' : ''}`}
                   onClick={() => onSelectArticle(article)}
                 >
+                  {renderCheckbox(article, 'excerpt-checkbox')}
                   {!article.isRead && <div className="unread-dot-compact" />}
                   <div className="excerpt-meta">
                     {feed?.favicon ? (
@@ -477,9 +543,7 @@ export default function ArticleList({
                     <span className="excerpt-source">{feed?.title || 'Unknown'}</span>
                     <span className="excerpt-time">{timeAgo(article.publishedAt)}</span>
                     {article.aiStatus === 'done' && (
-                      <span className="excerpt-ai-badge" title="AI analyzed">
-                        <HiOutlineSparkles /> AI
-                      </span>
+                      <span className="excerpt-ai-badge" title="AI analyzed"><HiOutlineSparkles /> AI</span>
                     )}
                   </div>
                   <div className="excerpt-body">
@@ -501,15 +565,14 @@ export default function ArticleList({
               );
             }
 
-            // Card view (default)
+            // Card / magazine view
             return (
               <div
                 key={article.id}
-                className={`article-card-grid ${article.isRead ? 'read' : ''} ${
-                  selectedArticleId === article.id ? 'active' : ''
-                }`}
+                className={`article-card-grid ${article.isRead ? 'read' : ''} ${selectedArticleId === article.id ? 'active' : ''} ${isSelected ? 'card-selected' : ''}`}
                 onClick={() => onSelectArticle(article)}
               >
+                {renderCheckbox(article, 'grid-checkbox')}
                 <div className="card-image-wrap">
                   {article.imageUrl ? (
                     <img
@@ -520,9 +583,7 @@ export default function ArticleList({
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   ) : (
-                    <div className="card-image-placeholder">
-                      <HiOutlineNewspaper />
-                    </div>
+                    <div className="card-image-placeholder"><HiOutlineNewspaper /></div>
                   )}
                   {article.aiStatus === 'done' && (
                     <span className="card-ai-badge" title="AI analyzed"><HiOutlineSparkles /></span>
@@ -547,6 +608,67 @@ export default function ArticleList({
           })
         )}
       </div>
+
+      {/* Floating action bar */}
+      {showFab && (
+        <div className="floating-action-bar">
+          <div className="fab-left">
+            <button className="btn btn-ghost btn-icon btn-sm fab-clear" onClick={clearSelection} title="Clear selection">
+              <HiOutlineXMark />
+            </button>
+            <span className="fab-count">{selCount} selected</span>
+            <button
+              className="btn btn-ghost btn-sm fab-select-all"
+              onClick={selectAll}
+              title="Select all visible"
+            >
+              Select all {filteredArticles.length}
+            </button>
+          </div>
+
+          <div className="fab-actions">
+            <button className="btn btn-ghost btn-sm fab-action-btn" onClick={handleMarkReadSelected} title="Mark selected as read">
+              <HiOutlineCheckCircle /> Read
+            </button>
+            <button className="btn btn-ghost btn-sm fab-action-btn" onClick={handleBookmarkSelected} title="Bookmark selected">
+              <HiOutlineBookmark /> Save
+            </button>
+            <button className="btn btn-ghost btn-sm fab-action-btn" onClick={handleExportSelected} title="Export selected as CSV">
+              <HiOutlineArrowDownTray /> CSV
+            </button>
+          </div>
+
+          <div className="fab-ai-wrap" ref={aiMenuRef}>
+            <button
+              className="btn btn-accent btn-sm fab-ai-btn"
+              onClick={() => setShowAiMenu(m => !m)}
+              disabled={selCount < 2}
+              title={selCount < 2 ? 'Select at least 2 articles' : 'AI Actions'}
+            >
+              <HiOutlineSparkles /> AI Actions
+              <HiOutlineChevronDown className={`fab-chevron${showAiMenu ? ' open' : ''}`} />
+            </button>
+            {showAiMenu && (
+              <div className="fab-ai-menu">
+                {Object.entries(OP_LIMITS).map(([key, def]) => {
+                  const disabled = selCount < def.min || selCount > def.max;
+                  return (
+                    <button
+                      key={key}
+                      className={`fab-ai-option${disabled ? ' disabled' : ''}`}
+                      onClick={() => !disabled && handleOpenAIPanel(key)}
+                      title={disabled ? `${def.hint} articles required` : ''}
+                    >
+                      <span className="fab-ai-op-label">{def.label}</span>
+                      <span className="fab-ai-op-hint">{def.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
