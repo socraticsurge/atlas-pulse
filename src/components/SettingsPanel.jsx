@@ -16,6 +16,9 @@ import {
   getAISettings,
   saveAISettings,
 } from '../utils/aiSettings.js';
+import { AUTO_REFRESH_OPTIONS, getAutoRefreshMinutes, saveAutoRefreshMinutes } from '../utils/constants.js';
+import { getBatchSettings, saveBatchSettings } from '../utils/batchSettings.js';
+import OllamaSetup from './OllamaSetup.jsx';
 
 const PRESET_COLORS = [
   { id: 'emerald', hex: '#00d4aa', label: 'Emerald' },
@@ -52,11 +55,28 @@ export default function SettingsPanel({
   appColor, customAccentHex, onChangeColor,
   appTextColor, onChangeTextColor,
   feeds, folders, onImportOPML, onRefreshAll,
+  onAutoRefreshChange,
 }) {
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
   const [pickerColor, setPickerColor] = useState(customAccentHex || '#00d4aa');
   const [aiSettings, setAISettings] = useState(getAISettings);
+  const [autoRefreshMinutes, setAutoRefreshMinutes] = useState(getAutoRefreshMinutes);
+  const [batchSettings, setBatchSettings] = useState(getBatchSettings);
+
+  const updateAutoRefresh = (minutes) => {
+    saveAutoRefreshMinutes(minutes);
+    setAutoRefreshMinutes(minutes);
+    onAutoRefreshChange?.(minutes);
+  };
+
+  const updateBatchSettings = (patch) => {
+    setBatchSettings((prev) => {
+      const next = { ...prev, ...patch };
+      saveBatchSettings(next);
+      return next;
+    });
+  };
 
   const updateAISettings = (patch) => {
     setAISettings((prev) => {
@@ -227,6 +247,25 @@ export default function SettingsPanel({
             </div>
           </div>
 
+          {/* ── Reading ──────────────────────────────────────────────── */}
+          <div className="settings-group">
+            <h3>Reading</h3>
+            <div className="settings-row" style={{ borderBottom: 'none' }}>
+              <label>Auto-refresh feeds</label>
+              <div className="settings-segmented">
+                {AUTO_REFRESH_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    className={`btn btn-sm ${autoRefreshMinutes === opt.value ? 'btn-primary' : 'btn-ghost'}`}
+                    onClick={() => updateAutoRefresh(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* ── AI Assistant ─────────────────────────────────────────── */}
           <div className="settings-group">
             <h3>AI Assistant</h3>
@@ -300,6 +339,88 @@ export default function SettingsPanel({
               <div className="settings-char-count">
                 {aiSettings.customInstructions.length} / 300
               </div>
+            </div>
+          </div>
+
+          {/* ── AI Processing ────────────────────────────────────────── */}
+          <div className="settings-group">
+            <h3>AI Processing</h3>
+
+            {/* Enable / disable batch */}
+            <div className="settings-row">
+              <label>
+                Background batch processing
+                <span className="settings-sublabel"> — auto-summarize and classify new articles</span>
+              </label>
+              <button
+                className={`btn btn-sm ${batchSettings.enabled ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => updateBatchSettings({ enabled: !batchSettings.enabled })}
+              >
+                {batchSettings.enabled ? 'Enabled' : 'Disabled'}
+              </button>
+            </div>
+
+            {batchSettings.enabled && (
+              <>
+                {/* Features */}
+                <div className="settings-row">
+                  <label>What to generate</label>
+                  <div className="settings-segmented">
+                    {[
+                      { id: 'summary',  label: 'Summary only' },
+                      { id: 'analysis', label: 'Analysis only' },
+                      { id: 'both',     label: 'Both' },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        className={`btn btn-sm ${batchSettings.features === f.id ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => updateBatchSettings({ features: f.id })}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Articles per cycle */}
+                <div className="settings-row">
+                  <label>
+                    Articles per cycle
+                    <span className="settings-sublabel"> — processed after each feed refresh</span>
+                  </label>
+                  <div className="settings-segmented">
+                    {[5, 10, 20, 50].map((n) => (
+                      <button
+                        key={n}
+                        className={`btn btn-sm ${batchSettings.maxPerCycle === n ? 'btn-primary' : 'btn-ghost'}`}
+                        onClick={() => updateBatchSettings({ maxPerCycle: n })}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Model override */}
+                <div className="settings-row">
+                  <label>
+                    Model
+                    <span className="settings-sublabel"> — leave blank to use the first available</span>
+                  </label>
+                  <input
+                    className="settings-text-input"
+                    placeholder="Auto"
+                    value={batchSettings.model}
+                    onChange={(e) => updateBatchSettings({ model: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Ollama setup wizard — always visible so users can configure Ollama */}
+            <div className="settings-row settings-row-col" style={{ borderBottom: 'none' }}>
+              <label>Ollama</label>
+              <OllamaSetup compact />
             </div>
           </div>
 

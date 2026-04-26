@@ -397,7 +397,7 @@ export default function ArticleReader({
         <AIDrawer
           isOpen={showAI}
           onClose={() => setShowAI(false)}
-          article={article}
+          article={liveArticle || article}
           extractedContent={extractedContent}
           feedTitle={feed?.title || null}
         />

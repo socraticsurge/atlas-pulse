@@ -4,11 +4,12 @@ import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
 import AddFeedModal from './components/AddFeedModal.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
-import SummariesModal from './components/SummariesModal.jsx';
+import LibraryView from './components/LibraryView.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
-import { DEFAULT_REFRESH_INTERVAL } from './utils/constants.js';
+import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
+import { getAutoRefreshMinutes } from './utils/constants.js';
 
 const SIDEBAR_MIN = 180;
 const SIDEBAR_MAX = 400;
@@ -35,8 +36,8 @@ function App() {
   const [visibleArticles, setVisibleArticles] = useState([]);
   const [showAddFeed, setShowAddFeed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [showSummaries, setShowSummaries] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [autoRefreshMinutes, setAutoRefreshMinutes] = useState(getAutoRefreshMinutes);
   const [toast, setToast] = useState(null);
 
   const [theme, setTheme] = useState(() =>
@@ -69,6 +70,7 @@ function App() {
 
   const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
   const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
+  const { queuedCount } = useAIBatchProcessor();
   const refreshIntervalRef = useRef(null);
 
   const effectiveSidebarWidth = sidebarMode === 'hidden' ? 0
@@ -168,15 +170,17 @@ function App() {
     }
   }, [refreshAllFeeds, showToast]);
 
+  // Auto-refresh interval — re-runs whenever feeds load or the user changes the interval
   useEffect(() => {
-    if (feeds.length === 0) return;
+    if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+    if (feeds.length === 0 || autoRefreshMinutes === 0) return;
     refreshIntervalRef.current = setInterval(() => {
       refreshAllFeeds().catch(console.error);
-    }, DEFAULT_REFRESH_INTERVAL);
+    }, autoRefreshMinutes * 60 * 1000);
     return () => {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
     };
-  }, [feeds.length, refreshAllFeeds]);
+  }, [feeds.length, autoRefreshMinutes, refreshAllFeeds]);
 
   const handleSelectArticle = useCallback((article) => {
     setSelectedArticle(article);
@@ -226,6 +230,8 @@ function App() {
   const hasNext = currentArticleIndex >= 0 && currentArticleIndex < visibleArticles.length - 1;
   const hasPrev = currentArticleIndex > 0;
 
+  const isLibraryView = activeView.type === 'library';
+
   return (
     <div className="app-layout">
       <Sidebar
@@ -246,22 +252,26 @@ function App() {
         onToggleTheme={toggleTheme}
         refreshing={refreshing}
         onToggleMode={toggleSidebarMode}
-        onShowSummaries={() => setShowSummaries(true)}
+        batchQueuedCount={queuedCount}
         style={{ width: effectiveSidebarWidth, minWidth: effectiveSidebarWidth }}
       />
 
       {sidebarMode === 'expanded' && <ResizableHandle onResize={handleSidebarResize} />}
 
-      <ArticleList
-        activeView={activeView}
-        selectedArticleId={selectedArticle?.id}
-        onSelectArticle={handleSelectArticle}
-        onArticlesLoaded={setVisibleArticles}
-        sidebarHidden={sidebarMode === 'hidden'}
-        onShowSidebar={toggleSidebarMode}
-      />
+      {isLibraryView ? (
+        <LibraryView />
+      ) : (
+        <ArticleList
+          activeView={activeView}
+          selectedArticleId={selectedArticle?.id}
+          onSelectArticle={handleSelectArticle}
+          onArticlesLoaded={setVisibleArticles}
+          sidebarHidden={sidebarMode === 'hidden'}
+          onShowSidebar={toggleSidebarMode}
+        />
+      )}
 
-      {selectedArticle && (
+      {!isLibraryView && selectedArticle && (
         <ArticleReader
           article={selectedArticle}
           isOpen={!!selectedArticle}
@@ -284,11 +294,6 @@ function App() {
         folders={folders}
       />
 
-      <SummariesModal
-        isOpen={showSummaries}
-        onClose={() => setShowSummaries(false)}
-      />
-
       <SettingsPanel
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
@@ -305,6 +310,7 @@ function App() {
         folders={folders}
         onImportOPML={importFeedsFromOPML}
         onRefreshAll={handleRefreshAll}
+        onAutoRefreshChange={setAutoRefreshMinutes}
       />
 
       {toast && (

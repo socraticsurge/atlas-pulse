@@ -14,6 +14,15 @@ import {
 import db from '../db/database.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
 
+const FILTER_DIMS = [
+  { key: 'sentiment',    label: 'Sentiment',    values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative', mixed: '🔀 Mixed' } },
+  { key: 'urgency',      label: 'Urgency',      values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
+  { key: 'frame',        label: 'Frame',        values: { conflict: '⚔️ Conflict', human_interest: '👤 Human', economic: '📊 Economic', analytical: '🔬 Analytical', moral: '⚖️ Moral', informational: '📰 Info' } },
+  { key: 'tone',         label: 'Tone',         values: { alarming: '🚨 Alarming', cautionary: '⚠️ Cautionary', neutral: '〰️ Neutral', optimistic: '✨ Optimistic', critical: '💭 Critical', satirical: '🎭 Satirical' } },
+  { key: 'depth',        label: 'Depth',        values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
+  { key: 'subjectivity', label: 'Subjectivity', values: { objective: '🎯 Objective', balanced: '⚖️ Balanced', opinion: '💬 Opinion' } },
+];
+
 export default function ArticleList({
   activeView,
   selectedArticleId,
@@ -27,6 +36,7 @@ export default function ArticleList({
   const [viewMode, setViewMode] = useState(() =>
     localStorage.getItem('atlas-pulse-view-mode') || 'magazine'
   );
+  const [activeFilters, setActiveFilters] = useState({});
 
   const feeds = useLiveQuery(() => db.feeds.toArray()) || [];
   const feedMap = useMemo(() => {
@@ -87,7 +97,7 @@ export default function ArticleList({
     }
   }, [activeView.type, activeView.id]) || [];
 
-  // Filter articles by search query (local search across title + summary + source)
+  // Filter articles by search query
   const articles = useMemo(() => {
     if (!searchQuery.trim()) return rawArticles;
     const q = searchQuery.toLowerCase().trim();
@@ -99,11 +109,47 @@ export default function ArticleList({
     });
   }, [rawArticles, searchQuery, feedMap]);
 
-  // Notify parent of the current visible articles list
-  useEffect(() => {
-    if (onArticlesLoaded) {
-      onArticlesLoaded(articles);
+  // Derive which filter values are present in the current article set
+  const availableFilters = useMemo(() => {
+    const result = {};
+    for (const dim of FILTER_DIMS) result[dim.key] = new Set();
+    for (const a of articles) {
+      if (!a.aiAnalysis) continue;
+      try {
+        const analysis = JSON.parse(a.aiAnalysis);
+        for (const dim of FILTER_DIMS) {
+          if (analysis[dim.key]) result[dim.key].add(analysis[dim.key]);
+        }
+      } catch { /* ignore */ }
     }
+    return result;
+  }, [articles]);
+
+  // Apply active AI filters on top of search-filtered articles
+  const filteredArticles = useMemo(() => {
+    const filterKeys = Object.keys(activeFilters).filter(k => activeFilters[k]);
+    if (filterKeys.length === 0) return articles;
+    return articles.filter((a) => {
+      if (!a.aiAnalysis) return false;
+      try {
+        const analysis = JSON.parse(a.aiAnalysis);
+        return filterKeys.every(k => analysis[k] === activeFilters[k]);
+      } catch { return false; }
+    });
+  }, [articles, activeFilters]);
+
+  const toggleFilter = (dimKey, value) => {
+    setActiveFilters(prev =>
+      prev[dimKey] === value ? { ...prev, [dimKey]: null } : { ...prev, [dimKey]: value }
+    );
+  };
+
+  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
+  const hasAnyAnalysis = articles.some(a => a.aiAnalysis);
+
+  // Notify parent of the unfiltered article list (for navigation)
+  useEffect(() => {
+    if (onArticlesLoaded) onArticlesLoaded(articles);
   }, [articles, onArticlesLoaded]);
 
   const viewTitle = useMemo(() => {
@@ -139,7 +185,7 @@ export default function ArticleList({
           )}
           <h2>
             {viewTitle}
-            <span className="article-count"> · {articles.length} articles</span>
+            <span className="article-count"> · {filteredArticles.length} articles</span>
           </h2>
         </div>
         <div className="article-list-actions">
@@ -220,14 +266,48 @@ export default function ArticleList({
         </div>
       )}
 
+      {/* AI filter chips — only shown when analysis data exists */}
+      {hasAnyAnalysis && (
+        <div className="ai-filter-row">
+          {FILTER_DIMS.map((dim) => {
+            const presentValues = availableFilters[dim.key];
+            if (!presentValues || presentValues.size === 0) return null;
+            return [...presentValues].map((val) => {
+              const label = dim.values[val] || val;
+              const isActive = activeFilters[dim.key] === val;
+              return (
+                <button
+                  key={`${dim.key}-${val}`}
+                  className={`ai-filter-chip ${isActive ? 'active' : ''}`}
+                  onClick={() => toggleFilter(dim.key, val)}
+                  title={`Filter by ${dim.label}: ${val}`}
+                >
+                  {label}
+                </button>
+              );
+            });
+          })}
+          {hasActiveFilters && (
+            <button
+              className="ai-filter-chip ai-filter-clear"
+              onClick={() => setActiveFilters({})}
+            >
+              ✕ Clear
+            </button>
+          )}
+        </div>
+      )}
+
       <div className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
-        {articles.length === 0 ? (
+        {filteredArticles.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon">
               {searchQuery ? <HiOutlineMagnifyingGlass /> : <HiOutlineSparkles />}
             </span>
             <h3>
-              {searchQuery
+              {hasActiveFilters
+                ? 'No matching articles'
+                : searchQuery
                 ? 'No matching articles'
                 : activeView.type === 'saved'
                 ? 'Nothing saved yet'
@@ -236,7 +316,9 @@ export default function ArticleList({
                 : 'Your feed is empty'}
             </h3>
             <p>
-              {searchQuery
+              {hasActiveFilters
+                ? 'No articles match the active filters'
+                : searchQuery
                 ? `No articles match "${searchQuery}"`
                 : activeView.type === 'saved'
                 ? 'Bookmark articles to find them here'
@@ -246,7 +328,7 @@ export default function ArticleList({
             </p>
           </div>
         ) : (
-          articles.map((article) => {
+          filteredArticles.map((article) => {
             const feed = feedMap[article.feedId];
 
             if (viewMode === 'compact') {

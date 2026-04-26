@@ -38,7 +38,7 @@ export default function Sidebar({
   onToggleTheme,
   refreshing,
   onToggleMode,
-  onShowSummaries,
+  batchQueuedCount = 0,
   style,
 }) {
   const isIcon = mode === 'icon' || mode === 'hidden';
@@ -164,11 +164,14 @@ export default function Sidebar({
             )}
           </div>
           <div
-            className="sidebar-icon-item"
-            onClick={onShowSummaries}
-            title="AI Summaries"
+            className={`sidebar-icon-item ${activeView.type === 'library' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'library' })}
+            title="AI Summaries Library"
           >
             <HiOutlineSparkles />
+            {batchQueuedCount > 0 && (
+              <span className="sidebar-icon-badge">{capBadge(batchQueuedCount)}</span>
+            )}
           </div>
 
           {(folders.length > 0 || uncategorizedFeeds.length > 0) && (
@@ -304,9 +307,13 @@ export default function Sidebar({
             <span className="nav-label">Saved</span>
             {savedCount > 0 && <span className="badge">{savedCount}</span>}
           </div>
-          <div className="nav-item" onClick={onShowSummaries}>
+          <div
+            className={`nav-item ${activeView.type === 'library' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'library' })}
+          >
             <span className="nav-icon"><HiOutlineSparkles /></span>
             <span className="nav-label">AI Summaries</span>
+            {batchQueuedCount > 0 && <span className="badge">{batchQueuedCount}</span>}
           </div>
         </div>
 
