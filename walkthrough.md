@@ -62,7 +62,7 @@ graph LR
 - **Folders**: Create/rename/delete; right-click context menu; move feeds into folders
 - **Bookmarks**: Bookmark any article; find them under "Saved" in the sidebar
 - **Today view**: Shows only articles published today
-- **Search**: Instant local search across title, content, and source name
+- **Search**: AND-logic tokenized search — "cloud AI" matches both terms anywhere; `"quoted phrase"` for exact match; results ranked by relevance (title › source › AI topics › body)
 - **Mark all read**: One-click button in the article list header
 - **AI Only filter**: Toggle to show only AI-analyzed articles
 - **Content filters**: Per-dimension dropdown pills (Sentiment · Urgency · Frame · Tone · Depth)
@@ -87,6 +87,18 @@ graph LR
 - **AI Summaries Library**: Save summaries to a persistent SQLite library; search, browse, export as CSV
 - **Model selector**: Live dropdown populated from your installed Ollama models
 - **AI processed badge**: Sparkle indicator on analyzed articles in all three list views
+
+### Multi-Article AI Actions
+- **Multi-select**: Checkbox on any article card; floating action bar appears when ≥1 selected
+- **Compare Sources** (2–5 articles): AI analysis across angle, framing, key claims, omissions, tone, evidence
+- **Generate Newsletter** (3–15 articles): Daily Digest, Weekly Roundup, or Executive Brief
+- **AI Briefing** (2–15 articles): Free-form prompt answered using selected articles as context
+- **Streaming output**: All operations stream token by token
+- **Active config strip**: Shows active AI personas, tone, and custom instructions before generating
+- **Export**: Copy · Markdown (`.md`) · Word (`.docx`) · Email
+
+### Feed Quality
+- **Cross-feed deduplication**: Wire stories appearing in multiple feeds are stored only once; canonical URL normalization strips tracking params, `www.` prefix, fragments (DB v6)
 
 ---
 
@@ -121,18 +133,20 @@ Open **http://localhost:5173**. This starts both the Vite frontend (`:5173`) and
 ### Frontend
 | File | Purpose |
 |---|---|
-| [src/db/database.js](src/db/database.js) | Dexie.js IndexedDB schema v3 |
+| [src/db/database.js](src/db/database.js) | Dexie.js IndexedDB schema v6 — feeds, articles (`canonicalLink`, `aiStatus`, `aiSummary`, `aiAnalysis`), folders |
 | [src/utils/api.js](src/utils/api.js) | HTTP client — all `/api/*` calls + `streamChat()` generator |
 | [src/utils/batchSettings.js](src/utils/batchSettings.js) | Batch processor config (localStorage) |
-| [src/utils/helpers.js](src/utils/helpers.js) | Date formatting, read time, HTML stripping |
-| [src/utils/aiSettings.js](src/utils/aiSettings.js) | AI persona + tone configuration |
+| [src/utils/helpers.js](src/utils/helpers.js) | Date formatting, read time, HTML stripping, `canonicalizeUrl` |
+| [src/utils/aiSettings.js](src/utils/aiSettings.js) | AI persona + tone configuration, `buildSystemPrompt` |
 | [src/utils/constants.js](src/utils/constants.js) | Auto-refresh options, popular feeds catalog |
 | [src/utils/opml.js](src/utils/opml.js) | OPML import/export |
-| [src/hooks/useFeeds.js](src/hooks/useFeeds.js) | Feed CRUD + refresh (queues new articles for batch) |
+| [src/utils/docx.js](src/utils/docx.js) | Client-side Markdown → `.docx` export |
+| [src/hooks/useFeeds.js](src/hooks/useFeeds.js) | Feed CRUD + refresh — cross-feed dedup by `canonicalLink`, queues articles for batch |
 | [src/hooks/useFolders.js](src/hooks/useFolders.js) | Folder management |
 | [src/hooks/useAIBatchProcessor.js](src/hooks/useAIBatchProcessor.js) | Background AI engine — queue watcher, processOne loop, triggerBatch |
 | [src/components/Sidebar.jsx](src/components/Sidebar.jsx) | Left panel — nav, folders, feeds, library badge |
-| [src/components/ArticleList.jsx](src/components/ArticleList.jsx) | Middle panel — grid/list/compact, AI filters, batch trigger |
+| [src/components/ArticleList.jsx](src/components/ArticleList.jsx) | Middle panel — grid/list/compact, multi-select, AI filters, batch trigger |
+| [src/components/MultiArticlePanel.jsx](src/components/MultiArticlePanel.jsx) | Multi-article AI panel — Compare / Newsletter / Briefing with streaming output and export |
 | [src/components/ArticleReader.jsx](src/components/ArticleReader.jsx) | Right panel — reader, toolbar, progress bar |
 | [src/components/AIDrawer.jsx](src/components/AIDrawer.jsx) | AI panel — Summary / Analysis / Chat tabs |
 | [src/components/OllamaSetup.jsx](src/components/OllamaSetup.jsx) | Guided Ollama install/start/model-pull wizard |
@@ -156,7 +170,8 @@ Open **http://localhost:5173**. This starts both the Vite frontend (`:5173`) and
 | `b` | Toggle bookmark |
 | `o` | Open article in original tab |
 | `f` | Toggle zen / focus mode |
-| `Esc` | Exit zen mode / close reader |
+| `/` | Focus search box |
+| `Esc` | Clear selection · clear search · exit zen mode · close reader |
 
 ---
 
