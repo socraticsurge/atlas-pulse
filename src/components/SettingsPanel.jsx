@@ -97,8 +97,6 @@ export default function SettingsPanel({
     updateAISettings({ personas: next });
   };
 
-  if (!isOpen) return null;
-
   const [confirmClear, setConfirmClear] = useState(false);
   const confirmClearTimerRef = useRef(null);
 
@@ -115,6 +113,8 @@ export default function SettingsPanel({
       confirmClearTimerRef.current = setTimeout(() => setConfirmClear(false), 3000);
     }
   }, [confirmClear, onClose]);
+
+  if (!isOpen) return null;
 
   const handleExport = () => {
     const opmlString = generateOPML(feeds, folders);
