@@ -38,7 +38,7 @@ export default function Sidebar({
   onToggleTheme,
   refreshing,
   onToggleMode,
-  batchQueuedCount = 0,
+  librarySummaryCount = 0,
   style,
 }) {
   const isIcon = mode === 'icon' || mode === 'hidden';
@@ -169,8 +169,8 @@ export default function Sidebar({
             title="AI Summaries Library"
           >
             <HiOutlineSparkles />
-            {batchQueuedCount > 0 && (
-              <span className="sidebar-icon-badge">{capBadge(batchQueuedCount)}</span>
+            {librarySummaryCount > 0 && (
+              <span className="sidebar-icon-badge">{capBadge(librarySummaryCount)}</span>
             )}
           </div>
 
@@ -313,7 +313,7 @@ export default function Sidebar({
           >
             <span className="nav-icon"><HiOutlineSparkles /></span>
             <span className="nav-label">AI Summaries</span>
-            {batchQueuedCount > 0 && <span className="badge">{batchQueuedCount}</span>}
+            {librarySummaryCount > 0 && <span className="badge">{librarySummaryCount}</span>}
           </div>
         </div>
 

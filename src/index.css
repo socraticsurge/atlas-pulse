@@ -589,7 +589,7 @@ a:hover {
 .article-list-content {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 0 16px;
+  padding: 8px 16px 20px;
 }
 
 /* Grid mode — portrait thumbnail cards */
@@ -641,6 +641,23 @@ a:hover {
   overflow: hidden;
   background: var(--bg-tertiary);
   flex-shrink: 0;
+  position: relative;
+}
+
+.card-ai-badge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--accent);
+  font-size: 10px;
+  backdrop-filter: blur(4px);
 }
 
 .card-image {
@@ -1830,36 +1847,7 @@ a:hover {
 }
 
 /* Text color picker */
-.text-color-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.text-color-option {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border);
-  background: var(--bg-tertiary);
-  cursor: pointer;
-  font-size: 12px;
-  color: var(--text-secondary);
-  transition: border-color var(--transition-fast), background var(--transition-fast);
-}
-
-.text-color-option:hover {
-  border-color: var(--accent-border);
-  background: var(--bg-hover);
-}
-
-.text-color-option.active {
-  border-color: var(--accent);
-  background: var(--accent-muted);
-  color: var(--accent);
-}
+/* .text-color-row / .text-color-option removed — reuses .color-swatch-row / .color-swatch */
 
 .text-color-dot {
   width: 12px;
@@ -2272,6 +2260,22 @@ a:hover {
   text-overflow: ellipsis;
 }
 
+.excerpt-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
 .excerpt-time {
   font-size: 11px;
   color: var(--text-secondary);
@@ -2323,7 +2327,7 @@ a:hover {
 /* ===== Compact Article View ===== */
 .article-card-compact {
   display: grid;
-  grid-template-columns: 14px 160px 1fr auto;
+  grid-template-columns: 14px 160px 1fr 18px auto;
   align-items: center;
   gap: 12px;
   padding: 8px 16px 8px 20px;
@@ -2403,10 +2407,19 @@ a:hover {
   white-space: nowrap;
 }
 
+.compact-ai-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--accent);
+}
+
 .compact-time {
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
+  text-align: right;
 }
 
 /* ===== Reader Settings ===== */
@@ -3475,6 +3488,34 @@ a:hover {
   color: var(--text-tertiary);
 }
 
+.settings-select {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 5px 10px;
+  width: 220px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ── AI processed tag ───────────────────────────────────────── */
+.ai-processed-tag {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+  opacity: 0.7;
+  font-size: 11px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
 /* ── AI drawer — checking label ─────────────────────────────── */
 .ai-checking-label {
   display: inline-flex;
@@ -3655,53 +3696,121 @@ a:hover {
 
 .ai-filter-row {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-secondary);
+  position: relative;
 }
 
-.ai-filter-chip {
+.ai-filter-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.ai-filter-pill-wrap {
+  position: relative;
+}
+
+.ai-filter-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 9px;
-  font-size: 11.5px;
-  font-weight: 500;
+  padding: 4px 9px;
   border-radius: 20px;
+  font-size: 11.5px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  transition: border-color var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
   white-space: nowrap;
+  user-select: none;
 }
 
-.ai-filter-chip:hover {
+.ai-filter-pill:hover {
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.ai-filter-pill.active {
   background: var(--accent-muted);
   border-color: var(--accent-border);
   color: var(--accent);
+  font-weight: 500;
 }
 
-.ai-filter-chip.active {
-  background: var(--accent-muted);
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
+.ai-filter-chevron {
+  font-size: 10px;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+  opacity: 0.7;
 }
 
-.ai-filter-clear {
-  background: transparent;
-  border-color: transparent;
-  color: var(--text-tertiary);
-  font-size: 11px;
+.ai-filter-chevron.open {
+  transform: rotate(180deg);
 }
 
-.ai-filter-clear:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border);
+.ai-filter-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--bg-modal);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  min-width: 150px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-filter-option {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12px;
   color: var(--text-secondary);
+  border-radius: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.ai-filter-option:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.ai-filter-option.active {
+  color: var(--accent);
+  background: var(--accent-muted);
+  font-weight: 500;
+}
+
+.ai-filter-clear-btn {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: color var(--transition-fast);
+  margin-left: 2px;
+}
+
+.ai-filter-clear-btn:hover {
+  color: var(--danger);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -3847,6 +3956,23 @@ a:hover {
   text-align: right;
 }
 
+.ollama-ready-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ollama-ready-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
 /* ═══════════════════════════════════════════════════════════════
    AI DRAWER — BATCH SUMMARY + ANALYSIS BADGES
    ═══════════════════════════════════════════════════════════════ */
@@ -3897,6 +4023,20 @@ a:hover {
   font-size: 13px;
   color: var(--text-tertiary);
   padding: 12px 0;
+}
+
+.batch-running-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--accent);
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  white-space: nowrap;
 }
 
 /* ═══════════════════════════════════════════════════════════════
