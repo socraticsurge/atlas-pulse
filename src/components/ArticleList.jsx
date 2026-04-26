@@ -509,6 +509,7 @@ export default function ArticleList({
                   onClick={() => onSelectArticle(article)}
                 >
                   {renderCheckbox(article, 'compact-checkbox')}
+                  {!article.isRead && <div className="unread-dot-compact" />}
                   {feed?.favicon ? (
                     <img className="compact-favicon" src={feed.favicon} alt="" />
                   ) : (

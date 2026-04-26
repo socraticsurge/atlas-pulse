@@ -4359,6 +4359,12 @@ a:hover {
   opacity: 1;
 }
 
+/* Hide unread dot when checkbox is visible (compact view) */
+.article-card-compact:hover .unread-dot-compact,
+.card-selected.article-card-compact .unread-dot-compact {
+  opacity: 0;
+}
+
 /* Selected card accent border */
 .card-selected.article-card-compact,
 .card-selected.article-card-excerpt {
@@ -4371,11 +4377,14 @@ a:hover {
   outline-offset: -2px;
 }
 
-/* Compact view checkbox */
+/* Compact view checkbox — absolute so it doesn't enter the grid */
 .compact-checkbox {
-  position: relative;
-  flex-shrink: 0;
-  margin-right: 2px;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
 }
 
 /* Excerpt view checkbox */
