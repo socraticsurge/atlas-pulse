@@ -5039,10 +5039,19 @@ mark[data-highlight-id]:hover { filter: brightness(0.92); }
 }
 .highlight-card-link:hover { color: var(--accent); }
 
-.highlight-card-delete {
-  opacity: 0;
+.highlight-card-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 6px 6px 0;
   flex-shrink: 0;
-  margin: 8px 8px 0 0;
+  opacity: 0;
   transition: opacity var(--transition-fast);
 }
-.highlight-card:hover .highlight-card-delete { opacity: 1; }
+.highlight-card:hover .highlight-card-actions { opacity: 1; }
+
+.highlight-card-delete {
+  flex-shrink: 0;
+}

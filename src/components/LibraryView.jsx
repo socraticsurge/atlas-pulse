@@ -9,9 +9,11 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineMagnifyingGlass,
   HiOutlineXMark,
+  HiOutlineNewspaper,
 } from 'react-icons/hi2';
 import { fetchSummaries, deleteSummary, getSummariesExportURL, fetchDBPath } from '../utils/api.js';
 import { PERSONAS } from '../utils/aiSettings.js';
+import db from '../db/database.js';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -41,7 +43,7 @@ function ToneBadge({ label }) {
   return <span className="sum-badge sum-badge-tone">{label}</span>;
 }
 
-const SummaryCard = memo(function SummaryCard({ row, onDelete }) {
+const SummaryCard = memo(function SummaryCard({ row, onDelete, onOpenInReader }) {
   const [expanded, setExpanded] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -106,6 +108,15 @@ const SummaryCard = memo(function SummaryCard({ row, onDelete }) {
       )}
 
       <div className="lib-card-actions">
+        {onOpenInReader && (
+          <button
+            className="btn btn-ghost btn-icon btn-sm"
+            onClick={() => onOpenInReader(row.article_url)}
+            title="Open article in reader"
+          >
+            <HiOutlineNewspaper />
+          </button>
+        )}
         <button
           className={`btn btn-ghost btn-icon btn-sm${confirmDelete ? ' btn-danger-confirm' : ''}`}
           onClick={handleDeleteClick}
@@ -119,7 +130,7 @@ const SummaryCard = memo(function SummaryCard({ row, onDelete }) {
   );
 });
 
-export default function LibraryView() {
+export default function LibraryView({ onOpenArticle }) {
   const [summaries, setSummaries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -149,6 +160,16 @@ export default function LibraryView() {
     await deleteSummary(id);
     setSummaries((prev) => prev.filter((r) => r.id !== id));
   }, []);
+
+  const handleOpenInReader = useCallback(async (articleUrl) => {
+    if (!articleUrl) return;
+    const article = await db.articles.where('link').equals(articleUrl).first();
+    if (article && onOpenArticle) {
+      onOpenArticle(article);
+    } else {
+      window.open(articleUrl, '_blank', 'noopener,noreferrer');
+    }
+  }, [onOpenArticle]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return summaries;
@@ -246,7 +267,7 @@ export default function LibraryView() {
         )}
 
         {!loading && filtered.map((row) => (
-          <SummaryCard key={row.id} row={row} onDelete={handleDelete} />
+          <SummaryCard key={row.id} row={row} onDelete={handleDelete} onOpenInReader={handleOpenInReader} />
         ))}
       </div>
     </div>

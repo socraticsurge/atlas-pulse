@@ -272,6 +272,11 @@ function App() {
     }
   }, [deleteFolderAndFeeds, showToast, activeView]);
 
+  const handleOpenArticleFromLibrary = useCallback((article) => {
+    setActiveView({ type: 'all' });
+    setSelectedArticle(article);
+  }, []);
+
   const handleTriggerBatch = useCallback(async () => {
     const count = await triggerBatch();
     if (count > 0) showToast(`Queued ${count} article${count !== 1 ? 's' : ''} for AI analysis`);
@@ -332,9 +337,9 @@ function App() {
       {sidebarMode === 'expanded' && <ResizableHandle onResize={handleSidebarResize} />}
 
       {isLibraryView ? (
-        <LibraryView />
+        <LibraryView onOpenArticle={handleOpenArticleFromLibrary} />
       ) : isHighlightsView ? (
-        <HighlightsLibrary />
+        <HighlightsLibrary onOpenArticle={handleOpenArticleFromLibrary} />
       ) : (
         <ArticleList
           activeView={activeView}
