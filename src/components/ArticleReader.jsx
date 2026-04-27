@@ -26,6 +26,7 @@ import * as api from '../utils/api.js';
 import ReaderSettings, { getReaderSettings, getReaderCSSVars } from './ReaderSettings.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
 import AIDrawer from './AIDrawer.jsx';
+import HighlightToolbar, { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
 
 export default function ArticleReader({
   article,
@@ -65,6 +66,10 @@ export default function ArticleReader({
     () => (article ? db.articles.get(article.id) : undefined),
     [article?.id]
   );
+  const highlights = useLiveQuery(
+    () => (article ? db.highlights.where('articleId').equals(article.id).toArray() : []),
+    [article?.id]
+  ) || [];
 
   // Reading progress bar
   useEffect(() => {
@@ -246,6 +251,44 @@ export default function ArticleReader({
   }, [displayContent]);
 
   const readerCSSVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
+
+  // Apply saved highlights to the rendered article DOM
+  useEffect(() => {
+    const contentEl = contentRef.current?.querySelector('.reader-article-content');
+    if (!contentEl) return;
+
+    // Remove existing marks first
+    contentEl.querySelectorAll('mark[data-highlight-id]').forEach(mark => {
+      const parent = mark.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(mark.textContent), mark);
+        parent.normalize();
+      }
+    });
+
+    for (const h of highlights) {
+      const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        const idx = node.nodeValue.indexOf(h.text);
+        if (idx === -1) continue;
+        const before = node.nodeValue.slice(0, idx);
+        const after = node.nodeValue.slice(idx + h.text.length);
+        const mark = document.createElement('mark');
+        mark.setAttribute('data-highlight-id', String(h.id));
+        mark.style.background = HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow;
+        mark.style.borderRadius = '2px';
+        if (h.note) mark.title = h.note;
+        mark.textContent = h.text;
+        const frag = document.createDocumentFragment();
+        if (before) frag.appendChild(document.createTextNode(before));
+        frag.appendChild(mark);
+        if (after) frag.appendChild(document.createTextNode(after));
+        node.parentNode.replaceChild(frag, node);
+        break; // first occurrence only
+      }
+    }
+  }, [highlights, sanitizedContent, extracting]);
 
   if (!article) return null;
 
@@ -458,6 +501,12 @@ export default function ArticleReader({
           )}
         </div>
       </div>
+
+      <HighlightToolbar
+        containerRef={contentRef}
+        article={currentArticle}
+        feedTitle={feed?.title || ''}
+      />
     </>
   );
 }

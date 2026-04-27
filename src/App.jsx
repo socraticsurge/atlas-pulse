@@ -5,6 +5,7 @@ import ArticleReader from './components/ArticleReader.jsx';
 import AddFeedModal from './components/AddFeedModal.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import LibraryView from './components/LibraryView.jsx';
+import HighlightsLibrary from './components/HighlightsLibrary.jsx';
 import MultiArticlePanel from './components/MultiArticlePanel.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
@@ -301,6 +302,7 @@ function App() {
   const hasPrev = currentArticleIndex > 0;
 
   const isLibraryView = activeView.type === 'library';
+  const isHighlightsView = activeView.type === 'highlights';
 
   return (
     <div className="app-layout">
@@ -331,6 +333,8 @@ function App() {
 
       {isLibraryView ? (
         <LibraryView />
+      ) : isHighlightsView ? (
+        <HighlightsLibrary />
       ) : (
         <ArticleList
           activeView={activeView}
@@ -349,7 +353,7 @@ function App() {
         />
       )}
 
-      {!isLibraryView && multiPanel ? (
+      {!isLibraryView && !isHighlightsView && multiPanel ? (
         <MultiArticlePanel
           articles={multiPanel.articles}
           initialOperation={multiPanel.operation}
@@ -357,7 +361,7 @@ function App() {
           width={readerWidth}
           onResize={handleReaderResize}
         />
-      ) : !isLibraryView && selectedArticle ? (
+      ) : !isLibraryView && !isHighlightsView && selectedArticle ? (
         <ReaderErrorBoundary width={readerWidth} onClose={() => setSelectedArticle(null)}>
           <ArticleReader
             article={selectedArticle}
