@@ -101,7 +101,7 @@ function App() {
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
 
   const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
-  const { folders, addFolder, renameFolder, deleteFolder } = useFolders();
+  const { folders, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds } = useFolders();
   const { availableModels, progress: batchProgress, queuedCount: batchQueuedCount, triggerBatch } = useAIBatchProcessor();
   const refreshIntervalRef = useRef(null);
 
@@ -256,15 +256,20 @@ function App() {
   }, [selectedArticle, visibleArticles]);
 
   const handleDeleteFolder = useCallback(async (folderId) => {
-    const folder = folders.find(f => f.id === folderId);
-    if (window.confirm(`Delete folder "${folder?.name}"? Feeds will be moved to uncategorized.`)) {
-      await deleteFolder(folderId);
-      showToast('Folder deleted');
-      if (activeView.type === 'folder' && activeView.id === folderId) {
-        setActiveView({ type: 'all' });
-      }
+    await deleteFolder(folderId);
+    showToast('Folder deleted — feeds moved to Uncategorized');
+    if (activeView.type === 'folder' && activeView.id === folderId) {
+      setActiveView({ type: 'all' });
     }
-  }, [folders, deleteFolder, showToast, activeView]);
+  }, [deleteFolder, showToast, activeView]);
+
+  const handleDeleteFolderAndFeeds = useCallback(async (folderId) => {
+    await deleteFolderAndFeeds(folderId);
+    showToast('Folder and all its feeds deleted');
+    if (activeView.type === 'folder' && activeView.id === folderId) {
+      setActiveView({ type: 'all' });
+    }
+  }, [deleteFolderAndFeeds, showToast, activeView]);
 
   const handleTriggerBatch = useCallback(async () => {
     const count = await triggerBatch();
@@ -310,6 +315,7 @@ function App() {
         onAddFolder={addFolder}
         onRenameFolder={renameFolder}
         onDeleteFolder={handleDeleteFolder}
+        onDeleteFolderAndFeeds={handleDeleteFolderAndFeeds}
         onRemoveFeed={handleRemoveFeed}
         onMoveFeed={handleMoveFeed}
         onRefreshAll={handleRefreshAll}

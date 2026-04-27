@@ -23,8 +23,18 @@ export function useFolders() {
 
   const deleteFolder = useCallback(async (folderId) => {
     await db.transaction('rw', db.folders, db.feeds, async () => {
-      // Move feeds in this folder to uncategorized (null)
       await db.feeds.where('folderId').equals(folderId).modify({ folderId: null });
+      await db.folders.delete(folderId);
+    });
+  }, []);
+
+  const deleteFolderAndFeeds = useCallback(async (folderId) => {
+    await db.transaction('rw', db.folders, db.feeds, db.articles, async () => {
+      const folderFeeds = await db.feeds.where('folderId').equals(folderId).toArray();
+      for (const feed of folderFeeds) {
+        await db.articles.where('feedId').equals(feed.id).delete();
+      }
+      await db.feeds.where('folderId').equals(folderId).delete();
       await db.folders.delete(folderId);
     });
   }, []);
@@ -34,5 +44,6 @@ export function useFolders() {
     addFolder,
     renameFolder,
     deleteFolder,
+    deleteFolderAndFeeds,
   };
 }
