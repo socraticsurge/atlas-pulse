@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineSparkles,
   HiOutlineXMark,
@@ -10,12 +11,15 @@ import {
   HiOutlineChevronDown,
   HiOutlineBookmarkSquare,
   HiOutlineBeaker,
+  HiOutlineTrash,
+  HiOutlinePencilSquare,
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat, saveSummary } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 import OllamaSetup from './OllamaSetup.jsx';
+import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
 import db from '../db/database.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
@@ -215,6 +219,11 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const abortRef = useRef(null);
   const tokenBufferRef = useRef('');
   const rafRef = useRef(null);
+
+  const articleHighlights = useLiveQuery(
+    () => (article ? db.highlights.where('articleId').equals(article.id).toArray() : []),
+    [article?.id]
+  ) || [];
 
   const loadModels = useCallback((modelList) => {
     setModels(modelList);
@@ -541,6 +550,9 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
             <button className={`ai-tab ${tab === 'chat' ? 'active' : ''}`} onClick={() => setTab('chat')}>
               Chat
             </button>
+            <button className={`ai-tab ${tab === 'highlights' ? 'active' : ''}`} onClick={() => setTab('highlights')}>
+              Highlights {articleHighlights.length > 0 && <span className="ai-tab-badge">{articleHighlights.length}</span>}
+            </button>
           </div>
 
           {/* Active persona + tone badge strip */}
@@ -721,6 +733,40 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
                   {chatLoading ? <HiOutlineXMark /> : <HiOutlinePaperAirplane />}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* ── Highlights Tab ── */}
+          {tab === 'highlights' && (
+            <div className="ai-drawer-body highlights-tab">
+              {articleHighlights.length === 0 ? (
+                <div className="ai-empty-state">
+                  <HiOutlinePencilSquare />
+                  <p>No highlights for this article yet. Select any text to save it.</p>
+                </div>
+              ) : (
+                <div className="highlights-tab-list">
+                  {articleHighlights.map(h => (
+                    <div key={h.id} className="highlight-tab-item">
+                      <div
+                        className="highlight-tab-bar"
+                        style={{ background: HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow }}
+                      />
+                      <div className="highlight-tab-content">
+                        <p className="highlight-tab-text">"{h.text}"</p>
+                        {h.note && <p className="highlight-tab-note">{h.note}</p>}
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-icon btn-sm highlight-tab-delete"
+                        onClick={() => db.highlights.delete(h.id)}
+                        title="Delete"
+                      >
+                        <HiOutlineTrash />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>

@@ -53,4 +53,12 @@ db.version(6).stores({
   })
 );
 
+// v7: add highlights table for saved text selections
+db.version(7).stores({
+  folders: '++id, name, order, createdAt',
+  feeds: '++id, folderId, title, url, siteUrl, lastRefreshed, createdAt',
+  articles: '++id, feedId, guid, title, link, canonicalLink, publishedAt, isRead, isBookmarked, aiStatus, [feedId+guid]',
+  highlights: '++id, articleId, createdAt',
+});
+
 export default db;

@@ -18,6 +18,7 @@ import {
   HiOutlineBars3,
   HiOutlineSparkles,
   HiOutlineEllipsisHorizontal,
+  HiOutlinePencilSquare,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 
@@ -63,6 +64,10 @@ export default function Sidebar({
 
   const savedCount = useLiveQuery(
     () => db.articles.where('isBookmarked').equals(1).count()
+  ) || 0;
+
+  const highlightsCount = useLiveQuery(
+    () => db.highlights.count()
   ) || 0;
 
   const todayCount = useLiveQuery(() => {
@@ -169,6 +174,16 @@ export default function Sidebar({
             <HiOutlineBookmark />
             {savedCount > 0 && (
               <span className="sidebar-icon-badge">{capBadge(savedCount)}</span>
+            )}
+          </div>
+          <div
+            className={`sidebar-icon-item ${activeView.type === 'highlights' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'highlights' })}
+            title="Highlights"
+          >
+            <HiOutlinePencilSquare />
+            {highlightsCount > 0 && (
+              <span className="sidebar-icon-badge">{capBadge(highlightsCount)}</span>
             )}
           </div>
           <div
@@ -314,6 +329,14 @@ export default function Sidebar({
             <span className="nav-icon"><HiOutlineBookmark /></span>
             <span className="nav-label">Saved</span>
             {savedCount > 0 && <span className="badge">{savedCount}</span>}
+          </div>
+          <div
+            className={`nav-item ${activeView.type === 'highlights' ? 'active' : ''}`}
+            onClick={() => onViewChange({ type: 'highlights' })}
+          >
+            <span className="nav-icon"><HiOutlinePencilSquare /></span>
+            <span className="nav-label">Highlights</span>
+            {highlightsCount > 0 && <span className="badge">{highlightsCount}</span>}
           </div>
           <div
             className={`nav-item ${activeView.type === 'library' ? 'active' : ''}`}
