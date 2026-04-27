@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineTrash,
@@ -7,6 +7,7 @@ import {
   HiOutlineArrowTopRightOnSquare,
   HiOutlinePencilSquare,
   HiOutlineNewspaper,
+  HiOutlineArrowDownTray,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
@@ -14,6 +15,30 @@ import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function exportCSV(highlights) {
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const headers = ['Highlighted Text', 'Note', 'Color', 'Article Title', 'Source', 'Article URL', 'Saved Date'];
+  const rows = highlights.map(h => [
+    h.text,
+    h.note || '',
+    h.color || '',
+    h.articleTitle || '',
+    h.feedTitle || '',
+    h.articleLink || '',
+    h.createdAt ? new Date(h.createdAt).toLocaleString() : '',
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `atlas-pulse-highlights-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export default function HighlightsLibrary({ onOpenArticle }) {
@@ -35,18 +60,18 @@ export default function HighlightsLibrary({ onOpenArticle }) {
     );
   }, [highlights, search]);
 
-  const handleDelete = async (id) => {
+  const handleDelete = useCallback(async (id) => {
     await db.highlights.delete(id);
-  };
+  }, []);
 
-  const handleOpenInReader = async (articleId, articleLink) => {
+  const handleOpenInReader = useCallback(async (articleId, articleLink) => {
     const article = await db.articles.get(articleId);
     if (article && onOpenArticle) {
       onOpenArticle(article);
     } else if (articleLink) {
       window.open(articleLink, '_blank', 'noopener,noreferrer');
     }
-  };
+  }, [onOpenArticle]);
 
   return (
     <div className="library-panel">
@@ -68,6 +93,15 @@ export default function HighlightsLibrary({ onOpenArticle }) {
           >
             <HiOutlineMagnifyingGlass />
           </button>
+          {highlights.length > 0 && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => exportCSV(highlights)}
+              title="Export all highlights as CSV"
+            >
+              <HiOutlineArrowDownTray /> Export CSV
+            </button>
+          )}
         </div>
       </div>
 
@@ -88,6 +122,11 @@ export default function HighlightsLibrary({ onOpenArticle }) {
           )}
         </div>
       )}
+
+      <div className="library-db-path">
+        <span>IndexedDB</span>
+        <code>stored in this browser only</code>
+      </div>
 
       <div className="library-body">
         {filtered.length === 0 ? (
