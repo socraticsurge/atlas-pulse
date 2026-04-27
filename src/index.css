@@ -525,6 +525,40 @@ a:hover {
   object-fit: contain;
 }
 
+.nav-item-menu-btn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  padding: 0;
+  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+  flex-shrink: 0;
+}
+.nav-item:hover .nav-item-menu-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+.nav-item-menu-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.nav-item.active .nav-item-menu-btn {
+  color: var(--accent);
+}
+
 .folder-toggle {
   cursor: pointer;
   display: flex;

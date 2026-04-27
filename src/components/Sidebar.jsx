@@ -17,6 +17,7 @@ import {
   HiOutlineArrowRightCircle,
   HiOutlineBars3,
   HiOutlineSparkles,
+  HiOutlineEllipsisHorizontal,
 } from 'react-icons/hi2';
 import db from '../db/database.js';
 
@@ -31,6 +32,7 @@ export default function Sidebar({
   onAddFolder,
   onRenameFolder,
   onDeleteFolder,
+  onDeleteFolderAndFeeds,
   onRemoveFeed,
   onMoveFeed,
   onRefreshAll,
@@ -390,6 +392,16 @@ export default function Sidebar({
                       <span className="nav-icon"><HiOutlineFolderOpen /></span>
                       <span className="nav-label">{folder.name}</span>
                       {folderUnread > 0 && <span className="badge">{folderUnread}</span>}
+                      <button
+                        className="nav-item-menu-btn"
+                        title="Folder options"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setContextMenu({ type: 'folder', id: folder.id, x: e.clientX, y: e.clientY });
+                        }}
+                      >
+                        <HiOutlineEllipsisHorizontal />
+                      </button>
                     </>
                   )}
                 </div>
@@ -413,6 +425,16 @@ export default function Sidebar({
                     {unreadCounts.byFeed[feed.id] > 0 && (
                       <span className="badge">{unreadCounts.byFeed[feed.id]}</span>
                     )}
+                    <button
+                      className="nav-item-menu-btn"
+                      title="Feed options"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContextMenu({ type: 'feed', id: feed.id, x: e.clientX, y: e.clientY });
+                      }}
+                    >
+                      <HiOutlineEllipsisHorizontal />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -438,6 +460,16 @@ export default function Sidebar({
               {unreadCounts.byFeed[feed.id] > 0 && (
                 <span className="badge">{unreadCounts.byFeed[feed.id]}</span>
               )}
+              <button
+                className="nav-item-menu-btn"
+                title="Feed options"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContextMenu({ type: 'feed', id: feed.id, x: e.clientX, y: e.clientY });
+                }}
+              >
+                <HiOutlineEllipsisHorizontal />
+              </button>
             </div>
           ))}
         </div>
@@ -476,14 +508,20 @@ export default function Sidebar({
                     setContextMenu(null);
                   }}
                 >
-                  <HiOutlinePencil /> Rename Folder
+                  <HiOutlinePencil /> Rename
                 </button>
                 <div className="context-menu-divider" />
                 <button
                   className="context-menu-item danger"
                   onClick={() => { onDeleteFolder(contextMenu.id); setContextMenu(null); }}
                 >
-                  <HiOutlineTrash /> Delete Folder
+                  <HiOutlineTrash /> Delete folder (keep feeds)
+                </button>
+                <button
+                  className="context-menu-item danger"
+                  onClick={() => { onDeleteFolderAndFeeds(contextMenu.id); setContextMenu(null); }}
+                >
+                  <HiOutlineTrash /> Delete folder + all feeds
                 </button>
               </>
             )}
