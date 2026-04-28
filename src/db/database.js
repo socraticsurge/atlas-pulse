@@ -61,4 +61,12 @@ db.version(7).stores({
   highlights: '++id, articleId, createdAt',
 });
 
+// v8: drop highlights from IDB — migrated to SQLite (server/db/highlights.db)
+db.version(8).stores({
+  folders: '++id, name, order, createdAt',
+  feeds: '++id, folderId, title, url, siteUrl, lastRefreshed, createdAt',
+  articles: '++id, feedId, guid, title, link, canonicalLink, publishedAt, isRead, isBookmarked, aiStatus, [feedId+guid]',
+  highlights: null,
+});
+
 export default db;

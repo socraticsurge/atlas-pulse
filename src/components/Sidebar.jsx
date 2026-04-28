@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { fetchHighlightsCount } from '../utils/api.js';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineNewspaper,
@@ -66,9 +67,10 @@ export default function Sidebar({
     () => db.articles.where('isBookmarked').equals(1).count()
   ) || 0;
 
-  const highlightsCount = useLiveQuery(
-    () => db.highlights.count()
-  ) || 0;
+  const [highlightsCount, setHighlightsCount] = useState(0);
+  useEffect(() => {
+    fetchHighlightsCount().then(({ count }) => setHighlightsCount(count)).catch(() => {});
+  }, []);
 
   const todayCount = useLiveQuery(() => {
     const start = new Date();

@@ -1,5 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   HiOutlineTrash,
   HiOutlineMagnifyingGlass,
@@ -8,68 +7,71 @@ import {
   HiOutlinePencilSquare,
   HiOutlineNewspaper,
   HiOutlineArrowDownTray,
+  HiOutlineExclamationCircle,
 } from 'react-icons/hi2';
-import db from '../db/database.js';
+import {
+  fetchHighlights,
+  deleteHighlight,
+  getHighlightsExportURL,
+  fetchHighlightsDBPath,
+} from '../utils/api.js';
 import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
+import db from '../db/database.js';
 
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function exportCSV(highlights) {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const headers = ['Highlighted Text', 'Note', 'Color', 'Article Title', 'Source', 'Article URL', 'Saved Date'];
-  const rows = highlights.map(h => [
-    h.text,
-    h.note || '',
-    h.color || '',
-    h.articleTitle || '',
-    h.feedTitle || '',
-    h.articleLink || '',
-    h.createdAt ? new Date(h.createdAt).toLocaleString() : '',
-  ]);
-  const csv = [headers, ...rows].map(r => r.map(esc).join(',')).join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `atlas-pulse-highlights-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 export default function HighlightsLibrary({ onOpenArticle }) {
+  const [highlights, setHighlights] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [dbPath, setDbPath] = useState('');
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  const highlights = useLiveQuery(
-    () => db.highlights.orderBy('createdAt').reverse().toArray()
-  ) || [];
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await fetchHighlights();
+      setHighlights(rows);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    fetchHighlightsDBPath().then(({ path }) => setDbPath(path)).catch(() => {});
+  }, [load]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return highlights;
     const q = search.toLowerCase();
     return highlights.filter(h =>
-      h.text.toLowerCase().includes(q) ||
+      (h.highlighted_text || '').toLowerCase().includes(q) ||
       (h.note || '').toLowerCase().includes(q) ||
-      (h.articleTitle || '').toLowerCase().includes(q) ||
-      (h.feedTitle || '').toLowerCase().includes(q)
+      (h.article_title || '').toLowerCase().includes(q) ||
+      (h.article_source || '').toLowerCase().includes(q)
     );
   }, [highlights, search]);
 
   const handleDelete = useCallback(async (id) => {
-    await db.highlights.delete(id);
+    await deleteHighlight(id);
+    setHighlights(prev => prev.filter(h => h.id !== id));
   }, []);
 
-  const handleOpenInReader = useCallback(async (articleId, articleLink) => {
-    const article = await db.articles.get(articleId);
+  const handleOpenInReader = useCallback(async (articleUrl) => {
+    if (!articleUrl) return;
+    const article = await db.articles.where('link').equals(articleUrl).first();
     if (article && onOpenArticle) {
       onOpenArticle(article);
-    } else if (articleLink) {
-      window.open(articleLink, '_blank', 'noopener,noreferrer');
+    } else if (articleUrl) {
+      window.open(articleUrl, '_blank', 'noopener,noreferrer');
     }
   }, [onOpenArticle]);
 
@@ -94,13 +96,14 @@ export default function HighlightsLibrary({ onOpenArticle }) {
             <HiOutlineMagnifyingGlass />
           </button>
           {highlights.length > 0 && (
-            <button
+            <a
+              href={getHighlightsExportURL()}
+              download
               className="btn btn-secondary btn-sm"
-              onClick={() => exportCSV(highlights)}
               title="Export all highlights as CSV"
             >
               <HiOutlineArrowDownTray /> Export CSV
-            </button>
+            </a>
           )}
         </div>
       </div>
@@ -123,13 +126,29 @@ export default function HighlightsLibrary({ onOpenArticle }) {
         </div>
       )}
 
-      <div className="library-db-path">
-        <span>IndexedDB</span>
-        <code>stored in this browser only</code>
-      </div>
+      {dbPath && (
+        <div className="library-db-path">
+          <span>SQLite:</span>
+          <code>{dbPath}</code>
+        </div>
+      )}
 
       <div className="library-body">
-        {filtered.length === 0 ? (
+        {loading && (
+          <div className="empty-state">
+            <span className="spinner" style={{ width: 24, height: 24 }} />
+          </div>
+        )}
+
+        {error && (
+          <div className="ai-error" style={{ margin: '20px 24px' }}>
+            <HiOutlineExclamationCircle />
+            <span>{error}</span>
+            <button className="btn btn-ghost btn-sm" onClick={load}>Retry</button>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
           <div className="empty-state">
             <span className="empty-icon"><HiOutlinePencilSquare /></span>
             <h3>{search ? 'No matching highlights' : 'No highlights yet'}</h3>
@@ -139,7 +158,9 @@ export default function HighlightsLibrary({ onOpenArticle }) {
                 : 'Select any text while reading an article and click Save to keep it here.'}
             </p>
           </div>
-        ) : (
+        )}
+
+        {!loading && !error && filtered.length > 0 && (
           <div className="highlights-list">
             {filtered.map(h => (
               <div key={h.id} className="highlight-card">
@@ -148,31 +169,31 @@ export default function HighlightsLibrary({ onOpenArticle }) {
                   style={{ background: HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow }}
                 />
                 <div className="highlight-card-body">
-                  <blockquote className="highlight-card-text">{h.text}</blockquote>
+                  <blockquote className="highlight-card-text">{h.highlighted_text}</blockquote>
                   {h.note && <p className="highlight-card-note">{h.note}</p>}
                   <div className="highlight-card-meta">
-                    {h.feedTitle && <span className="highlight-card-source">{h.feedTitle}</span>}
-                    {h.feedTitle && h.articleTitle && <span className="meta-divider">·</span>}
-                    {h.articleTitle && (
-                      <span className="highlight-card-article" title={h.articleTitle}>
-                        {h.articleTitle.slice(0, 70)}{h.articleTitle.length > 70 ? '…' : ''}
+                    {h.article_source && <span className="highlight-card-source">{h.article_source}</span>}
+                    {h.article_source && h.article_title && <span className="meta-divider">·</span>}
+                    {h.article_title && (
+                      <span className="highlight-card-article" title={h.article_title}>
+                        {h.article_title.slice(0, 70)}{h.article_title.length > 70 ? '…' : ''}
                       </span>
                     )}
                     <span className="meta-divider">·</span>
-                    <span className="highlight-card-date">{formatDate(h.createdAt)}</span>
+                    <span className="highlight-card-date">{formatDate(h.created_at)}</span>
                   </div>
                 </div>
                 <div className="highlight-card-actions">
                   <button
                     className="btn btn-ghost btn-icon btn-sm"
-                    onClick={() => handleOpenInReader(h.articleId, h.articleLink)}
+                    onClick={() => handleOpenInReader(h.article_url)}
                     title="Open article in reader"
                   >
                     <HiOutlineNewspaper />
                   </button>
-                  {h.articleLink && (
+                  {h.article_url && (
                     <a
-                      href={h.articleLink}
+                      href={h.article_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-ghost btn-icon btn-sm"
