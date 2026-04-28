@@ -1,49 +1,34 @@
-import { useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import db from '../db/database.js';
+import { useState, useEffect, useCallback } from 'react';
+import * as api from '../utils/api.js';
 
-/**
- * Hook for folder CRUD operations.
- */
 export function useFolders() {
-  const folders = useLiveQuery(() => db.folders.orderBy('order').toArray()) || [];
+  const [folders, setFolders] = useState([]);
+
+  useEffect(() => {
+    api.fetchFolders().then(setFolders).catch(() => {});
+  }, []);
 
   const addFolder = useCallback(async (name) => {
-    const maxOrder = folders.length > 0 ? Math.max(...folders.map((f) => f.order || 0)) : 0;
-    return db.folders.add({
-      name,
-      order: maxOrder + 1,
-      createdAt: new Date().toISOString(),
-    });
+    const maxOrder = folders.length > 0 ? Math.max(...folders.map(f => f.order || 0)) : 0;
+    const created = await api.createFolder({ name, order: maxOrder + 1 });
+    setFolders(prev => [...prev, created]);
+    return created.id;
   }, [folders]);
 
   const renameFolder = useCallback(async (folderId, newName) => {
-    await db.folders.update(folderId, { name: newName });
+    const updated = await api.updateFolder(folderId, { name: newName });
+    setFolders(prev => prev.map(f => f.id === folderId ? updated : f));
   }, []);
 
   const deleteFolder = useCallback(async (folderId) => {
-    await db.transaction('rw', db.folders, db.feeds, async () => {
-      await db.feeds.where('folderId').equals(folderId).modify({ folderId: null });
-      await db.folders.delete(folderId);
-    });
+    await api.deleteFolder(folderId, false);
+    setFolders(prev => prev.filter(f => f.id !== folderId));
   }, []);
 
   const deleteFolderAndFeeds = useCallback(async (folderId) => {
-    await db.transaction('rw', db.folders, db.feeds, db.articles, async () => {
-      const folderFeeds = await db.feeds.where('folderId').equals(folderId).toArray();
-      for (const feed of folderFeeds) {
-        await db.articles.where('feedId').equals(feed.id).delete();
-      }
-      await db.feeds.where('folderId').equals(folderId).delete();
-      await db.folders.delete(folderId);
-    });
+    await api.deleteFolder(folderId, true);
+    setFolders(prev => prev.filter(f => f.id !== folderId));
   }, []);
 
-  return {
-    folders,
-    addFolder,
-    renameFolder,
-    deleteFolder,
-    deleteFolderAndFeeds,
-  };
+  return { folders, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds };
 }

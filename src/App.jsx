@@ -101,7 +101,17 @@ function App() {
   const [librarySummaryCount, setLibrarySummaryCount] = useState(0);
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
 
-  const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds();
+  // Incremented after any mutation that changes article data — used to trigger re-fetches
+  const [articlesRefreshKey, setArticlesRefreshKey] = useState(0);
+  const [countsRefreshKey, setCountsRefreshKey] = useState(0);
+
+  const bumpArticles = useCallback(() => {
+    setArticlesRefreshKey(k => k + 1);
+    setCountsRefreshKey(k => k + 1);
+  }, []);
+  const bumpCounts = useCallback(() => setCountsRefreshKey(k => k + 1), []);
+
+  const { feeds, addFeed, removeFeed, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds(bumpArticles);
   const { folders, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds } = useFolders();
   const { availableModels, progress: batchProgress, queuedCount: batchQueuedCount, triggerBatch } = useAIBatchProcessor();
   const refreshIntervalRef = useRef(null);
@@ -206,11 +216,10 @@ function App() {
     if (window.confirm(`Remove "${feed?.title || 'this feed'}"? All its articles will be deleted.`)) {
       await removeFeed(feedId);
       showToast('Feed removed');
-      if (activeView.type === 'feed' && activeView.id === feedId) {
-        setActiveView({ type: 'all' });
-      }
+      bumpArticles();
+      if (activeView.type === 'feed' && activeView.id === feedId) setActiveView({ type: 'all' });
     }
-  }, [feeds, removeFeed, showToast, activeView]);
+  }, [feeds, removeFeed, showToast, bumpArticles, activeView]);
 
   const handleMoveFeed = useCallback(async (feedId, folderId) => {
     await updateFeedFolder(feedId, folderId);
@@ -259,18 +268,15 @@ function App() {
   const handleDeleteFolder = useCallback(async (folderId) => {
     await deleteFolder(folderId);
     showToast('Folder deleted — feeds moved to Uncategorized');
-    if (activeView.type === 'folder' && activeView.id === folderId) {
-      setActiveView({ type: 'all' });
-    }
+    if (activeView.type === 'folder' && activeView.id === folderId) setActiveView({ type: 'all' });
   }, [deleteFolder, showToast, activeView]);
 
   const handleDeleteFolderAndFeeds = useCallback(async (folderId) => {
     await deleteFolderAndFeeds(folderId);
     showToast('Folder and all its feeds deleted');
-    if (activeView.type === 'folder' && activeView.id === folderId) {
-      setActiveView({ type: 'all' });
-    }
-  }, [deleteFolderAndFeeds, showToast, activeView]);
+    bumpArticles();
+    if (activeView.type === 'folder' && activeView.id === folderId) setActiveView({ type: 'all' });
+  }, [deleteFolderAndFeeds, showToast, bumpArticles, activeView]);
 
   const handleOpenArticleFromLibrary = useCallback((article) => {
     setActiveView({ type: 'all' });
@@ -332,6 +338,7 @@ function App() {
         onToggleMode={toggleSidebarMode}
         librarySummaryCount={librarySummaryCount}
         style={{ width: effectiveSidebarWidth, minWidth: effectiveSidebarWidth }}
+        refreshKey={countsRefreshKey}
       />
 
       {sidebarMode === 'expanded' && <ResizableHandle onResize={handleSidebarResize} />}
@@ -355,6 +362,8 @@ function App() {
             setMultiPanel({ articles, operation });
             setSelectedArticle(null);
           }}
+          refreshKey={articlesRefreshKey}
+          onCountChanged={bumpCounts}
         />
       )}
 
@@ -381,6 +390,7 @@ function App() {
             width={readerWidth}
             onResize={handleReaderResize}
             onSummarySaved={handleSummarySaved}
+            onArticleChanged={bumpCounts}
           />
         </ReaderErrorBoundary>
       ) : null}

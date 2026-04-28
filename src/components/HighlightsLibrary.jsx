@@ -14,9 +14,9 @@ import {
   deleteHighlight,
   getHighlightsExportURL,
   fetchHighlightsDBPath,
+  fetchArticleByLink,
 } from '../utils/api.js';
 import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
-import db from '../db/database.js';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -67,10 +67,10 @@ export default function HighlightsLibrary({ onOpenArticle }) {
 
   const handleOpenInReader = useCallback(async (articleUrl) => {
     if (!articleUrl) return;
-    const article = await db.articles.where('link').equals(articleUrl).first();
+    const article = await fetchArticleByLink(articleUrl).catch(() => null);
     if (article && onOpenArticle) {
       onOpenArticle(article);
-    } else if (articleUrl) {
+    } else {
       window.open(articleUrl, '_blank', 'noopener,noreferrer');
     }
   }, [onOpenArticle]);

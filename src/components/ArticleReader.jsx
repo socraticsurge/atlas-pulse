@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import DOMPurify from 'dompurify';
 import {
   HiOutlineBookmark,
@@ -20,7 +19,6 @@ import {
 import { SiX } from 'react-icons/si';
 import { FaLinkedinIn } from 'react-icons/fa';
 import { BsBookmarkFill } from 'react-icons/bs';
-import db from '../db/database.js';
 import { formatDate, estimateReadTime } from '../utils/helpers.js';
 import * as api from '../utils/api.js';
 import ReaderSettings, { getReaderSettings, getReaderCSSVars } from './ReaderSettings.jsx';
@@ -41,6 +39,7 @@ export default function ArticleReader({
   width,
   onResize,
   onSummarySaved,
+  onArticleChanged,
 }) {
   const [extractedContent, setExtractedContent] = useState(null);
   const [extracting, setExtracting] = useState(false);
@@ -57,16 +56,25 @@ export default function ArticleReader({
   const shareMenuRef = useRef(null);
   const scrollMapRef = useRef({});
 
-  // Live DB queries
-  const feed = useLiveQuery(
-    () => (article ? db.feeds.get(article.feedId) : undefined),
-    [article?.feedId]
-  );
-  const liveArticle = useLiveQuery(
-    () => (article ? db.articles.get(article.id) : undefined),
-    [article?.id]
-  );
+  const [feed, setFeed] = useState(null);
+  const [liveArticle, setLiveArticle] = useState(null);
   const [highlights, setHighlights] = useState([]);
+
+  useEffect(() => {
+    if (article?.feedId) {
+      api.fetchFeed(article.feedId).then(setFeed).catch(() => setFeed(null));
+    } else {
+      setFeed(null);
+    }
+  }, [article?.feedId]);
+
+  useEffect(() => {
+    if (article?.id) {
+      api.fetchArticle(article.id).then(setLiveArticle).catch(() => setLiveArticle(null));
+    } else {
+      setLiveArticle(null);
+    }
+  }, [article?.id]);
 
   const loadHighlights = useCallback(async () => {
     if (!article?.link) { setHighlights([]); return; }
@@ -184,7 +192,9 @@ export default function ArticleReader({
   // Mark as read when opened
   useEffect(() => {
     if (article && !article.isRead) {
-      db.articles.update(article.id, { isRead: 1 });
+      api.patchArticle(article.id, { isRead: 1 })
+        .then(updated => { setLiveArticle(updated); onArticleChanged?.(); })
+        .catch(() => {});
     }
   }, [article?.id]);
 
@@ -211,14 +221,18 @@ export default function ArticleReader({
   const toggleBookmark = useCallback(async () => {
     if (!article) return;
     const current = liveArticle || article;
-    await db.articles.update(article.id, { isBookmarked: current.isBookmarked ? 0 : 1 });
-  }, [article, liveArticle]);
+    const updated = await api.patchArticle(article.id, { isBookmarked: current.isBookmarked ? 0 : 1 });
+    setLiveArticle(updated);
+    onArticleChanged?.();
+  }, [article, liveArticle, onArticleChanged]);
 
   const toggleRead = useCallback(async () => {
     if (!article) return;
     const current = liveArticle || article;
-    await db.articles.update(article.id, { isRead: current.isRead ? 0 : 1 });
-  }, [article, liveArticle]);
+    const updated = await api.patchArticle(article.id, { isRead: current.isRead ? 0 : 1 });
+    setLiveArticle(updated);
+    onArticleChanged?.();
+  }, [article, liveArticle, onArticleChanged]);
 
   const handleCopyLink = useCallback(() => {
     if (!article?.link) return;

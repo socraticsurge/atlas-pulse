@@ -8,7 +8,7 @@ import {
   HiOutlineCheck,
 } from 'react-icons/hi2';
 import { useState, useRef, useCallback } from 'react';
-import db from '../db/database.js';
+import { clearAllData } from '../utils/api.js';
 import { parseOPML, generateOPML } from '../utils/opml.js';
 import {
   PERSONAS,
@@ -104,9 +104,7 @@ export default function SettingsPanel({
     if (confirmClear) {
       clearTimeout(confirmClearTimerRef.current);
       setConfirmClear(false);
-      await db.articles.clear();
-      await db.feeds.clear();
-      await db.folders.clear();
+      await clearAllData();
       onClose();
     } else {
       setConfirmClear(true);

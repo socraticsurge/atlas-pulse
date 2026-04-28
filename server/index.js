@@ -7,6 +7,7 @@ import aiRouter from './routes/ai.js';
 import summariesRouter from './routes/summaries.js';
 import highlightsRouter from './routes/highlights.js';
 import ollamaRouter from './routes/ollama.js';
+import readerRouter from './routes/reader.js';
 
 const app = express();
 const PORT = 3001;
@@ -22,6 +23,7 @@ app.use('/api/ai', aiRouter);
 app.use('/api/summaries', summariesRouter);
 app.use('/api/highlights', highlightsRouter);
 app.use('/api/ollama', ollamaRouter);
+app.use('/api/reader', readerRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

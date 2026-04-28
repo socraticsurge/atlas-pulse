@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
 import {
   HiOutlineCheckCircle,
   HiOutlineNewspaper,
@@ -15,7 +14,7 @@ import {
   HiOutlineBookmark,
   HiOutlineArrowDownTray,
 } from 'react-icons/hi2';
-import db from '../db/database.js';
+import { fetchArticles, fetchFeeds, patchArticle, bulkUpdateArticles } from '../utils/api.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
 
 const FILTER_DIMS = [
@@ -65,7 +64,12 @@ export default function ArticleList({
   batchQueuedCount = 0,
   onTriggerBatch,
   onOpenAIPanel,
+  refreshKey = 0,
+  onCountChanged,
 }) {
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [feeds, setFeeds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const searchInputRef = useRef(null);
@@ -79,79 +83,40 @@ export default function ArticleList({
   const [showAiMenu, setShowAiMenu] = useState(false);
   const aiMenuRef = useRef(null);
 
-  const feeds = useLiveQuery(() => db.feeds.toArray()) || [];
+  // Load feeds for feedMap (rarely changes, so a single load is fine)
+  useEffect(() => {
+    fetchFeeds().then(setFeeds).catch(() => {});
+  }, []);
+
+  // Load articles whenever the view or refreshKey changes
+  useEffect(() => {
+    setLoading(true);
+    fetchArticles(activeView.type, activeView.id)
+      .then(data => { setArticles(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [activeView.type, activeView.id, refreshKey]);
+
   const feedMap = useMemo(() => {
     const m = {};
-    feeds.forEach((f) => (m[f.id] = f));
+    feeds.forEach(f => (m[f.id] = f));
     return m;
   }, [feeds]);
 
-  const rawArticles = useLiveQuery(() => {
-    switch (activeView.type) {
-      case 'feed':
-        return db.articles
-          .where('feedId')
-          .equals(activeView.id)
-          .toArray()
-          .then((arts) => arts.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)));
+  // Optimistic update: update a single article in local state
+  const updateArticleLocal = useCallback((id, changes) => {
+    setArticles(prev => prev.map(a => a.id === id ? { ...a, ...changes } : a));
+  }, []);
 
-      case 'folder':
-        return db.feeds
-          .where('folderId')
-          .equals(activeView.id)
-          .toArray()
-          .then((fds) => {
-            const feedIds = fds.map((f) => f.id);
-            if (feedIds.length === 0) return [];
-            return db.articles
-              .where('feedId')
-              .anyOf(feedIds)
-              .toArray()
-              .then((arts) => arts.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)));
-          });
-
-      case 'today': {
-        const start = new Date();
-        start.setHours(0, 0, 0, 0);
-        const startStr = start.toISOString();
-        return db.articles
-          .toArray()
-          .then((arts) =>
-            arts
-              .filter((a) => a.publishedAt >= startStr)
-              .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
-          );
-      }
-
-      case 'saved':
-        return db.articles
-          .where('isBookmarked')
-          .equals(1)
-          .toArray()
-          .then((arts) => arts.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)));
-
-      case 'all':
-      default:
-        return db.articles
-          .toArray()
-          .then((arts) => arts.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)));
-    }
-  }, [activeView.type, activeView.id]) || [];
-
-  // Filter articles by search query — AND logic, quoted phrase support, relevance ranking
-  const articles = useMemo(() => {
-    if (!searchQuery.trim()) return rawArticles;
-
-    // Parse: "quoted phrase" stays as one token, unquoted words split individually
+  // Filter articles by search query
+  const filteredBySearch = useMemo(() => {
+    if (!searchQuery.trim()) return articles;
     const tokens = [];
     const tokenRe = /"([^"]+)"|(\S+)/g;
     let m;
-    while ((m = tokenRe.exec(searchQuery)) !== null) {
-      tokens.push((m[1] || m[2]).toLowerCase());
-    }
+    while ((m = tokenRe.exec(searchQuery)) !== null) tokens.push((m[1] || m[2]).toLowerCase());
 
     const scored = [];
-    for (const article of rawArticles) {
+    for (const article of articles) {
       const title = (article.title || '').toLowerCase();
       const body = stripHtml(article.summary || article.content || '').toLowerCase();
       const source = (feedMap[article.feedId]?.title || '').toLowerCase();
@@ -159,9 +124,7 @@ export default function ArticleList({
       if (article.aiAnalysis) {
         try { topics = (JSON.parse(article.aiAnalysis).topics || []).join(' ').toLowerCase(); } catch {}
       }
-
-      let score = 0;
-      let allMatch = true;
+      let score = 0, allMatch = true;
       for (const token of tokens) {
         const inTitle = title.includes(token);
         const inBody = body.includes(token);
@@ -175,41 +138,36 @@ export default function ArticleList({
       }
       if (allMatch) scored.push({ article, score });
     }
-
     scored.sort((a, b) => b.score - a.score);
     return scored.map(s => s.article);
-  }, [rawArticles, searchQuery, feedMap]);
+  }, [articles, searchQuery, feedMap]);
 
-  // Derive which filter values are present in the current article set
   const availableFilters = useMemo(() => {
     const result = {};
     for (const dim of FILTER_DIMS) result[dim.key] = new Set();
-    for (const a of articles) {
+    for (const a of filteredBySearch) {
       if (!a.aiAnalysis) continue;
       try {
         const analysis = JSON.parse(a.aiAnalysis);
-        for (const dim of FILTER_DIMS) {
-          if (analysis[dim.key]) result[dim.key].add(analysis[dim.key]);
-        }
-      } catch { /* ignore */ }
+        for (const dim of FILTER_DIMS) if (analysis[dim.key]) result[dim.key].add(analysis[dim.key]);
+      } catch {}
     }
     return result;
-  }, [articles]);
+  }, [filteredBySearch]);
 
-  // Apply active AI filters on top of search-filtered articles
   const filteredArticles = useMemo(() => {
-    let result = articles;
+    let result = filteredBySearch;
     if (showAiOnly) result = result.filter(a => a.aiStatus === 'done');
     const filterKeys = Object.keys(activeFilters).filter(k => activeFilters[k]);
     if (filterKeys.length === 0) return result;
-    return result.filter((a) => {
+    return result.filter(a => {
       if (!a.aiAnalysis) return false;
       try {
         const analysis = JSON.parse(a.aiAnalysis);
         return filterKeys.every(k => analysis[k] === activeFilters[k]);
       } catch { return false; }
     });
-  }, [articles, activeFilters, showAiOnly]);
+  }, [filteredBySearch, activeFilters, showAiOnly]);
 
   const toggleFilter = (dimKey, value) => {
     setActiveFilters(prev =>
@@ -220,7 +178,6 @@ export default function ArticleList({
   const hasActiveFilters = Object.values(activeFilters).some(Boolean);
   const hasAnyAnalysis = articles.some(a => a.aiAnalysis);
 
-  // Notify parent of the filtered article list (for prev/next navigation)
   const notifyTimerRef = useRef(null);
   useEffect(() => {
     clearTimeout(notifyTimerRef.current);
@@ -230,12 +187,8 @@ export default function ArticleList({
     return () => clearTimeout(notifyTimerRef.current);
   }, [filteredArticles, onArticlesLoaded]);
 
-  // Clear selection when view changes
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [activeView.type, activeView.id]);
+  useEffect(() => { setSelectedIds(new Set()); }, [activeView.type, activeView.id]);
 
-  // Keyboard: '/' focuses search, Escape clears selection or closes search
   useEffect(() => {
     const handler = (e) => {
       if (e.key === '/' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
@@ -243,19 +196,14 @@ export default function ArticleList({
         setShowSearch(true);
         setTimeout(() => searchInputRef.current?.focus(), 0);
       } else if (e.key === 'Escape') {
-        if (selectedIds.size > 0) {
-          setSelectedIds(new Set());
-        } else if (showSearch) {
-          setShowSearch(false);
-          setSearchQuery('');
-        }
+        if (selectedIds.size > 0) setSelectedIds(new Set());
+        else if (showSearch) { setShowSearch(false); setSearchQuery(''); }
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [showSearch, selectedIds]);
 
-  // Close AI menu on outside click
   useEffect(() => {
     if (!showAiMenu) return;
     const handler = (e) => {
@@ -275,20 +223,23 @@ export default function ArticleList({
   }, []);
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
-
-  const selectAll = useCallback(() => {
-    setSelectedIds(new Set(filteredArticles.map(a => a.id)));
-  }, [filteredArticles]);
+  const selectAll = useCallback(() => setSelectedIds(new Set(filteredArticles.map(a => a.id))), [filteredArticles]);
 
   const handleMarkReadSelected = useCallback(async () => {
-    await db.articles.where('id').anyOf([...selectedIds]).modify({ isRead: 1 });
+    const ids = [...selectedIds];
+    ids.forEach(id => updateArticleLocal(id, { isRead: 1 }));
+    await bulkUpdateArticles(ids, { isRead: 1 });
+    onCountChanged?.();
     clearSelection();
-  }, [selectedIds, clearSelection]);
+  }, [selectedIds, updateArticleLocal, clearSelection, onCountChanged]);
 
   const handleBookmarkSelected = useCallback(async () => {
-    await db.articles.where('id').anyOf([...selectedIds]).modify({ isBookmarked: 1 });
+    const ids = [...selectedIds];
+    ids.forEach(id => updateArticleLocal(id, { isBookmarked: 1 }));
+    await bulkUpdateArticles(ids, { isBookmarked: 1 });
+    onCountChanged?.();
     clearSelection();
-  }, [selectedIds, clearSelection]);
+  }, [selectedIds, updateArticleLocal, clearSelection, onCountChanged]);
 
   const handleExportSelected = useCallback(() => {
     const selected = filteredArticles.filter(a => selectedIds.has(a.id));
@@ -304,6 +255,14 @@ export default function ArticleList({
     onOpenAIPanel?.(selected, operation);
   }, [selectedIds, filteredArticles, feedMap, onOpenAIPanel]);
 
+  const handleMarkAllRead = useCallback(async () => {
+    const ids = articles.filter(a => !a.isRead).map(a => a.id);
+    if (ids.length === 0) return;
+    ids.forEach(id => updateArticleLocal(id, { isRead: 1 }));
+    await bulkUpdateArticles(ids, { isRead: 1 });
+    onCountChanged?.();
+  }, [articles, updateArticleLocal, onCountChanged]);
+
   const viewTitle = useMemo(() => {
     switch (activeView.type) {
       case 'all': return 'All Articles';
@@ -315,7 +274,7 @@ export default function ArticleList({
     }
   }, [activeView]);
 
-  const unreadCount = rawArticles.filter(a => !a.isRead).length;
+  const unreadCount = articles.filter(a => !a.isRead).length;
   const selCount = selectedIds.size;
   const showFab = selCount > 0;
 
@@ -339,11 +298,7 @@ export default function ArticleList({
       <div className="article-list-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {sidebarHidden && (
-            <button
-              className="btn btn-ghost btn-icon btn-sm"
-              onClick={onShowSidebar}
-              title="Show sidebar"
-            >
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={onShowSidebar} title="Show sidebar">
               <HiOutlineBars3 />
             </button>
           )}
@@ -395,11 +350,7 @@ export default function ArticleList({
               <span>{batchQueuedCount}</span>
             </div>
           ) : (
-            <button
-              className="btn btn-ghost btn-icon btn-sm"
-              onClick={onTriggerBatch}
-              title="Run AI analysis on recent articles"
-            >
+            <button className="btn btn-ghost btn-icon btn-sm" onClick={onTriggerBatch} title="Run AI analysis on recent articles">
               <HiOutlineSparkles />
             </button>
           )}
@@ -412,21 +363,13 @@ export default function ArticleList({
             <HiOutlineMagnifyingGlass />
           </button>
           {unreadCount > 0 && (
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                const ids = rawArticles.filter(a => !a.isRead).map(a => a.id);
-                if (ids.length > 0) db.articles.where('id').anyOf(ids).modify({ isRead: 1 });
-              }}
-              title="Mark all as read"
-            >
+            <button className="btn btn-ghost btn-sm" onClick={handleMarkAllRead} title="Mark all as read">
               <HiOutlineCheckCircle /> Mark all read
             </button>
           )}
         </div>
       </div>
 
-      {/* Search bar */}
       {showSearch && (
         <div className="article-search-bar">
           <HiOutlineMagnifyingGlass className="search-icon" />
@@ -446,7 +389,6 @@ export default function ArticleList({
         </div>
       )}
 
-      {/* AI content filters */}
       {hasAnyAnalysis && (
         <>
           {openFilterDim && (
@@ -498,7 +440,7 @@ export default function ArticleList({
       )}
 
       <div className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
-        {rawArticles === undefined ? (
+        {loading ? (
           Array.from({ length: 8 }, (_, i) => (
             <div key={i} className="article-card-skeleton">
               <div className="skeleton-line skeleton-short" />
@@ -540,11 +482,9 @@ export default function ArticleList({
                 >
                   {renderCheckbox(article, 'compact-checkbox')}
                   {!article.isRead && <div className="unread-dot-compact" />}
-                  {feed?.favicon ? (
-                    <img className="compact-favicon" src={feed.favicon} alt="" />
-                  ) : (
-                    <span className="compact-source-icon"><HiOutlineNewspaper /></span>
-                  )}
+                  {feed?.favicon
+                    ? <img className="compact-favicon" src={feed.favicon} alt="" />
+                    : <span className="compact-source-icon"><HiOutlineNewspaper /></span>}
                   <span className="compact-source">{feed?.title || 'Unknown'}</span>
                   <span className="compact-title">{article.title}</span>
                   <span className="compact-ai-col">
@@ -566,11 +506,9 @@ export default function ArticleList({
                   {renderCheckbox(article, 'excerpt-checkbox')}
                   {!article.isRead && <div className="unread-dot-compact" />}
                   <div className="excerpt-meta">
-                    {feed?.favicon ? (
-                      <img className="excerpt-favicon" src={feed.favicon} alt="" />
-                    ) : (
-                      <span className="excerpt-source-icon"><HiOutlineNewspaper /></span>
-                    )}
+                    {feed?.favicon
+                      ? <img className="excerpt-favicon" src={feed.favicon} alt="" />
+                      : <span className="excerpt-source-icon"><HiOutlineNewspaper /></span>}
                     <span className="excerpt-source">{feed?.title || 'Unknown'}</span>
                     <span className="excerpt-time">{timeAgo(article.publishedAt)}</span>
                     {article.aiStatus === 'done' && (
@@ -596,7 +534,6 @@ export default function ArticleList({
               );
             }
 
-            // Card / magazine view
             return (
               <div
                 key={article.id}
@@ -623,11 +560,9 @@ export default function ArticleList({
                 <div className="card-body">
                   <div className="card-meta">
                     {!article.isRead && <span className="card-unread-dot" />}
-                    {feed?.favicon ? (
-                      <img className="card-favicon" src={feed.favicon} alt="" />
-                    ) : (
-                      <span className="card-favicon-icon"><HiOutlineNewspaper /></span>
-                    )}
+                    {feed?.favicon
+                      ? <img className="card-favicon" src={feed.favicon} alt="" />
+                      : <span className="card-favicon-icon"><HiOutlineNewspaper /></span>}
                     <span className="card-source">{feed?.title || 'Unknown'}</span>
                     <span className="card-dot" />
                     <span className="card-time">{timeAgo(article.publishedAt)}</span>
@@ -640,7 +575,6 @@ export default function ArticleList({
         )}
       </div>
 
-      {/* Floating action bar */}
       {showFab && (
         <div className="floating-action-bar">
           <div className="fab-left">
@@ -648,15 +582,10 @@ export default function ArticleList({
               <HiOutlineXMark />
             </button>
             <span className="fab-count">{selCount} selected</span>
-            <button
-              className="btn btn-ghost btn-sm fab-select-all"
-              onClick={selectAll}
-              title="Select all visible"
-            >
+            <button className="btn btn-ghost btn-sm fab-select-all" onClick={selectAll} title="Select all visible">
               Select all {filteredArticles.length}
             </button>
           </div>
-
           <div className="fab-actions">
             <button className="btn btn-ghost btn-sm fab-action-btn" onClick={handleMarkReadSelected} title="Mark selected as read">
               <HiOutlineCheckCircle /> Read
@@ -668,7 +597,6 @@ export default function ArticleList({
               <HiOutlineArrowDownTray /> CSV
             </button>
           </div>
-
           <div className="fab-ai-wrap" ref={aiMenuRef}>
             <button
               className="btn btn-accent btn-sm fab-ai-btn"

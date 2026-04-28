@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { fetchHighlightsCount } from '../utils/api.js';
-import { useLiveQuery } from 'dexie-react-hooks';
+import { fetchHighlightsCount, fetchCounts } from '../utils/api.js';
 import {
   HiOutlineNewspaper,
   HiOutlineCalendar,
@@ -21,8 +20,6 @@ import {
   HiOutlineEllipsisHorizontal,
   HiOutlinePencilSquare,
 } from 'react-icons/hi2';
-import db from '../db/database.js';
-
 export default function Sidebar({
   mode = 'expanded',
   activeView,
@@ -44,6 +41,7 @@ export default function Sidebar({
   onToggleMode,
   librarySummaryCount = 0,
   style,
+  refreshKey = 0,
 }) {
   const isIcon = mode === 'icon' || mode === 'hidden';
 
@@ -54,29 +52,21 @@ export default function Sidebar({
   const [renameValue, setRenameValue] = useState('');
   const [contextMenu, setContextMenu] = useState(null);
 
-  const unreadCounts = useLiveQuery(async () => {
-    const unread = await db.articles.where('isRead').equals(0).toArray();
-    const counts = {};
-    for (const a of unread) {
-      counts[a.feedId] = (counts[a.feedId] || 0) + 1;
-    }
-    return { byFeed: counts, total: unread.length };
-  }) || { byFeed: {}, total: 0 };
-
-  const savedCount = useLiveQuery(
-    () => db.articles.where('isBookmarked').equals(1).count()
-  ) || 0;
-
+  const [unreadCounts, setUnreadCounts] = useState({ byFeed: {}, total: 0 });
+  const [savedCount, setSavedCount] = useState(0);
+  const [todayCount, setTodayCount] = useState(0);
   const [highlightsCount, setHighlightsCount] = useState(0);
-  useEffect(() => {
-    fetchHighlightsCount().then(({ count }) => setHighlightsCount(count)).catch(() => {});
-  }, []);
 
-  const todayCount = useLiveQuery(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    return db.articles.where('publishedAt').aboveOrEqual(start.toISOString()).count();
-  }) || 0;
+  useEffect(() => {
+    fetchCounts()
+      .then(({ unreadByFeed, total, savedCount: sc, todayCount: tc }) => {
+        setUnreadCounts({ byFeed: unreadByFeed, total });
+        setSavedCount(sc);
+        setTodayCount(tc);
+      })
+      .catch(() => {});
+    fetchHighlightsCount().then(({ count }) => setHighlightsCount(count)).catch(() => {});
+  }, [refreshKey]);
 
   const toggleFolder = useCallback((folderId) => {
     setOpenFolders((prev) => {

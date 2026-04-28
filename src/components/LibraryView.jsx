@@ -11,9 +11,8 @@ import {
   HiOutlineXMark,
   HiOutlineNewspaper,
 } from 'react-icons/hi2';
-import { fetchSummaries, deleteSummary, getSummariesExportURL, fetchDBPath } from '../utils/api.js';
+import { fetchSummaries, deleteSummary, getSummariesExportURL, fetchDBPath, fetchArticleByLink } from '../utils/api.js';
 import { PERSONAS } from '../utils/aiSettings.js';
-import db from '../db/database.js';
 
 function formatDate(iso) {
   if (!iso) return '—';
@@ -163,7 +162,7 @@ export default function LibraryView({ onOpenArticle }) {
 
   const handleOpenInReader = useCallback(async (articleUrl) => {
     if (!articleUrl) return;
-    const article = await db.articles.where('link').equals(articleUrl).first();
+    const article = await fetchArticleByLink(articleUrl).catch(() => null);
     if (article && onOpenArticle) {
       onOpenArticle(article);
     } else {

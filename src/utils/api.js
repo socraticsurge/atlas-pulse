@@ -183,6 +183,75 @@ export async function fetchHighlightsDBPath() {
   return res.json();
 }
 
+// ── Reader storage (folders, feeds, articles) ─────────────────────────────────
+
+const READER = `${API_BASE}/reader`;
+
+async function readerFetch(path, opts = {}) {
+  const res = await fetch(`${READER}${path}`, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(err.error || 'Request failed');
+  }
+  return res.json();
+}
+
+function json(body) {
+  return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
+// Folders
+export async function fetchFolders() { return readerFetch('/folders'); }
+export async function createFolder(data) { return readerFetch('/folders', { ...json(data), method: 'POST' }); }
+export async function findOrCreateFolder(name) { return readerFetch('/folders/find-or-create', json({ name })); }
+export async function updateFolder(id, data) { return readerFetch(`/folders/${id}`, { ...json(data), method: 'PUT' }); }
+export async function deleteFolder(id, withFeeds = false) {
+  return readerFetch(`/folders/${id}${withFeeds ? '?withFeeds=true' : ''}`, { method: 'DELETE' });
+}
+
+// Feeds
+export async function fetchFeeds() { return readerFetch('/feeds'); }
+export async function fetchFeed(id) { return readerFetch(`/feeds/${id}`); }
+export async function storeFeed(data) { return readerFetch('/feeds', json(data)); }
+export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, { ...json(data), method: 'PUT' }); }
+export async function removeFeed(id) { return readerFetch(`/feeds/${id}`, { method: 'DELETE' }); }
+
+// Articles
+export async function fetchArticles(view = 'all', id) {
+  const params = new URLSearchParams({ view });
+  if (id !== undefined) params.set('id', id);
+  return readerFetch(`/articles?${params}`);
+}
+export async function fetchArticle(id) { return readerFetch(`/articles/${id}`); }
+export async function fetchArticleByLink(url) {
+  return readerFetch(`/articles/by-link?url=${encodeURIComponent(url)}`);
+}
+export async function patchArticle(id, data) {
+  return readerFetch(`/articles/${id}`, { ...json(data), method: 'PUT' });
+}
+export async function bulkUpdateArticles(ids, data) {
+  return readerFetch('/articles/bulk-update', { ...json({ ids, ...data }), method: 'PUT' });
+}
+export async function bulkInsertArticles(feedId, articles) {
+  return readerFetch('/articles/bulk-insert', json({ feedId, articles }));
+}
+export async function fetchArticlesByAiStatus(status) {
+  const s = Array.isArray(status) ? status.join(',') : status;
+  return readerFetch(`/articles/by-ai-status?status=${encodeURIComponent(s)}`);
+}
+export async function fetchUnprocessedForFeed(feedId, limit) {
+  return readerFetch(`/articles/unprocessed?feedId=${feedId}&limit=${limit}`);
+}
+export async function fetchQueueCount() {
+  const { count } = await readerFetch('/articles/queue-count');
+  return count;
+}
+export async function resetProcessingArticles() {
+  return readerFetch('/articles/reset-processing', { method: 'POST' });
+}
+export async function fetchCounts() { return readerFetch('/articles/counts'); }
+export async function clearAllData() { return readerFetch('/all', { method: 'DELETE' }); }
+
 export async function fetchAIModels() {
   const res = await fetch(`${API_BASE}/ai/models`);
   if (!res.ok) throw new Error('Could not reach Ollama');
