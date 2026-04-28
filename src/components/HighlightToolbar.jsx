@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { HiOutlineCheck, HiOutlinePencil } from 'react-icons/hi2';
-import db from '../db/database.js';
+import { saveHighlight } from '../utils/api.js';
 
 export const HIGHLIGHT_COLORS = {
   yellow: '#fef08a',
@@ -9,24 +9,34 @@ export const HIGHLIGHT_COLORS = {
   pink:   '#fecdd3',
 };
 
-export default function HighlightToolbar({ containerRef, article, feedTitle }) {
-  const [sel, setSel] = useState(null);
-  const [color, setColor] = useState('yellow');
-  const [note, setNote] = useState('');
+// Toolbar intrinsic height (one row, no note): padding-top + row + padding-bottom
+const TOOLBAR_HEIGHT = 40;
+const TOOLBAR_WIDTH  = 210;
+
+export default function HighlightToolbar({ containerRef, article, feedTitle, onSaved }) {
+  const [sel, setSel]           = useState(null);
+  const [color, setColor]       = useState('yellow');
+  const [note, setNote]         = useState('');
   const [showNote, setShowNote] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved, setSaved]       = useState(false);
   const toolbarRef = useRef(null);
 
   useEffect(() => {
+    // mousedown: immediately clear any visible toolbar so the user gets a
+    // clean slate every time they start a new selection attempt.
+    const onMouseDown = (e) => {
+      if (toolbarRef.current?.contains(e.target)) return;
+      setSel(null);
+    };
+
     const onMouseUp = (e) => {
       if (toolbarRef.current?.contains(e.target)) return;
 
       const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || !selection.rangeCount) {
-        setSel(null); return;
-      }
+      if (!selection || selection.isCollapsed || !selection.rangeCount) return;
+
       const text = selection.toString().trim();
-      if (!text) { setSel(null); return; }
+      if (!text) return;
 
       const container = containerRef.current;
       if (!container) return;
@@ -34,15 +44,22 @@ export default function HighlightToolbar({ containerRef, article, feedTitle }) {
       if (!contentEl) return;
 
       const range = selection.getRangeAt(0);
-      if (!contentEl.contains(range.commonAncestorContainer)) { setSel(null); return; }
+      if (!contentEl.contains(range.commonAncestorContainer)) return;
 
-      const rect = range.getBoundingClientRect();
-      const toolbarWidth = 192;
+      const selRect       = range.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+
+      // Horizontal: centre over selection, clamped inside the reader panel
       const left = Math.min(
-        window.innerWidth - toolbarWidth - 8,
-        Math.max(8, rect.left + rect.width / 2 - toolbarWidth / 2)
+        containerRect.right - TOOLBAR_WIDTH - 8,
+        Math.max(containerRect.left + 8,
+          selRect.left + selRect.width / 2 - TOOLBAR_WIDTH / 2)
       );
-      const top = rect.top < 64 ? rect.bottom + 8 : rect.top - 50;
+
+      // Vertical: prefer above the selection; fall back to below if too close to top
+      const topAbove = selRect.top - TOOLBAR_HEIGHT - 8;
+      const topBelow = selRect.bottom + 8;
+      const top = topAbove >= containerRect.top + 8 ? topAbove : topBelow;
 
       setSel({ text, top, left });
       setSaved(false);
@@ -50,31 +67,44 @@ export default function HighlightToolbar({ containerRef, article, feedTitle }) {
       setShowNote(false);
     };
 
-    document.addEventListener('mouseup', onMouseUp);
-    return () => document.removeEventListener('mouseup', onMouseUp);
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setSel(null);
+    };
+
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mouseup',   onMouseUp);
+    document.addEventListener('keydown',   onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mouseup',   onMouseUp);
+      document.removeEventListener('keydown',   onKeyDown);
+    };
   }, [containerRef]);
 
   const handleSave = useCallback(async () => {
     if (!sel || !article) return;
-    await db.highlights.add({
-      articleId: article.id,
-      articleTitle: article.title || '',
-      feedTitle: feedTitle || '',
-      articleLink: article.link || '',
-      text: sel.text,
-      note: note.trim(),
+    await saveHighlight({
+      article_url:      article.link  || '',
+      article_title:    article.title || '',
+      article_source:   feedTitle     || '',
+      highlighted_text: sel.text,
+      note:             note.trim(),
       color,
-      createdAt: new Date().toISOString(),
     });
     setSaved(true);
+    onSaved?.();
     window.getSelection()?.removeAllRanges();
     setTimeout(() => setSel(null), 700);
-  }, [sel, article, feedTitle, note, color]);
+  }, [sel, article, feedTitle, note, color, onSaved]);
 
   if (!sel) return null;
 
   return (
-    <div ref={toolbarRef} className="highlight-toolbar" style={{ top: sel.top, left: sel.left }}>
+    <div
+      ref={toolbarRef}
+      className="highlight-toolbar"
+      style={{ top: sel.top, left: sel.left, minWidth: TOOLBAR_WIDTH }}
+    >
       <div className="highlight-toolbar-row">
         <div className="highlight-toolbar-colors">
           {Object.entries(HIGHLIGHT_COLORS).map(([id, bg]) => (
@@ -106,7 +136,7 @@ export default function HighlightToolbar({ containerRef, article, feedTitle }) {
       {showNote && (
         <textarea
           className="highlight-note-input"
-          placeholder="Add a note..."
+          placeholder="Add a note…"
           value={note}
           onChange={e => setNote(e.target.value)}
           rows={2}

@@ -66,10 +66,22 @@ export default function ArticleReader({
     () => (article ? db.articles.get(article.id) : undefined),
     [article?.id]
   );
-  const highlights = useLiveQuery(
-    () => (article ? db.highlights.where('articleId').equals(article.id).toArray() : []),
-    [article?.id]
-  ) || [];
+  const [highlights, setHighlights] = useState([]);
+
+  const loadHighlights = useCallback(async () => {
+    if (!article?.link) { setHighlights([]); return; }
+    try {
+      const data = await api.fetchHighlightsByArticle(article.link);
+      setHighlights(data);
+    } catch { setHighlights([]); }
+  }, [article?.link]);
+
+  useEffect(() => { loadHighlights(); }, [loadHighlights]);
+
+  const handleHighlightDeleted = useCallback(async (id) => {
+    await api.deleteHighlight(id);
+    setHighlights(prev => prev.filter(h => h.id !== id));
+  }, []);
 
   // Reading progress bar
   useEffect(() => {
@@ -270,16 +282,16 @@ export default function ArticleReader({
       const walker = document.createTreeWalker(contentEl, NodeFilter.SHOW_TEXT);
       let node;
       while ((node = walker.nextNode())) {
-        const idx = node.nodeValue.indexOf(h.text);
+        const idx = node.nodeValue.indexOf(h.highlighted_text);
         if (idx === -1) continue;
         const before = node.nodeValue.slice(0, idx);
-        const after = node.nodeValue.slice(idx + h.text.length);
+        const after = node.nodeValue.slice(idx + h.highlighted_text.length);
         const mark = document.createElement('mark');
         mark.setAttribute('data-highlight-id', String(h.id));
         mark.style.background = HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow;
         mark.style.borderRadius = '2px';
         if (h.note) mark.title = h.note;
-        mark.textContent = h.text;
+        mark.textContent = h.highlighted_text;
         const frag = document.createDocumentFragment();
         if (before) frag.appendChild(document.createTextNode(before));
         frag.appendChild(mark);
@@ -455,6 +467,8 @@ export default function ArticleReader({
           extractedContent={extractedContent}
           feedTitle={feed?.title || null}
           onSummarySaved={onSummarySaved}
+          highlights={highlights}
+          onHighlightDeleted={handleHighlightDeleted}
         />
 
         <div className="reader-content" ref={contentRef} style={readerCSSVars}>
@@ -506,6 +520,7 @@ export default function ArticleReader({
         containerRef={contentRef}
         article={currentArticle}
         feedTitle={feed?.title || ''}
+        onSaved={loadHighlights}
       />
     </>
   );

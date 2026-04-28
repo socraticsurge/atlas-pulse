@@ -136,6 +136,53 @@ export async function fetchDBPath() {
   return res.json();
 }
 
+export async function saveHighlight(data) {
+  const res = await fetch(`${API_BASE}/highlights`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Failed to save' }));
+    throw new Error(err.error || 'Failed to save highlight');
+  }
+  return res.json();
+}
+
+export async function fetchHighlights() {
+  const res = await fetch(`${API_BASE}/highlights`);
+  if (!res.ok) throw new Error('Failed to fetch highlights');
+  return res.json();
+}
+
+export async function fetchHighlightsByArticle(articleUrl) {
+  const res = await fetch(`${API_BASE}/highlights/by-article?url=${encodeURIComponent(articleUrl)}`);
+  if (!res.ok) throw new Error('Failed to fetch article highlights');
+  return res.json();
+}
+
+export async function fetchHighlightsCount() {
+  const res = await fetch(`${API_BASE}/highlights/count`);
+  if (!res.ok) throw new Error('Failed to fetch highlights count');
+  return res.json();
+}
+
+export async function deleteHighlight(id) {
+  const res = await fetch(`${API_BASE}/highlights/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete highlight');
+  return res.json();
+}
+
+export function getHighlightsExportURL() {
+  return `${API_BASE}/highlights/export`;
+}
+
+export async function fetchHighlightsDBPath() {
+  const res = await fetch(`${API_BASE}/highlights/db-path`);
+  if (!res.ok) throw new Error('Failed to get highlights DB path');
+  return res.json();
+}
+
 export async function fetchAIModels() {
   const res = await fetch(`${API_BASE}/ai/models`);
   if (!res.ok) throw new Error('Could not reach Ollama');
