@@ -69,4 +69,12 @@ db.version(8).stores({
   highlights: null,
 });
 
+// v9: drop folders, feeds, articles from IDB — migrated to SQLite (server/db/reader.db)
+db.version(9).stores({
+  folders: null,
+  feeds: null,
+  articles: null,
+  highlights: null,
+});
+
 export default db;

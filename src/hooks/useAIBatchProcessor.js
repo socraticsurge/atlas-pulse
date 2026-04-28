@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import db from '../db/database.js';
-import { streamChat, fetchAIModels } from '../utils/api.js';
+import {
+  streamChat, fetchAIModels,
+  patchArticle, bulkUpdateArticles, fetchQueueCount,
+  fetchArticlesByAiStatus, fetchUnprocessedForFeed, resetProcessingArticles,
+} from '../utils/api.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 import { stripHtml } from '../utils/helpers.js';
 
@@ -45,16 +47,23 @@ function parseAnalysis(response) {
 
 export function useAIBatchProcessor() {
   const [progress, setProgress] = useState({ total: 0, done: 0, failed: 0, running: false });
-  const [availableModels, setAvailableModels] = useState(null); // null = not yet loaded
+  const [availableModels, setAvailableModels] = useState(null);
+  const [queuedCount, setQueuedCount] = useState(0);
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
   const mountedRef = useRef(true);
 
-  // Watch queue depth — triggers the processing loop when new articles are queued
-  const queuedCount = useLiveQuery(
-    () => db.articles.where('aiStatus').equals('queued').count(),
-    []
-  ) ?? 0;
+  // Poll queue depth every 3 seconds — replaces useLiveQuery
+  useEffect(() => {
+    const poll = () => {
+      fetchQueueCount()
+        .then(count => { if (mountedRef.current) setQueuedCount(count); })
+        .catch(() => {});
+    };
+    poll();
+    const t = setInterval(poll, 3000);
+    return () => clearInterval(t);
+  }, []);
 
   // Fetch available models once, refresh occasionally
   useEffect(() => {
@@ -66,9 +75,9 @@ export function useAIBatchProcessor() {
     return () => clearInterval(t);
   }, []);
 
-  // On mount: reset any articles stuck in 'processing' state (from a previous crash)
+  // On mount: reset articles stuck in 'processing' from a previous crash
   useEffect(() => {
-    db.articles.where('aiStatus').equals('processing').modify({ aiStatus: 'queued' }).catch(() => {});
+    resetProcessingArticles().catch(() => {});
     return () => { mountedRef.current = false; };
   }, []);
 
@@ -82,44 +91,38 @@ export function useAIBatchProcessor() {
     const model = (savedModel && availableModels?.some(m => m.name === savedModel))
       ? savedModel
       : availableModels?.[0]?.name || '';
-    if (!model) return; // No model available — wait for user to set up Ollama
+    if (!model) return;
 
     processingRef.current = true;
 
     let articleId = null;
     try {
-      // Pick the newest queued article
-      const queued = await db.articles
-        .where('aiStatus').equals('queued')
-        .toArray()
-        .then(arr => arr.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)));
+      const queued = await fetchArticlesByAiStatus('queued');
+      const sorted = queued.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
-      if (queued.length === 0) {
+      if (sorted.length === 0) {
         setProgress(p => ({ ...p, running: false }));
         processingRef.current = false;
         return;
       }
 
-      const article = queued[0];
+      const article = sorted[0];
       articleId = article.id;
 
-      await db.articles.update(articleId, { aiStatus: 'processing' });
+      await patchArticle(articleId, { aiStatus: 'processing' });
       if (mountedRef.current) {
         setProgress(p => ({
           ...p,
           running: true,
-          total: Math.max(p.total, p.done + p.failed + queued.length),
+          total: Math.max(p.total, p.done + p.failed + sorted.length),
         }));
       }
 
-      // Build article text (truncate to keep prompt fast on small models)
       const rawText = stripHtml(article.content || article.summary || '');
       const text = rawText.length > 4000 ? rawText.slice(0, 4000) + '…' : rawText;
-      const articleContext = `Title: ${article.title}\n\n${text}`;
-
       const msgs = [
         { role: 'system', content: BATCH_SYSTEM_PROMPT },
-        { role: 'user', content: articleContext },
+        { role: 'user', content: `Title: ${article.title}\n\n${text}` },
       ];
 
       let response = '';
@@ -132,33 +135,28 @@ export function useAIBatchProcessor() {
       const features = settings.features || 'both';
       const updates = { aiStatus: 'done' };
 
-      if (features === 'summary' || features === 'both') {
-        updates.aiSummary = parsed.summary;
-      }
+      if (features === 'summary' || features === 'both') updates.aiSummary = parsed.summary;
       if (features === 'analysis' || features === 'both') {
         const { summary: _s, ...analysisOnly } = parsed;
         updates.aiAnalysis = JSON.stringify(analysisOnly);
       }
 
-      await db.articles.update(articleId, updates);
+      await patchArticle(articleId, updates);
       if (mountedRef.current) setProgress(p => ({ ...p, done: p.done + 1 }));
 
     } catch (err) {
       console.error('[Batch AI] Error processing article', articleId, err);
-      if (articleId) {
-        await db.articles.update(articleId, { aiStatus: 'error' }).catch(() => {});
-      }
+      if (articleId) await patchArticle(articleId, { aiStatus: 'error' }).catch(() => {});
       if (mountedRef.current) setProgress(p => ({ ...p, failed: p.failed + 1 }));
     } finally {
       processingRef.current = false;
-      // Yield to the event loop between articles so the UI stays responsive
       if (mountedRef.current && !pausedRef.current) {
         setTimeout(processOne, 50);
       }
     }
   }, [availableModels]);
 
-  // Start processing whenever queue has items and we're not already running
+  // Start processing when queue has items and we're not already running
   useEffect(() => {
     if (queuedCount > 0 && !processingRef.current && !pausedRef.current) {
       processOne();
@@ -182,17 +180,16 @@ export function useAIBatchProcessor() {
     setProgress({ total: 0, done: 0, failed: 0, running: false });
   }, []);
 
-  // Queue the N most recent unprocessed articles on demand
   const triggerBatch = useCallback(async () => {
     const settings = getBatchSettings();
     const n = settings.maxPerCycle || 10;
-    const unprocessed = await db.articles
-      .where('aiStatus').anyOf(['none', 'queued', 'error'])
-      .toArray()
-      .then(arr => arr.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt)).slice(0, n));
-    if (unprocessed.length === 0) return 0;
-    await db.articles.where('id').anyOf(unprocessed.map(a => a.id)).modify({ aiStatus: 'queued' });
-    return unprocessed.length;
+    const unprocessed = await fetchArticlesByAiStatus(['none', 'error']);
+    const sorted = unprocessed
+      .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+      .slice(0, n);
+    if (sorted.length === 0) return 0;
+    await bulkUpdateArticles(sorted.map(a => a.id), { aiStatus: 'queued' });
+    return sorted.length;
   }, []);
 
   return { progress, queuedCount, pause, resume, resetProgress, triggerBatch, availableModels };

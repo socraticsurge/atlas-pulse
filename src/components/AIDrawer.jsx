@@ -14,7 +14,7 @@ import {
   HiOutlinePencilSquare,
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
-import { fetchAIModels, streamChat, saveSummary } from '../utils/api.js';
+import { fetchAIModels, streamChat, saveSummary, patchArticle } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 import OllamaSetup from './OllamaSetup.jsx';
@@ -303,7 +303,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
       }
       const parsed = parseAnalysisJSON(response);
       setAnalysis(parsed);
-      await db.articles.update(article.id, { aiAnalysis: JSON.stringify(parsed) });
+      await patchArticle(article.id, { aiAnalysis: JSON.stringify(parsed) }).catch(() => {});
     } catch (err) {
       setAnalysisError(err.message);
     } finally {
