@@ -8,6 +8,28 @@
 
 A modern, privacy-first RSS feed reader that runs entirely on your local machine. No cloud services, no subscriptions, no accounts — your data stays in your browser's IndexedDB. Powered by React, Express, and (optionally) a local Ollama LLM for AI-powered summaries, content analysis, and article chat.
 
+![Atlas Pulse — article grid in dark theme](docs/screenshots/01-grid-dark.png)
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/02-reader-dark.png" alt="Reader with automatic full-text extraction" />
+      <p align="center"><em>Reader with automatic full-text extraction</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/03-ai-dark.png" alt="AI Assistant — summary streamed from a local Ollama model" />
+      <p align="center"><em>AI summary, streamed from a local Ollama model</em></p>
+    </td>
+  </tr>
+</table>
+
+<details>
+<summary>Light theme</summary>
+
+![Atlas Pulse — light theme](docs/screenshots/04-light.png)
+
+</details>
+
 ---
 
 ## Quick Start
