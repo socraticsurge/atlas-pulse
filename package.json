@@ -1,7 +1,32 @@
 {
-  "name": "rss-feed-reader",
+  "name": "atlas-pulse",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.3.0",
+  "description": "Privacy-first RSS feed reader with fully local AI via Ollama. No cloud, no accounts, your data never leaves your machine.",
+  "license": "MIT",
+  "author": "Vinay Chaganti",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/socraticsurge/atlas-pulse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/socraticsurge/atlas-pulse/issues"
+  },
+  "homepage": "https://github.com/socraticsurge/atlas-pulse#readme",
+  "keywords": [
+    "rss",
+    "rss-reader",
+    "feed-reader",
+    "ollama",
+    "local-ai",
+    "local-first",
+    "privacy",
+    "react",
+    "express"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "type": "module",
   "scripts": {
     "dev": "concurrently --kill-others \"npm run dev:frontend\" \"npm run dev:server\"",
