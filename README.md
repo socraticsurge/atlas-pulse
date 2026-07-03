@@ -1,6 +1,10 @@
 # Atlas Pulse — Personal RSS Feed Reader
 
-**Version 1.3.0**
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+![React](https://img.shields.io/badge/React-19-61dafb)
+![Local AI](https://img.shields.io/badge/AI-100%25%20local%20via%20Ollama-8A2BE2)
+![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 A modern, privacy-first RSS feed reader that runs entirely on your local machine. No cloud services, no subscriptions, no accounts — your data stays in your browser's IndexedDB. Powered by React, Express, and (optionally) a local Ollama LLM for AI-powered summaries, content analysis, and article chat.
 
@@ -17,8 +21,9 @@ A modern, privacy-first RSS feed reader that runs entirely on your local machine
 ### Run the App
 
 ```bash
-# 1. Navigate to the project folder
-cd "/path/to/RSS Feed Reader"
+# 1. Clone the repo
+git clone https://github.com/socraticsurge/atlas-pulse.git
+cd atlas-pulse
 
 # 2. Install dependencies (first time only, or after pulling updates)
 npm install
@@ -190,7 +195,7 @@ curl http://localhost:11434   # should print "Ollama is running"
 ## Project Structure
 
 ```
-RSS Feed Reader/
+atlas-pulse/
 │
 ├── package.json                  # Dependencies & npm scripts
 ├── vite.config.js                # Vite config + /api proxy to port 3001
@@ -374,6 +379,22 @@ npm run dev
 
 ### Reset everything
 - **Settings → Clear All Data** wipes all IndexedDB data
+
+---
+
+## Contributing
+
+Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, AI via local Ollama only), development setup, and pull request guidelines. By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+- **Found a bug?** [Open a bug report](https://github.com/socraticsurge/atlas-pulse/issues/new?template=bug_report.yml)
+- **Have an idea?** [Open a feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) or start a [discussion](https://github.com/socraticsurge/atlas-pulse/discussions)
+- **Security issue?** Please report privately — see [SECURITY.md](SECURITY.md)
+
+---
+
+## License
+
+Released under the [MIT License](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 ---
 
