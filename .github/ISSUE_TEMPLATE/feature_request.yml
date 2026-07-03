@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest an idea or improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before suggesting, please note the project's core principles: local-first,
+        privacy-first, and AI only through a local Ollama instance. Features that
+        require cloud services, accounts, or hosted APIs are out of scope.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the problem or friction you hit as a user.
+      placeholder: As a reader with 200 feeds, I struggle to...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to happen? Mockups and examples welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about, including other RSS readers that do this well.
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Fit with project principles
+      options:
+        - label: This feature works fully offline / locally, with no cloud services or accounts
+          required: true
