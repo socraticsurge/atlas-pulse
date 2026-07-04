@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { HiOutlineCheck, HiOutlinePencil } from 'react-icons/hi2';
 import { saveHighlight } from '../utils/api.js';
-
-export const HIGHLIGHT_COLORS = {
-  yellow: '#fef08a',
-  green:  '#bbf7d0',
-  blue:   '#bfdbfe',
-  pink:   '#fecdd3',
-};
+import { HIGHLIGHT_COLORS } from '../utils/constants.js';
 
 // Toolbar intrinsic height (one row, no note): padding-top + row + padding-bottom
 const TOOLBAR_HEIGHT = 40;

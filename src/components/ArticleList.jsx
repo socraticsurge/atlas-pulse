@@ -14,7 +14,7 @@ import {
   HiOutlineBookmark,
   HiOutlineArrowDownTray,
 } from 'react-icons/hi2';
-import { fetchArticles, fetchFeeds, patchArticle, bulkUpdateArticles } from '../utils/api.js';
+import { fetchArticles, fetchFeeds, bulkUpdateArticles } from '../utils/api.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
 
 const FILTER_DIMS = [
@@ -122,7 +122,7 @@ export default function ArticleList({
       const source = (feedMap[article.feedId]?.title || '').toLowerCase();
       let topics = '';
       if (article.aiAnalysis) {
-        try { topics = (JSON.parse(article.aiAnalysis).topics || []).join(' ').toLowerCase(); } catch {}
+        try { topics = (JSON.parse(article.aiAnalysis).topics || []).join(' ').toLowerCase(); } catch { /* malformed aiAnalysis — skip topics */ }
       }
       let score = 0, allMatch = true;
       for (const token of tokens) {
@@ -150,7 +150,7 @@ export default function ArticleList({
       try {
         const analysis = JSON.parse(a.aiAnalysis);
         for (const dim of FILTER_DIMS) if (analysis[dim.key]) result[dim.key].add(analysis[dim.key]);
-      } catch {}
+      } catch { /* malformed aiAnalysis — skip */ }
     }
     return result;
   }, [filteredBySearch]);

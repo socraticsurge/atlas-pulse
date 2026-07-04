@@ -16,7 +16,7 @@ import {
   fetchHighlightsDBPath,
   fetchArticleByLink,
 } from '../utils/api.js';
-import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
+import { HIGHLIGHT_COLORS } from '../utils/constants.js';
 
 function formatDate(iso) {
   if (!iso) return '';
@@ -25,24 +25,24 @@ function formatDate(iso) {
 
 export default function HighlightsLibrary({ onOpenArticle }) {
   const [highlights, setHighlights] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dbPath, setDbPath] = useState('');
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(() => (
+    fetchHighlights()
+      .then(rows => { setHighlights(rows); setError(null); })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false))
+  ), []);
+
+  const retry = useCallback(() => {
     setLoading(true);
     setError(null);
-    try {
-      const rows = await fetchHighlights();
-      setHighlights(rows);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    load();
+  }, [load]);
 
   useEffect(() => {
     load();
@@ -144,7 +144,7 @@ export default function HighlightsLibrary({ onOpenArticle }) {
           <div className="ai-error" style={{ margin: '20px 24px' }}>
             <HiOutlineExclamationCircle />
             <span>{error}</span>
-            <button className="btn btn-ghost btn-sm" onClick={load}>Retry</button>
+            <button className="btn btn-ghost btn-sm" onClick={retry}>Retry</button>
           </div>
         )}
 

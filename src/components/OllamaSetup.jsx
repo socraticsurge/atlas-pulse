@@ -16,17 +16,16 @@ export default function OllamaSetup({ onReady, compact = false, showReady = fals
   const [pullProgress, setPullProgress] = useState({});
   const [error, setError] = useState(null);
 
-  const checkStatus = useCallback(async () => {
-    try {
-      const result = await fetchOllamaStatus();
-      setStatus(result);
-      if (result.running && result.models.length > 0 && onReady) {
-        onReady(result.models);
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  }, [onReady]);
+  const checkStatus = useCallback(() => (
+    fetchOllamaStatus()
+      .then(result => {
+        setStatus(result);
+        if (result.running && result.models.length > 0 && onReady) {
+          onReady(result.models);
+        }
+      })
+      .catch(err => setError(err.message))
+  ), [onReady]);
 
   // Poll every 5s so the UI auto-advances once Ollama starts
   useEffect(() => {

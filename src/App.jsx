@@ -232,7 +232,7 @@ function App() {
     try {
       const count = await refreshAllFeeds();
       showToast(`Refreshed! ${count} new article${count !== 1 ? 's' : ''} found.`);
-    } catch (err) {
+    } catch {
       showToast('Failed to refresh some feeds', 'error');
     } finally {
       setRefreshing(false);
