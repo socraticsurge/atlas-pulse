@@ -18,7 +18,7 @@ import { fetchAIModels, streamChat, saveSummary, patchArticle } from '../utils/a
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 import OllamaSetup from './OllamaSetup.jsx';
-import { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
+import { HIGHLIGHT_COLORS } from '../utils/constants.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 const MAX_CHAT_MESSAGES = 40; // ~20 exchanges
@@ -232,34 +232,46 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
       .catch(() => { setOllamaReady(false); setOllamaChecked(true); });
   }, [loadModels]);
 
-  // Reset all state when article changes
-  useEffect(() => {
-    setSummary('');
-    setIsBatchSummary(false);
+  // Reset all state when the article changes, and pick up batch AI results as
+  // they land — done during render (not in effects) so the reset and the new
+  // article's first paint happen in one pass.
+  const parseBatchAnalysis = (raw) => {
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  };
+
+  const [prevArticleId, setPrevArticleId] = useState(article?.id);
+  const [prevAiSummary, setPrevAiSummary] = useState(article?.aiSummary);
+  const [prevAiAnalysis, setPrevAiAnalysis] = useState(article?.aiAnalysis);
+  if (prevArticleId !== article?.id) {
+    setPrevArticleId(article?.id);
+    setPrevAiSummary(article?.aiSummary);
+    setPrevAiAnalysis(article?.aiAnalysis);
+    setSummary(article?.aiSummary || '');
+    setIsBatchSummary(Boolean(article?.aiSummary));
     setSummaryError(null);
     setSummarizing(false);
     setSaved(false);
     setMessages([]);
     setChatError(null);
     setChatLoading(false);
-    setAnalysis(null);
+    setAnalysis(parseBatchAnalysis(article?.aiAnalysis));
     setAnalysisError(null);
-  }, [article?.id]);
-
-  // Pre-populate summary from batch
-  useEffect(() => {
-    if (article?.aiSummary) {
-      setSummary(article.aiSummary);
-      setIsBatchSummary(true);
+  } else {
+    // Same article, new batch results (e.g. background processing finished)
+    if (prevAiSummary !== article?.aiSummary) {
+      setPrevAiSummary(article?.aiSummary);
+      if (article?.aiSummary) {
+        setSummary(article.aiSummary);
+        setIsBatchSummary(true);
+      }
     }
-  }, [article?.id, article?.aiSummary]);
-
-  // Pre-populate analysis from batch
-  useEffect(() => {
-    if (article?.aiAnalysis) {
-      try { setAnalysis(JSON.parse(article.aiAnalysis)); } catch { /* ignore */ }
+    if (prevAiAnalysis !== article?.aiAnalysis) {
+      setPrevAiAnalysis(article?.aiAnalysis);
+      const parsed = parseBatchAnalysis(article?.aiAnalysis);
+      if (parsed) setAnalysis(parsed);
     }
-  }, [article?.id, article?.aiAnalysis]);
+  }
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -457,7 +469,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     } finally {
       setSaving(false);
     }
-  }, [summary, saving, article, feedTitle, selectedModel]);
+  }, [summary, saving, article, feedTitle, selectedModel, onSummarySaved]);
 
   if (!isOpen) return null;
 

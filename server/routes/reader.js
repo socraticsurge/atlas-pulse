@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   createFolder, listFolders, updateFolderById, removeFolderById, removeFolderAndFeedsById,
   findFolderByName,
-  createFeed, listFeeds, getFeed, getFeedByUrl, updateFeed, removeFeed,
+  createFeed, listFeeds, getFeed, updateFeed, removeFeed,
   bulkInsertArticles, getArticles, getArticleById, findArticleByLink,
   updateArticle, bulkUpdateArticles, getArticlesByAiStatus, getUnprocessedForFeed,
   getQueueCount, resetProcessingToQueued, getCounts, clearAll,

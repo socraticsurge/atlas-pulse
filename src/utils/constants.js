@@ -344,6 +344,13 @@ export function saveAutoRefreshMinutes(minutes) {
   localStorage.setItem('atlas-pulse-auto-refresh', String(minutes));
 }
 
+export const HIGHLIGHT_COLORS = {
+  yellow: '#fef08a',
+  green:  '#bbf7d0',
+  blue:   '#bfdbfe',
+  pink:   '#fecdd3',
+};
+
 export const VIEW_TYPES = {
   ALL: 'all',
   TODAY: 'today',

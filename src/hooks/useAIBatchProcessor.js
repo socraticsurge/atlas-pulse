@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   streamChat, fetchAIModels,
   patchArticle, bulkUpdateArticles, fetchQueueCount,
-  fetchArticlesByAiStatus, fetchUnprocessedForFeed, resetProcessingArticles,
+  fetchArticlesByAiStatus, resetProcessingArticles,
 } from '../utils/api.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 import { stripHtml } from '../utils/helpers.js';
@@ -52,6 +52,9 @@ export function useAIBatchProcessor() {
   const processingRef = useRef(false);
   const pausedRef = useRef(false);
   const mountedRef = useRef(true);
+  // Self-reference for the processing chain — a useCallback cannot reference
+  // itself directly (breaks React Compiler memoization).
+  const processOneRef = useRef(null);
 
   // Poll queue depth every 3 seconds — replaces useLiveQuery
   useEffect(() => {
@@ -151,10 +154,14 @@ export function useAIBatchProcessor() {
     } finally {
       processingRef.current = false;
       if (mountedRef.current && !pausedRef.current) {
-        setTimeout(processOne, 50);
+        setTimeout(() => processOneRef.current?.(), 50);
       }
     }
   }, [availableModels]);
+
+  useEffect(() => {
+    processOneRef.current = processOne;
+  }, [processOne]);
 
   // Start processing when queue has items and we're not already running
   useEffect(() => {

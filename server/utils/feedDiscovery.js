@@ -63,7 +63,7 @@ export async function discoverFeeds(websiteUrl) {
         }
       });
     }
-  } catch (e) {
+  } catch {
     // HTML fetch failed, continue with probe
   }
 

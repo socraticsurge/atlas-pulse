@@ -21,10 +21,12 @@ import { FaLinkedinIn } from 'react-icons/fa';
 import { BsBookmarkFill } from 'react-icons/bs';
 import { formatDate, estimateReadTime } from '../utils/helpers.js';
 import * as api from '../utils/api.js';
-import ReaderSettings, { getReaderSettings, getReaderCSSVars } from './ReaderSettings.jsx';
+import ReaderSettings from './ReaderSettings.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
 import AIDrawer from './AIDrawer.jsx';
-import HighlightToolbar, { HIGHLIGHT_COLORS } from './HighlightToolbar.jsx';
+import HighlightToolbar from './HighlightToolbar.jsx';
+import { getReaderSettings, getReaderCSSVars } from '../utils/readerSettings.js';
+import { HIGHLIGHT_COLORS } from '../utils/constants.js';
 
 export default function ArticleReader({
   article,
@@ -60,29 +62,53 @@ export default function ArticleReader({
   const [liveArticle, setLiveArticle] = useState(null);
   const [highlights, setHighlights] = useState([]);
 
-  useEffect(() => {
-    if (article?.feedId) {
-      api.fetchFeed(article.feedId).then(setFeed).catch(() => setFeed(null));
-    } else {
-      setFeed(null);
-    }
-  }, [article?.feedId]);
+  const articleId = article?.id;
+  const articleLink = article?.link;
+  const articleFeedId = article?.feedId;
+
+  // Reset per-article state during render rather than in effects, so the reset
+  // and the first paint of the new article happen in a single render pass.
+  const [prevArticleId, setPrevArticleId] = useState(articleId);
+  if (prevArticleId !== articleId) {
+    setPrevArticleId(articleId);
+    setLiveArticle(null);
+    setHighlights([]);
+    setExtractedContent(null);
+    setExtractError(null);
+    setExtracting(false);
+    setScrollProgress(0);
+  }
+
+  const [prevFeedId, setPrevFeedId] = useState(articleFeedId);
+  if (prevFeedId !== articleFeedId) {
+    setPrevFeedId(articleFeedId);
+    setFeed(null);
+  }
+
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (prevIsOpen !== isOpen) {
+    setPrevIsOpen(isOpen);
+    if (!isOpen) setIsVisible(false);
+  }
 
   useEffect(() => {
-    if (article?.id) {
-      api.fetchArticle(article.id).then(setLiveArticle).catch(() => setLiveArticle(null));
-    } else {
-      setLiveArticle(null);
+    if (articleFeedId) {
+      api.fetchFeed(articleFeedId).then(setFeed).catch(() => setFeed(null));
     }
-  }, [article?.id]);
+  }, [articleFeedId]);
 
-  const loadHighlights = useCallback(async () => {
-    if (!article?.link) { setHighlights([]); return; }
-    try {
-      const data = await api.fetchHighlightsByArticle(article.link);
-      setHighlights(data);
-    } catch { setHighlights([]); }
-  }, [article?.link]);
+  useEffect(() => {
+    if (articleId) {
+      api.fetchArticle(articleId).then(setLiveArticle).catch(() => setLiveArticle(null));
+    }
+  }, [articleId]);
+
+  const loadHighlights = useCallback(() => {
+    if (!articleLink) return;
+    api.fetchHighlightsByArticle(articleLink)
+      .then(data => setHighlights(data))
+      .catch(() => setHighlights([]));
+  }, [articleLink]);
 
   useEffect(() => { loadHighlights(); }, [loadHighlights]);
 
@@ -102,19 +128,18 @@ export default function ArticleReader({
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);
-  }, [isOpen, article?.id]);
+  }, [isOpen, articleId]);
 
   // Save scroll position when leaving an article; restore it when returning
   useEffect(() => {
     const el = contentRef.current;
-    const id = article?.id;
-    if (!id) return;
-    el.scrollTop = scrollMapRef.current[id] || 0;
-    setScrollProgress(0);
+    if (!el || !articleId) return;
+    const scrollMap = scrollMapRef.current;
+    el.scrollTop = scrollMap[articleId] || 0;
     return () => {
-      if (el && id) scrollMapRef.current[id] = el.scrollTop;
+      scrollMap[articleId] = el.scrollTop;
     };
-  }, [article?.id]);
+  }, [articleId]);
 
   // Close share menu on outside click
   useEffect(() => {
@@ -127,6 +152,22 @@ export default function ArticleReader({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showShareMenu]);
+
+  const toggleBookmark = useCallback(async () => {
+    if (!articleId) return;
+    const current = liveArticle || article;
+    const updated = await api.patchArticle(articleId, { isBookmarked: current.isBookmarked ? 0 : 1 });
+    setLiveArticle(updated);
+    onArticleChanged?.();
+  }, [articleId, article, liveArticle, onArticleChanged]);
+
+  const toggleRead = useCallback(async () => {
+    if (!articleId) return;
+    const current = liveArticle || article;
+    const updated = await api.patchArticle(articleId, { isRead: current.isRead ? 0 : 1 });
+    setLiveArticle(updated);
+    onArticleChanged?.();
+  }, [articleId, article, liveArticle, onArticleChanged]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -153,7 +194,7 @@ export default function ArticleReader({
           break;
         case 'o':
           e.preventDefault();
-          if (article?.link) window.open(article.link, '_blank', 'noopener,noreferrer');
+          if (articleLink) window.open(articleLink, '_blank', 'noopener,noreferrer');
           break;
         case 'f':
           e.preventDefault();
@@ -170,42 +211,36 @@ export default function ArticleReader({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, article?.link, zenMode]);
+  }, [isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, articleLink, zenMode, toggleBookmark]);
 
-  // Slide animation
+  // Slide animation (closing reset happens in the render-time adjustment above)
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
-    } else {
-      setIsVisible(false);
     }
   }, [isOpen]);
 
-  // Reset extraction state when article changes
+  // Mark as read when opened — the ref guards against re-patching the same
+  // article when the parent re-renders with a stale isRead flag.
+  const markedReadRef = useRef(null);
   useEffect(() => {
-    setExtractedContent(null);
-    setExtractError(null);
-    setExtracting(false);
-  }, [article?.id]);
-
-  // Mark as read when opened
-  useEffect(() => {
-    if (article && !article.isRead) {
+    if (article && !article.isRead && markedReadRef.current !== article.id) {
+      markedReadRef.current = article.id;
       api.patchArticle(article.id, { isRead: 1 })
         .then(updated => { setLiveArticle(updated); onArticleChanged?.(); })
         .catch(() => {});
     }
-  }, [article?.id]);
+  }, [article, onArticleChanged]);
 
   // Auto-extract full article — AbortController cancels the in-flight request on article change
   useEffect(() => {
-    if (!article?.link) return;
+    if (!articleLink) return;
     const controller = new AbortController();
     const extractFull = async () => {
       setExtracting(true);
       try {
-        const data = await api.extractArticle(article.link, controller.signal);
+        const data = await api.extractArticle(articleLink, controller.signal);
         if (data.content) setExtractedContent(data.content);
       } catch (err) {
         if (err.name === 'AbortError') return;
@@ -216,31 +251,15 @@ export default function ArticleReader({
     };
     extractFull();
     return () => controller.abort();
-  }, [article?.id, article?.link]);
-
-  const toggleBookmark = useCallback(async () => {
-    if (!article) return;
-    const current = liveArticle || article;
-    const updated = await api.patchArticle(article.id, { isBookmarked: current.isBookmarked ? 0 : 1 });
-    setLiveArticle(updated);
-    onArticleChanged?.();
-  }, [article, liveArticle, onArticleChanged]);
-
-  const toggleRead = useCallback(async () => {
-    if (!article) return;
-    const current = liveArticle || article;
-    const updated = await api.patchArticle(article.id, { isRead: current.isRead ? 0 : 1 });
-    setLiveArticle(updated);
-    onArticleChanged?.();
-  }, [article, liveArticle, onArticleChanged]);
+  }, [articleId, articleLink]);
 
   const handleCopyLink = useCallback(() => {
-    if (!article?.link) return;
-    navigator.clipboard.writeText(article.link).then(() => {
+    if (!articleLink) return;
+    navigator.clipboard.writeText(articleLink).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }, [article?.link]);
+  }, [articleLink]);
 
   const handleShare = useCallback((platform) => {
     const url = encodeURIComponent(article?.link || '');
