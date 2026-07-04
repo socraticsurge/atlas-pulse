@@ -35,6 +35,12 @@ router.post('/refresh', async (req, res) => {
     return res.status(400).json({ error: 'Array of feed URLs is required' });
   }
 
+  // Cap the batch so a single request can't fan out into hundreds of
+  // parallel server-side fetches.
+  if (urls.length > 100) {
+    return res.status(400).json({ error: 'Too many feed URLs (max 100 per request)' });
+  }
+
   try {
     const results = await Promise.allSettled(
       urls.map(async (url) => {

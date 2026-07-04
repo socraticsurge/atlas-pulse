@@ -1,4 +1,5 @@
 import { extract } from '@extractus/article-extractor';
+import { assertPublicHttpUrl } from './urlGuard.js';
 
 /**
  * Extract the full article content from a URL.
@@ -8,6 +9,7 @@ const EXTRACTION_TIMEOUT_MS = 15000;
 
 export async function extractArticle(url) {
   try {
+    await assertPublicHttpUrl(url);
     const article = await Promise.race([
       extract(url, {
         headers: {
