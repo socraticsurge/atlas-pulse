@@ -11,8 +11,26 @@ import readerRouter from './routes/reader.js';
 
 const app = express();
 const PORT = 3001;
+// Bind to loopback by default so the no-auth API is not exposed to the LAN.
+// Override with HOST=0.0.0.0 only if you deliberately want network access.
+const HOST = process.env.HOST || '127.0.0.1';
 
-app.use(cors());
+// This API has no auth by design (local, single-user). A wildcard CORS policy
+// would let any website the user visits read/delete their data cross-origin,
+// so only same-machine origins are allowed.
+app.use(cors({
+  origin(origin, callback) {
+    // Allow non-browser clients (curl, same-origin server calls) with no Origin.
+    if (!origin) return callback(null, true);
+    try {
+      const { hostname } = new URL(origin);
+      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+        return callback(null, true);
+      }
+    } catch { /* fall through to rejection */ }
+    return callback(new Error('Not allowed by CORS'));
+  },
+}));
 app.use(express.json({ limit: '2mb' }));
 
 // Routes
@@ -33,6 +51,6 @@ app.get('/api/health', (req, res) => {
 // Workaround for Node event loop exit issue
 setInterval(() => {}, 1000000);
 
-app.listen(PORT, () => {
-  console.log(`🚀 RSS Feed Reader API running on http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 RSS Feed Reader API running on http://${HOST}:${PORT}`);
 });

@@ -1,4 +1,5 @@
 import RSSParser from 'rss-parser';
+import { assertPublicHttpUrl } from './urlGuard.js';
 
 const parser = new RSSParser({
   timeout: 15000,
@@ -21,6 +22,7 @@ const parser = new RSSParser({
  */
 export async function parseFeed(feedUrl) {
   try {
+    await assertPublicHttpUrl(feedUrl);
     const feed = await parser.parseURL(feedUrl);
 
     return {

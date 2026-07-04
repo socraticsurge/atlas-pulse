@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { assertPublicHttpUrl } from './urlGuard.js';
 
 const COMMON_FEED_PATHS = [
   '/feed',
@@ -20,13 +21,8 @@ const COMMON_FEED_PATHS = [
  */
 export async function discoverFeeds(websiteUrl) {
   const feeds = [];
-  let baseUrl;
-
-  try {
-    baseUrl = new URL(websiteUrl);
-  } catch {
-    throw new Error('Invalid URL provided');
-  }
+  // Rejects loopback/private/link-local targets before any server-side fetch.
+  const baseUrl = await assertPublicHttpUrl(websiteUrl);
 
   // Step 1: Fetch the HTML and look for <link rel="alternate"> tags
   try {
