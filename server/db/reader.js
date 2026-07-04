@@ -272,6 +272,17 @@ export function removeFeed(id) {
 export function bulkInsertArticles(feedId, items) {
   if (items.length === 0) return 0;
 
+  // SQLite only accepts: numbers, strings, bigints, buffers, null.
+  // RSS parsers can return Date objects, arrays, or nested objects — sanitize everything.
+  const toStr = (v) => {
+    if (v == null) return null;
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'bigint') return String(v);
+    if (v instanceof Date) return v.toISOString();
+    if (Array.isArray(v)) return v.join(', ');
+    return String(v);
+  };
+
   const existingGuids = new Set(
     db.prepare(`SELECT guid FROM articles WHERE feed_id = ?`).all(feedId).map(r => r.guid)
   );
@@ -309,16 +320,16 @@ export function bulkInsertArticles(feedId, items) {
     for (const a of toInsert) {
       const info = insertOne.run({
         feed_id: feedId,
-        guid: a.guid || a.link,
-        title: a.title ?? null,
-        link: a.link ?? null,
-        canonical_link: a.canonicalLink ?? null,
-        published_at: a.publishedAt || now,
-        content: a.content ?? null,
-        summary: a.summary ?? null,
-        author: a.author ?? null,
-        image_url: a.imageUrl ?? null,
-        description: a.description ?? null,
+        guid: toStr(a.guid || a.link),
+        title: toStr(a.title),
+        link: toStr(a.link),
+        canonical_link: toStr(a.canonicalLink),
+        published_at: toStr(a.publishedAt) || now,
+        content: toStr(a.content),
+        summary: toStr(a.summary),
+        author: toStr(a.author),
+        image_url: toStr(a.imageUrl),
+        description: toStr(a.description),
         favicon: null,
         created_at: now,
       });
