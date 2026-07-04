@@ -1,6 +1,21 @@
 import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
 
 /**
+ * Remove HTML tags, applying the regex repeatedly until the string stops
+ * changing. A single pass can leave a tag behind for malformed/nested input
+ * like `<scr<script>ipt>`, where removing the inner tag reforms an outer one.
+ */
+function stripTags(input) {
+  let out = input;
+  let prev;
+  do {
+    prev = out;
+    out = out.replace(/<[^>]*>/g, '');
+  } while (out !== prev);
+  return out;
+}
+
+/**
  * Format a date as a human-readable relative time string.
  */
 export function timeAgo(dateStr) {
@@ -36,7 +51,7 @@ export function formatDate(dateStr) {
 export function estimateReadTime(content) {
   if (!content) return '1 min read';
   // Strip HTML tags for word count
-  const text = content.replace(/<[^>]*>/g, '');
+  const text = stripTags(content);
   const words = text.trim().split(/\s+/).length;
   const minutes = Math.max(1, Math.round(words / 200));
   return `${minutes} min read`;
@@ -47,7 +62,7 @@ export function estimateReadTime(content) {
  */
 export function stripHtml(html, maxLength = 160) {
   if (!html) return '';
-  const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  const text = stripTags(html).replace(/\s+/g, ' ').trim();
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trim() + '...';
 }

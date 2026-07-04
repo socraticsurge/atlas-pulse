@@ -1,3 +1,17 @@
+// Accept only http(s) URLs from an imported OPML file. Attribute values come
+// from an untrusted file, so a `javascript:`/`data:` URL slipped into xmlUrl or
+// htmlUrl must never be stored — it could later render as a link href. Returns
+// the URL if it's http(s), otherwise ''.
+function safeHttpUrl(value) {
+  if (!value) return '';
+  try {
+    const { protocol } = new URL(value);
+    return (protocol === 'http:' || protocol === 'https:') ? value : '';
+  } catch {
+    return '';
+  }
+}
+
 export function parseOPML(xmlString) {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
@@ -20,24 +34,24 @@ export function parseOPML(xmlString) {
       const folderName = outline.getAttribute('title') || outline.getAttribute('text') || 'Uncategorized';
       
       children.forEach(child => {
-        const xmlUrl = child.getAttribute('xmlUrl');
+        const xmlUrl = safeHttpUrl(child.getAttribute('xmlUrl'));
         if (xmlUrl) {
           feeds.push({
             title: child.getAttribute('title') || child.getAttribute('text') || xmlUrl,
             url: xmlUrl,
-            siteUrl: child.getAttribute('htmlUrl') || '',
+            siteUrl: safeHttpUrl(child.getAttribute('htmlUrl')),
             folderName: folderName
           });
         }
       });
     } else {
       // It's a direct feed
-      const xmlUrl = outline.getAttribute('xmlUrl');
+      const xmlUrl = safeHttpUrl(outline.getAttribute('xmlUrl'));
       if (xmlUrl) {
         feeds.push({
           title: outline.getAttribute('title') || outline.getAttribute('text') || xmlUrl,
           url: xmlUrl,
-          siteUrl: outline.getAttribute('htmlUrl') || '',
+          siteUrl: safeHttpUrl(outline.getAttribute('htmlUrl')),
           folderName: null
         });
       }
@@ -50,7 +64,7 @@ export function parseOPML(xmlString) {
   const existingUrls = new Set(feeds.map(f => f.url));
   
   allFeeds.forEach(feedNode => {
-    const xmlUrl = feedNode.getAttribute('xmlUrl');
+    const xmlUrl = safeHttpUrl(feedNode.getAttribute('xmlUrl'));
     if (xmlUrl && !existingUrls.has(xmlUrl)) {
       // Try to find parent folder if it exists
       const parent = feedNode.parentElement;
@@ -58,11 +72,11 @@ export function parseOPML(xmlString) {
       if (parent && parent.tagName.toLowerCase() === 'outline') {
         folderName = parent.getAttribute('title') || parent.getAttribute('text');
       }
-      
+
       feeds.push({
         title: feedNode.getAttribute('title') || feedNode.getAttribute('text') || xmlUrl,
         url: xmlUrl,
-        siteUrl: feedNode.getAttribute('htmlUrl') || '',
+        siteUrl: safeHttpUrl(feedNode.getAttribute('htmlUrl')),
         folderName: folderName
       });
       existingUrls.add(xmlUrl);

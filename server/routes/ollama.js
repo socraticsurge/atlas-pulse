@@ -1,10 +1,21 @@
 import { Router } from 'express';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import rateLimit from 'express-rate-limit';
 
 const execAsync = promisify(exec);
 const OLLAMA_BASE = 'http://localhost:11434';
 const router = Router();
+
+// Throttle the routes that spawn processes / trigger model downloads, so a
+// runaway client (or a script) can't hammer them.
+const processLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please slow down.' },
+});
 
 async function isOllamaInstalled() {
   try {
@@ -59,7 +70,7 @@ router.get('/status', async (req, res) => {
  * POST /api/ollama/start
  * Spawns `ollama serve` as a detached background process.
  */
-router.post('/start', (req, res) => {
+router.post('/start', processLimiter, (req, res) => {
   try {
     const child = spawn('ollama', ['serve'], {
       detached: true,
@@ -77,7 +88,7 @@ router.post('/start', (req, res) => {
  * Streams `ollama pull <model>` progress as newline-delimited JSON.
  * Body: { model: string }
  */
-router.post('/pull', async (req, res) => {
+router.post('/pull', processLimiter, async (req, res) => {
   const { model } = req.body;
   if (!model) return res.status(400).json({ error: 'model is required' });
 
