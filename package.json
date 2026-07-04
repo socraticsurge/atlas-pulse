@@ -34,6 +34,7 @@
     "dev:server": "node server/index.js",
     "build": "vite build",
     "lint": "eslint .",
+    "test": "node --test",
     "preview": "vite preview"
   },
   "dependencies": {
