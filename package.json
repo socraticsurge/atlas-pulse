@@ -37,29 +37,29 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@extractus/article-extractor": "^8.0.20",
-    "better-sqlite3": "^12.9.0",
+    "@extractus/article-extractor": "^8.1.0",
+    "better-sqlite3": "^12.11.1",
     "cheerio": "^1.2.0",
     "concurrently": "^9.2.1",
     "cors": "^2.8.6",
-    "date-fns": "^4.1.0",
-    "docx": "^9.6.1",
+    "date-fns": "^4.4.0",
+    "docx": "^9.7.1",
     "dompurify": "^3.4.1",
     "express": "^5.2.1",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
-    "react-icons": "^5.6.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-icons": "^5.7.0",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9.39.4",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.5.0",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
     "vite": "^8.0.9"
   }
 }
