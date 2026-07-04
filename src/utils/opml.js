@@ -2,7 +2,7 @@
 // from an untrusted file, so a `javascript:`/`data:` URL slipped into xmlUrl or
 // htmlUrl must never be stored — it could later render as a link href. Returns
 // the URL if it's http(s), otherwise ''.
-function safeHttpUrl(value) {
+export function safeHttpUrl(value) {
   if (!value) return '';
   try {
     const { protocol } = new URL(value);
