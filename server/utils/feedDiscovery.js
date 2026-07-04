@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { assertPublicHttpUrl } from './urlGuard.js';
+import { assertPublicHttpUrl, safeFetch } from './urlGuard.js';
 
 const COMMON_FEED_PATHS = [
   '/feed',
@@ -26,7 +26,7 @@ export async function discoverFeeds(websiteUrl) {
 
   // Step 1: Fetch the HTML and look for <link rel="alternate"> tags
   try {
-    const response = await fetch(baseUrl.href, {
+    const response = await safeFetch(baseUrl.href, {
       headers: {
         'User-Agent': 'RSS-Feed-Reader/1.0',
         'Accept': 'text/html,application/xhtml+xml',
@@ -68,11 +68,10 @@ export async function discoverFeeds(websiteUrl) {
     const probePromises = COMMON_FEED_PATHS.map(async (path) => {
       const probeUrl = new URL(path, baseUrl).href;
       try {
-        const resp = await fetch(probeUrl, {
+        const resp = await safeFetch(probeUrl, {
           method: 'HEAD',
           headers: { 'User-Agent': 'RSS-Feed-Reader/1.0' },
           signal: AbortSignal.timeout(5000),
-          redirect: 'follow',
         });
 
         const contentType = resp.headers.get('content-type') || '';

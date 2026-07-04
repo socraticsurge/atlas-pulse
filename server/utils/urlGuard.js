@@ -101,3 +101,24 @@ export async function assertPublicHttpUrl(rawUrl) {
 
   return url;
 }
+
+const MAX_REDIRECTS = 5;
+
+/**
+ * SSRF-safe fetch. Validates the initial URL and re-validates the target of
+ * every redirect hop, so a public URL cannot 3xx-redirect the server into a
+ * loopback/private/metadata address. Redirects are followed manually
+ * (redirect: 'manual') precisely so each Location can be checked first.
+ */
+export async function safeFetch(rawUrl, options = {}) {
+  let current = (await assertPublicHttpUrl(rawUrl)).href;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const res = await fetch(current, { ...options, redirect: 'manual' });
+    const isRedirect = res.status >= 300 && res.status < 400 && res.headers.has('location');
+    if (!isRedirect) return res;
+    const next = new URL(res.headers.get('location'), current).href;
+    await assertPublicHttpUrl(next); // re-validate before following
+    current = next;
+  }
+  throw new Error('Too many redirects');
+}
