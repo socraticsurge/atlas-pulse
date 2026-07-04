@@ -45,7 +45,7 @@ export async function parseFeed(feedUrl) {
       })),
     };
   } catch (error) {
-    throw new Error(`Failed to parse feed: ${error.message}`);
+    throw new Error(`Failed to parse feed: ${error.message}`, { cause: error });
   }
 }
 
