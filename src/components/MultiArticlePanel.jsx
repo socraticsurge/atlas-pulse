@@ -39,8 +39,7 @@ function buildArticleContext(articles) {
 function buildMessages(operation, template, instructions, articles) {
   const articleContext = buildArticleContext(articles);
   const aiSettings = getAISettings();
-  let basePrompt = '';
-  let userMessage = '';
+  let basePrompt, userMessage;
 
   if (operation === 'compare') {
     basePrompt = `You are a media analyst comparing how different sources cover the same topic.\n\nFor each dimension below, show how each article approaches it — reference the source by name:\n\n1. **Angle & Framing** — What perspective does each source emphasize?\n2. **Key Claims** — What are the main factual claims?\n3. **What's Missing** — What does each source omit or downplay?\n4. **Tone** — How does the language differ?\n5. **Evidence** — What sources or data does each cite?\n\nUse markdown with clear headers. Be specific and grounded in the text.`;

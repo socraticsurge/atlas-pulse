@@ -12,7 +12,7 @@ DOMPurify.addHook('uponSanitizeElement', (node, data) => {
   if (data.tagName !== 'iframe') return;
   let host = '';
   try { host = new URL(node.getAttribute('src') || '', 'https://x.invalid').hostname; }
-  catch { host = ''; }
+  catch { /* invalid/relative src → leave host empty so the iframe is dropped */ }
   if (!IFRAME_HOST_ALLOWLIST.includes(host)) {
     node.parentNode?.removeChild(node);
   }

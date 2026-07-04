@@ -37,6 +37,6 @@ export async function extractArticle(url) {
       ttr: article.ttr || 0, // time to read in seconds
     };
   } catch (error) {
-    throw new Error(`Article extraction failed: ${error.message}`);
+    throw new Error(`Article extraction failed: ${error.message}`, { cause: error });
   }
 }
