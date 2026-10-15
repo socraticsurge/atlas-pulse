@@ -19,15 +19,11 @@ function analysisOf(article) {
 
 /** Values present per filter dimension, e.g. { sentiment: Set{'positive'} }. */
 export function availableFilters(articles) {
-  const result = Object.fromEntries(FILTER_DIMS.map((dim) => [dim.key, new Set()]));
-  for (const article of articles) {
-    const analysis = analysisOf(article);
-    if (!analysis) continue;
-    for (const dim of FILTER_DIMS) {
-      if (analysis[dim.key]) result[dim.key].add(analysis[dim.key]);
-    }
-  }
-  return result;
+  const analyses = articles.map(analysisOf).filter(Boolean);
+  return Object.fromEntries(FILTER_DIMS.map((dim) => [
+    dim.key,
+    new Set(analyses.map((a) => a[dim.key]).filter(Boolean)),
+  ]));
 }
 
 /** Applies the AI-only toggle and the active dimension filters. */
