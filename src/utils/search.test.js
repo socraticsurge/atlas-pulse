@@ -28,7 +28,7 @@ test('matches the source title', () => {
 });
 
 test('full-text body matches from the index widen results beyond the excerpt', () => {
-  const bodyMatches = { kubernetes: new Set([4]) };
+  const bodyMatches = new Map([['kubernetes', new Set([4])]]);
   assert.deepEqual(rankArticles(articles, ['kubernetes'], { sourceOf }).map((a) => a.id), []);
   assert.deepEqual(rankArticles(articles, ['kubernetes'], { sourceOf, bodyMatches }).map((a) => a.id), [4]);
 });

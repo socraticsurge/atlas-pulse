@@ -134,7 +134,7 @@ router.get('/articles/unprocessed', (req, res) => {
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Full-text body matches per search term: { tokens, matches: { term: [ids] } }
+// Full-text body matches per search term: { tokens: [term], matches: [[ids]] } (aligned by index)
 router.get('/articles/search', (req, res) => {
   const q = String(req.query.q || '').slice(0, 500);
   try { res.json(searchArticleBodies(q)); }

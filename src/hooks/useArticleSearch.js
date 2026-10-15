@@ -4,9 +4,9 @@ import { rankArticles, tokenizeQuery } from '../utils/search.js';
 
 const DEBOUNCE_MS = 250;
 
-// { term: [ids] } from the server → { term: Set<id> } for fast lookups.
-function toIdSets(matches) {
-  return Object.fromEntries(Object.entries(matches).map(([term, ids]) => [term, new Set(ids)]));
+// Server returns terms and id lists aligned by index → Map<term, Set<id>>.
+function toIdSets(tokens, matches) {
+  return new Map(tokens.map((term, i) => [term, new Set(matches[i] || [])]));
 }
 
 /**
@@ -15,7 +15,7 @@ function toIdSets(matches) {
  * index shortly after and widen the results.
  */
 export function useArticleSearch(articles, query, sourceOf) {
-  const [bodyMatches, setBodyMatches] = useState({ query: '', matches: {} });
+  const [bodyMatches, setBodyMatches] = useState({ query: '', matches: new Map() });
   const trimmed = query.trim();
 
   useEffect(() => {
@@ -23,8 +23,8 @@ export function useArticleSearch(articles, query, sourceOf) {
     let cancelled = false;
     const timer = setTimeout(() => {
       searchArticleBodies(trimmed)
-        .then(({ matches }) => {
-          if (!cancelled) setBodyMatches({ query: trimmed, matches: toIdSets(matches) });
+        .then(({ tokens, matches }) => {
+          if (!cancelled) setBodyMatches({ query: trimmed, matches: toIdSets(tokens, matches) });
         })
         .catch(() => { /* excerpt-only search still works */ });
     }, DEBOUNCE_MS);
@@ -33,7 +33,7 @@ export function useArticleSearch(articles, query, sourceOf) {
 
   return useMemo(() => {
     if (!trimmed) return articles;
-    const matches = bodyMatches.query === trimmed ? bodyMatches.matches : {};
+    const matches = bodyMatches.query === trimmed ? bodyMatches.matches : new Map();
     return rankArticles(articles, tokenizeQuery(trimmed), { sourceOf, bodyMatches: matches });
   }, [articles, trimmed, sourceOf, bodyMatches]);
 }

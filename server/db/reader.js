@@ -333,15 +333,14 @@ function ftsTerm(token) {
 const stmtSearchTerm = db.prepare(`SELECT rowid AS id FROM articles_fts WHERE articles_fts MATCH ?`);
 
 /**
- * Full-text body search. Returns, per query term, the ids of articles whose
- * body contains it — callers combine these with title/source/topic matches.
+ * Full-text body search. Returns the query terms and, aligned by index, the
+ * ids of articles whose body contains each term — callers combine these with
+ * title/source/topic matches. (Arrays, not an object keyed by user input, so
+ * a term like "__proto__" can't touch object prototypes.)
  */
 export function searchArticleBodies(query) {
   const tokens = tokenizeQuery(query).slice(0, 10);
-  const matches = {};
-  for (const token of tokens) {
-    matches[token] = stmtSearchTerm.all(ftsTerm(token)).map((r) => r.id);
-  }
+  const matches = tokens.map((token) => stmtSearchTerm.all(ftsTerm(token)).map((r) => r.id));
   return { tokens, matches };
 }
 

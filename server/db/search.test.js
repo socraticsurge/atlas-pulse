@@ -18,16 +18,24 @@ before(async () => {
 });
 
 const titlesFor = (ids) => ids.map((id) => reader.getArticleById(id).title).sort();
+// Body matches for a single-term query.
+const bodyIds = (query) => reader.searchArticleBodies(query).matches[0];
 
 test('finds terms anywhere in the article body, including inside HTML', () => {
-  const { matches } = reader.searchArticleBodies('kubernetes');
-  assert.deepEqual(titlesFor(matches.kubernetes), ['Ops notes']);
+  assert.deepEqual(titlesFor(bodyIds('kubernetes')), ['Ops notes']);
 });
 
 test('single words match as prefixes; phrases match exactly', () => {
-  assert.deepEqual(titlesFor(reader.searchArticleBodies('cloud').matches.cloud), ['Cloud']);
-  assert.deepEqual(titlesFor(reader.searchArticleBodies('"open source"').matches['open source']), ['Licensing']);
-  assert.deepEqual(reader.searchArticleBodies('"source open"').matches['source open'], []);
+  assert.deepEqual(titlesFor(bodyIds('cloud')), ['Cloud']);
+  assert.deepEqual(titlesFor(bodyIds('"open source"')), ['Licensing']);
+  assert.deepEqual(bodyIds('"source open"'), []);
+});
+
+test('terms are never used as object keys (prototype safety)', () => {
+  const result = reader.searchArticleBodies('__proto__ constructor');
+  assert.deepEqual(result.tokens, ['__proto__', 'constructor']);
+  assert.ok(Array.isArray(result.matches) && result.matches.length === 2);
+  assert.equal({}.polluted, undefined);
 });
 
 test('quotes and FTS syntax in queries are treated as plain text', () => {
@@ -37,7 +45,7 @@ test('quotes and FTS syntax in queries are treated as plain text', () => {
 test('deleted articles leave the index', () => {
   const feed = reader.createFeed({ title: 'Temp', url: 'https://temp.example/rss' });
   reader.bulkInsertArticles(feed.id, [{ guid: 'gone', title: 'Gone', content: 'zeppelin' }]);
-  assert.equal(reader.searchArticleBodies('zeppelin').matches.zeppelin.length, 1);
+  assert.equal(bodyIds('zeppelin').length, 1);
   reader.removeFeed(feed.id);
-  assert.deepEqual(reader.searchArticleBodies('zeppelin').matches.zeppelin, []);
+  assert.deepEqual(bodyIds('zeppelin'), []);
 });

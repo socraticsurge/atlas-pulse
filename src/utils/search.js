@@ -40,17 +40,17 @@ function termScore(article, fields, token, bodyIds) {
 }
 
 /**
- * Filters and ranks articles. bodyMatches: { [term]: Set<id> } from the
+ * Filters and ranks articles. bodyMatches: Map<term, Set<id>> from the
  * full-text index; terms missing from it fall back to the excerpt.
  */
-export function rankArticles(articles, tokens, { sourceOf = () => '', bodyMatches = {} } = {}) {
+export function rankArticles(articles, tokens, { sourceOf = () => '', bodyMatches = new Map() } = {}) {
   if (tokens.length === 0) return articles;
   const scored = [];
   for (const article of articles) {
     const fields = searchFields(article, sourceOf(article));
     let score = 0;
     const allMatch = tokens.every((token) => {
-      const s = termScore(article, fields, token, bodyMatches[token]);
+      const s = termScore(article, fields, token, bodyMatches.get(token));
       score += s;
       return s > 0;
     });
