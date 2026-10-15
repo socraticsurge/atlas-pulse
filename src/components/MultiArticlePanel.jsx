@@ -11,7 +11,7 @@ import {
 } from 'react-icons/hi2';
 import { streamChat, fetchAIModels } from '../utils/api.js';
 import { isNanoModel, fitToNanoContext } from '../utils/chromeAI.js';
-import { stripHtml } from '../utils/helpers.js';
+import { htmlToText } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 import { getAISettings, buildSystemPrompt, PERSONAS, TONE_GROUPS } from '../utils/aiSettings.js';
@@ -33,7 +33,7 @@ const MAX_CHARS_PER_ARTICLE = 1200;
 
 function buildArticleContext(articles, charsPerArticle) {
   return articles.map((a, i) => {
-    const content = stripHtml(a.content || a.summary || '').slice(0, charsPerArticle);
+    const content = htmlToText(a.content || a.summary || '').slice(0, charsPerArticle);
     const date = a.publishedAt ? new Date(a.publishedAt).toDateString() : 'Unknown';
     return `=== ARTICLE ${i + 1} ===\nTitle: ${a.title || 'Untitled'}\nSource: ${a.feedTitle || 'Unknown'}\nPublished: ${date}\nURL: ${a.link || ''}\n\n${content}`;
   }).join('\n\n');
