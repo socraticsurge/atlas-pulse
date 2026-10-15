@@ -1,4 +1,7 @@
 import { HiOutlineXMark } from 'react-icons/hi2';
+import { useAppearance } from '../app/AppearanceContext.jsx';
+import { useLibrary } from '../app/LibraryContext.jsx';
+import { useToast } from '../app/ToastContext.jsx';
 import { AIAssistantSection } from './settings/AIAssistantSection.jsx';
 import { AIProcessingSection } from './settings/AIProcessingSection.jsx';
 import { AppearanceSection } from './settings/AppearanceSection.jsx';
@@ -18,10 +21,10 @@ function About() {
 }
 
 /** Settings modal: appearance, reading, AI, data, and danger zone. */
-export default function SettingsPanel({
-  isOpen, onClose, feeds, folders, onImportOPML, onRefreshAll, onAutoRefreshChange, availableModels = [], onShowToast,
-  ...appearance
-}) {
+export default function SettingsPanel({ isOpen, onClose, availableModels = [] }) {
+  const appearance = useAppearance();
+  const library = useLibrary();
+  const showToast = useToast();
   if (!isOpen) return null;
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -32,10 +35,10 @@ export default function SettingsPanel({
         </div>
         <div className="modal-body">
           <AppearanceSection {...appearance} />
-          <ReadingSection onAutoRefreshChange={onAutoRefreshChange} />
+          <ReadingSection onAutoRefreshChange={library.setAutoRefreshMinutes} />
           <AIAssistantSection />
           <AIProcessingSection availableModels={availableModels || []} />
-          <DataSection feeds={feeds} folders={folders} onImportOPML={onImportOPML} onRefreshAll={onRefreshAll} onShowToast={onShowToast} onClose={onClose} />
+          <DataSection feeds={library.feeds} folders={library.folders} onImportOPML={library.importFeedsFromOPML} onRefreshAll={library.onRefreshAll} onShowToast={showToast} onClose={onClose} />
           <About />
           <DangerZone onClose={onClose} />
         </div>
