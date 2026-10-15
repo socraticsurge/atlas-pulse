@@ -11,6 +11,7 @@ import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
+import { useFullArticle } from './hooks/useFullArticle.js';
 import { getAutoRefreshMinutes } from './utils/constants.js';
 import { fetchSummaries } from './utils/api.js';
 
@@ -251,9 +252,7 @@ function App() {
     };
   }, [feeds.length, autoRefreshMinutes, refreshAllFeeds]);
 
-  const handleSelectArticle = useCallback((article) => {
-    setSelectedArticle(article);
-  }, []);
+  useFullArticle(selectedArticle, setSelectedArticle);
 
   const handleNavigateArticle = useCallback((direction) => {
     if (!selectedArticle || visibleArticles.length === 0) return;
@@ -351,7 +350,7 @@ function App() {
         <ArticleList
           activeView={activeView}
           selectedArticleId={selectedArticle?.id}
-          onSelectArticle={handleSelectArticle}
+          onSelectArticle={setSelectedArticle}
           onArticlesLoaded={setVisibleArticles}
           sidebarHidden={sidebarMode === 'hidden'}
           onShowSidebar={toggleSidebarMode}

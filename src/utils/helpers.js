@@ -5,14 +5,21 @@ import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns';
  * changing. A single pass can leave a tag behind for malformed/nested input
  * like `<scr<script>ipt>`, where removing the inner tag reforms an outer one.
  */
+// Removes every `<...>` span in one linear pass (no regex backtracking on
+// input like "<<<<…"). Once no closing `>` remains, the rest is kept as text.
 function stripTags(input) {
-  let out = input;
-  let prev;
-  do {
-    prev = out;
-    out = out.replace(/<[^>]*>/g, '');
-  } while (out !== prev);
-  return out;
+  const s = String(input);
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const open = s.indexOf('<', i);
+    if (open === -1) break;
+    const close = s.indexOf('>', open + 1);
+    if (close === -1) break;
+    out += s.slice(i, open);
+    i = close + 1;
+  }
+  return out + s.slice(i);
 }
 
 /**

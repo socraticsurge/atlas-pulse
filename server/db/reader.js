@@ -1,6 +1,7 @@
 import { join } from 'path';
 import { DATA_DIR, openDatabase } from './connection.js';
 import { MIGRATIONS } from './migrations/reader.js';
+import { makeExcerpt } from '../utils/text.js';
 
 const DB_FILE = 'reader.db';
 export const DB_PATH = join(DATA_DIR, DB_FILE);
@@ -48,7 +49,18 @@ function toArticle(row) {
     aiAnalysis: row.ai_analysis,
     favicon: row.favicon,
     createdAt: row.created_at,
+    excerpt: row.excerpt,
   };
+}
+
+// List views omit the heavy content/summary/description columns; clients
+// fetch the full article (GET /articles/:id) when it is opened.
+const LIST_COLUMNS = `id, feed_id, guid, title, link, canonical_link, published_at, is_read,
+  is_bookmarked, author, image_url, ai_status, ai_summary, ai_analysis, favicon, created_at, excerpt`;
+
+function toListItem(row) {
+  const { content: _content, summary: _summary, description: _description, ...item } = toArticle(row);
+  return item;
 }
 
 // ── Folders ───────────────────────────────────────────────────────────────────
@@ -89,11 +101,11 @@ const stmts = {
   getArticleById: db.prepare(`SELECT * FROM articles WHERE id = ?`),
   getArticleByLink: db.prepare(`SELECT * FROM articles WHERE link = ? LIMIT 1`),
   getArticlesByFeed: db.prepare(
-    `SELECT * FROM articles WHERE feed_id = ? ORDER BY published_at DESC`
+    `SELECT ${LIST_COLUMNS} FROM articles WHERE feed_id = ? ORDER BY published_at DESC`
   ),
-  getAllArticles: db.prepare(`SELECT * FROM articles ORDER BY published_at DESC`),
+  getAllArticles: db.prepare(`SELECT ${LIST_COLUMNS} FROM articles ORDER BY published_at DESC`),
   getSavedArticles: db.prepare(
-    `SELECT * FROM articles WHERE is_bookmarked = 1 ORDER BY published_at DESC`
+    `SELECT ${LIST_COLUMNS} FROM articles WHERE is_bookmarked = 1 ORDER BY published_at DESC`
   ),
   getUnreadByFeed: db.prepare(
     `SELECT feed_id, COUNT(*) AS cnt FROM articles WHERE is_read = 0 GROUP BY feed_id`
@@ -248,10 +260,10 @@ export function bulkInsertArticles(feedId, items) {
   const insertOne = db.prepare(
     `INSERT OR IGNORE INTO articles
        (feed_id, guid, title, link, canonical_link, published_at, is_read, is_bookmarked,
-        content, summary, author, image_url, description, ai_status, favicon, created_at)
+        content, summary, author, image_url, description, ai_status, favicon, created_at, excerpt)
      VALUES
        (@feed_id, @guid, @title, @link, @canonical_link, @published_at, 0, 0,
-        @content, @summary, @author, @image_url, @description, 'none', @favicon, @created_at)`
+        @content, @summary, @author, @image_url, @description, 'none', @favicon, @created_at, @excerpt)`
   );
 
   const now = new Date().toISOString();
@@ -272,6 +284,7 @@ export function bulkInsertArticles(feedId, items) {
         description: toStr(a.description),
         favicon: null,
         created_at: now,
+        excerpt: makeExcerpt(toStr(a.summary), toStr(a.content)),
       });
       if (info.changes > 0) count++;
     }
@@ -279,29 +292,30 @@ export function bulkInsertArticles(feedId, items) {
   return count;
 }
 
+// List view of articles (no full content). view: all | feed | folder | saved | today
 export function getArticles(view, id) {
   switch (view) {
     case 'feed':
-      return stmts.getArticlesByFeed.all(id).map(toArticle);
+      return stmts.getArticlesByFeed.all(id).map(toListItem);
     case 'folder': {
       const feedIds = db.prepare(`SELECT id FROM feeds WHERE folder_id = ?`).all(id).map(r => r.id);
       if (feedIds.length === 0) return [];
       const placeholders = feedIds.map(() => '?').join(',');
       return db.prepare(
-        `SELECT * FROM articles WHERE feed_id IN (${placeholders}) ORDER BY published_at DESC`
-      ).all(...feedIds).map(toArticle);
+        `SELECT ${LIST_COLUMNS} FROM articles WHERE feed_id IN (${placeholders}) ORDER BY published_at DESC`
+      ).all(...feedIds).map(toListItem);
     }
     case 'saved':
-      return stmts.getSavedArticles.all().map(toArticle);
+      return stmts.getSavedArticles.all().map(toListItem);
     case 'today': {
       const start = new Date();
       start.setHours(0, 0, 0, 0);
       return db.prepare(
-        `SELECT * FROM articles WHERE published_at >= ? ORDER BY published_at DESC`
-      ).all(start.toISOString()).map(toArticle);
+        `SELECT ${LIST_COLUMNS} FROM articles WHERE published_at >= ? ORDER BY published_at DESC`
+      ).all(start.toISOString()).map(toListItem);
     }
     default:
-      return stmts.getAllArticles.all().map(toArticle);
+      return stmts.getAllArticles.all().map(toListItem);
   }
 }
 

@@ -1,3 +1,5 @@
+import { makeExcerpt } from '../../utils/text.js';
+
 // Schema history for reader.db. Never edit a shipped migration; append a new one.
 export const MIGRATIONS = [
   {
@@ -56,5 +58,20 @@ export const MIGRATIONS = [
   CREATE INDEX IF NOT EXISTS idx_articles_canonical_link ON articles(canonical_link);
   CREATE INDEX IF NOT EXISTS idx_articles_link          ON articles(link);
   `),
+  },
+  {
+    version: 2,
+    description: 'Add articles.excerpt (plain text) so list views can skip full content',
+    up: (db) => {
+      db.exec('ALTER TABLE articles ADD COLUMN excerpt TEXT');
+      // Backfill in id-ordered batches to keep memory bounded on large libraries.
+      const batch = db.prepare('SELECT id, summary, content FROM articles WHERE id > ? ORDER BY id LIMIT 500');
+      const update = db.prepare('UPDATE articles SET excerpt = ? WHERE id = ?');
+      let lastId = 0;
+      for (let rows = batch.all(lastId); rows.length > 0; rows = batch.all(lastId)) {
+        for (const row of rows) update.run(makeExcerpt(row.summary, row.content), row.id);
+        lastId = rows[rows.length - 1].id;
+      }
+    },
   },
 ];

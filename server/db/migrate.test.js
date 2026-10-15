@@ -42,18 +42,32 @@ test('rejects gaps or missing up() functions', () => {
 
 test('app schemas adopt an existing pre-migration database without data loss', () => {
   for (const migrations of [READER, SUMMARIES, HIGHLIGHTS]) {
-    const fresh = new Database(':memory:');
-    migrate(fresh, migrations);
-    const schemaSql = fresh.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all();
-
-    // Simulate a database created by v1.4.0 (tables present, user_version 0).
+    // A database created before migrations existed: the v1 schema with user_version 0.
     const legacy = new Database(':memory:');
-    for (const { sql } of schemaSql) legacy.exec(sql);
-    const [table] = schemaSql.map(({ sql }) => sql.match(/CREATE TABLE (?:IF NOT EXISTS )?(\w+)/)[1]);
+    migrations[0].up(legacy);
+    const [{ name: table }] = legacy.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all();
     const before = legacy.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n;
 
-    assert.deepEqual(migrate(legacy, migrations), [1]);
+    assert.deepEqual(migrate(legacy, migrations), migrations.map((m) => m.version));
     assert.equal(getSchemaVersion(legacy), migrations.length);
     assert.equal(legacy.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n, before);
   }
+});
+
+test('reader migration 2 backfills plain-text excerpts for existing articles', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER.slice(0, 1));
+  db.prepare("INSERT INTO feeds (title, url, created_at) VALUES ('F', 'https://f.example/rss', 'now')").run();
+  const insert = db.prepare(
+    "INSERT INTO articles (feed_id, guid, summary, content, created_at) VALUES (1, ?, ?, ?, 'now')"
+  );
+  insert.run('a', '<p>Short &amp; <b>sweet</b></p>', '<p>ignored when summary exists</p>');
+  insert.run('b', null, `<div>${'long '.repeat(200)}</div>`);
+  insert.run('c', null, null);
+
+  migrate(db, READER);
+  const excerpts = db.prepare('SELECT guid, excerpt FROM articles ORDER BY guid').all();
+  assert.equal(excerpts[0].excerpt, 'Short & sweet');
+  assert.equal(excerpts[1].excerpt.length, 300);
+  assert.equal(excerpts[2].excerpt, '');
 });
