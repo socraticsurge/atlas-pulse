@@ -31,7 +31,8 @@ export function useLiveArticle(article, onArticleChanged) {
   // article when the parent re-renders with a stale isRead flag.
   const markedReadRef = useRef(null);
   useEffect(() => {
-    if (!article || article.isRead || markedReadRef.current === article.id) return;
+    if (!article || article.isRead) return;
+    if (markedReadRef.current === article.id) return;
     markedReadRef.current = article.id;
     api.patchArticle(article.id, { isRead: 1 })
       .then((updated) => { setLive(updated); onArticleChanged?.(); })
