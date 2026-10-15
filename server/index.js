@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import feedsRouter from './routes/feeds.js';
 import discoverRouter from './routes/discover.js';
 import articlesRouter from './routes/articles.js';
@@ -10,7 +13,7 @@ import ollamaRouter from './routes/ollama.js';
 import readerRouter from './routes/reader.js';
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3001;
 // Bind to loopback by default so the no-auth API is not exposed to the LAN.
 // Override with HOST=0.0.0.0 only if you deliberately want network access.
 const HOST = process.env.HOST || '127.0.0.1';
@@ -24,7 +27,7 @@ app.use(cors({
     if (!origin) return callback(null, true);
     try {
       const { hostname } = new URL(origin);
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
+      if (hostname === 'localhost' || hostname.endsWith('.localhost') || hostname === '127.0.0.1' || hostname === '::1') {
         return callback(null, true);
       }
     } catch { /* fall through to rejection */ }
@@ -47,6 +50,13 @@ app.use('/api/reader', readerRouter);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Serve the built frontend (npm run build) so one process hosts the whole app.
+const DIST_DIR = join(dirname(fileURLToPath(import.meta.url)), '../dist');
+if (existsSync(join(DIST_DIR, 'index.html'))) {
+  app.use(express.static(DIST_DIR));
+  app.get(/^(?!\/api\/).*/, (req, res) => res.sendFile(join(DIST_DIR, 'index.html')));
+}
 
 // Workaround for Node event loop exit issue
 setInterval(() => {}, 1000000);
