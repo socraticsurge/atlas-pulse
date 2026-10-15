@@ -18,7 +18,7 @@ import {
 } from '../utils/aiSettings.js';
 import { AUTO_REFRESH_OPTIONS, getAutoRefreshMinutes, saveAutoRefreshMinutes } from '../utils/constants.js';
 import { getBatchSettings, saveBatchSettings } from '../utils/batchSettings.js';
-import OllamaSetup from './OllamaSetup.jsx';
+import { AIEngineSettings } from './AIEngines.jsx';
 
 const PRESET_COLORS = [
   { id: 'emerald', hex: '#00d4aa', label: 'Emerald' },
@@ -378,13 +378,9 @@ export default function SettingsPanel({
           <div className="settings-group">
             <h3>AI Processing</h3>
 
-            {/* Ollama — always first, shows status or setup wizard */}
-            <div className="settings-row settings-row-col">
-              <label>Ollama</label>
-              <OllamaSetup compact showReady />
-            </div>
+            <AIEngineSettings availableModels={availableModels} />
 
-            {/* Model — only shown once Ollama is confirmed running with models */}
+            {/* Model — shown once any engine has models */}
             {availableModels && availableModels.length > 0 && (
               <div className="settings-row">
                 <label>Model</label>
@@ -496,7 +492,7 @@ export default function SettingsPanel({
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
               <p><strong>Atlas Pulse</strong> — A modern RSS feed reader</p>
               <p style={{ marginTop: 8 }}>
-                All data is stored locally in your browser using IndexedDB.
+                All data is stored locally on your machine.
                 No accounts, no cloud, no tracking.
               </p>
             </div>

@@ -5,7 +5,7 @@ import {
   fetchArticlesByAiStatus, resetProcessingArticles,
 } from '../utils/api.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
-import { stripHtml } from '../utils/helpers.js';
+import { htmlToText } from '../utils/helpers.js';
 
 const BATCH_SYSTEM_PROMPT = `Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
 {
@@ -121,7 +121,7 @@ export function useAIBatchProcessor() {
         }));
       }
 
-      const rawText = stripHtml(article.content || article.summary || '');
+      const rawText = htmlToText(article.content || article.summary || '');
       const text = rawText.length > 4000 ? rawText.slice(0, 4000) + '…' : rawText;
       const msgs = [
         { role: 'system', content: BATCH_SYSTEM_PROMPT },

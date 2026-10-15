@@ -58,11 +58,20 @@ export function estimateReadTime(content) {
 }
 
 /**
- * Strip HTML tags and return plain text snippet.
+ * Convert HTML to plain text with collapsed whitespace — the full text, not
+ * a snippet. Use this for AI context; callers apply their own length limits.
+ */
+export function htmlToText(html) {
+  if (!html) return '';
+  return stripTags(html).replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Strip HTML tags and return a short plain-text snippet (default 160 chars),
+ * for previews and list rows.
  */
 export function stripHtml(html, maxLength = 160) {
-  if (!html) return '';
-  const text = stripTags(html).replace(/\s+/g, ' ').trim();
+  const text = htmlToText(html);
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength).trim() + '...';
 }

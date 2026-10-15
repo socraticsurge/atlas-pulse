@@ -1,5 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import feedsRouter from './routes/feeds.js';
 import discoverRouter from './routes/discover.js';
 import articlesRouter from './routes/articles.js';
@@ -10,10 +14,17 @@ import ollamaRouter from './routes/ollama.js';
 import readerRouter from './routes/reader.js';
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3001;
 // Bind to loopback by default so the no-auth API is not exposed to the LAN.
 // Override with HOST=0.0.0.0 only if you deliberately want network access.
 const HOST = process.env.HOST || '127.0.0.1';
+
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+
+// *.localhost names always resolve to loopback (RFC 6761).
+function isLocalHostname(hostname) {
+  return LOOPBACK_HOSTS.has(hostname) || hostname.endsWith('.localhost');
+}
 
 // This API has no auth by design (local, single-user). A wildcard CORS policy
 // would let any website the user visits read/delete their data cross-origin,
@@ -23,10 +34,7 @@ app.use(cors({
     // Allow non-browser clients (curl, same-origin server calls) with no Origin.
     if (!origin) return callback(null, true);
     try {
-      const { hostname } = new URL(origin);
-      if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1') {
-        return callback(null, true);
-      }
+      if (isLocalHostname(new URL(origin).hostname)) return callback(null, true);
     } catch { /* fall through to rejection */ }
     return callback(new Error('Not allowed by CORS'));
   },
@@ -47,6 +55,21 @@ app.use('/api/reader', readerRouter);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Serve the built frontend (npm run build) so one process hosts the whole app.
+const DIST_DIR = join(dirname(fileURLToPath(import.meta.url)), '../dist');
+if (existsSync(join(DIST_DIR, 'index.html'))) {
+  // Generous cap — a single user loading the app never comes close — that
+  // stops a runaway client from hammering the filesystem.
+  const staticLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 600,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(staticLimiter, express.static(DIST_DIR));
+  app.get(/^(?!\/api\/).*/, staticLimiter, (req, res) => res.sendFile(join(DIST_DIR, 'index.html')));
+}
 
 // Workaround for Node event loop exit issue
 setInterval(() => {}, 1000000);

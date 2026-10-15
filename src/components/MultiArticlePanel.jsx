@@ -9,8 +9,9 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineArrowPath,
 } from 'react-icons/hi2';
-import { streamChat } from '../utils/api.js';
-import { stripHtml } from '../utils/helpers.js';
+import { streamChat, fetchAIModels } from '../utils/api.js';
+import { isNanoModel, fitToNanoContext } from '../utils/chromeAI.js';
+import { htmlToText } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 import { getAISettings, buildSystemPrompt, PERSONAS, TONE_GROUPS } from '../utils/aiSettings.js';
@@ -28,16 +29,20 @@ const NEWSLETTER_TEMPLATES = [
   { id: 'brief',    label: 'Executive Brief' },
 ];
 
-function buildArticleContext(articles) {
+const MAX_CHARS_PER_ARTICLE = 1200;
+
+function buildArticleContext(articles, charsPerArticle) {
   return articles.map((a, i) => {
-    const content = stripHtml(a.content || a.summary || '').slice(0, 1200);
+    const content = htmlToText(a.content || a.summary || '').slice(0, charsPerArticle);
     const date = a.publishedAt ? new Date(a.publishedAt).toDateString() : 'Unknown';
     return `=== ARTICLE ${i + 1} ===\nTitle: ${a.title || 'Untitled'}\nSource: ${a.feedTitle || 'Unknown'}\nPublished: ${date}\nURL: ${a.link || ''}\n\n${content}`;
   }).join('\n\n');
 }
 
-function buildMessages(operation, template, instructions, articles) {
-  const articleContext = buildArticleContext(articles);
+// request: { operation, template, instructions, articles }
+function buildMessages(request, charsPerArticle = MAX_CHARS_PER_ARTICLE) {
+  const { operation, template, instructions, articles } = request;
+  const articleContext = buildArticleContext(articles, charsPerArticle);
   const aiSettings = getAISettings();
   let basePrompt, userMessage;
 
@@ -63,6 +68,45 @@ function buildMessages(operation, template, instructions, articles) {
   ];
 }
 
+const NO_MODEL_ERROR = 'No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.';
+
+// The batch model from Settings, or for "Auto" the first available model
+// (Gemini Nano when present).
+async function resolveModel() {
+  const saved = getBatchSettings().model;
+  if (saved) return saved;
+  const { models } = await fetchAIModels().catch(() => ({ models: [] }));
+  return models[0]?.name || '';
+}
+
+/**
+ * Picks the model and builds the messages. Gemini Nano has a small context
+ * window, so for Nano every article is shortened evenly until the whole
+ * selection fits, rather than failing or dropping articles.
+ * Returns { model, messages, notice }; throws with a user-facing message.
+ */
+async function prepareRequest(request) {
+  const model = await resolveModel();
+  if (!model) throw new Error(NO_MODEL_ERROR);
+  const build = (chars) => buildMessages(request, chars);
+  if (!isNanoModel(model)) return { model, messages: build(), notice: null };
+
+  const { chars, trimmed } = await fitToNanoContext(
+    build()[0].content,
+    (n) => build(n)[1].content,
+    { maxChars: MAX_CHARS_PER_ARTICLE },
+  );
+  const notice = trimmed
+    ? `To fit Gemini Nano, each article was shortened to its first ${chars.toLocaleString()} characters.`
+    : null;
+  return { model, messages: build(chars), notice };
+}
+
+function MapNotice({ notice, error }) {
+  if (!notice || error) return null;
+  return <div className="map-notice">{notice}</div>;
+}
+
 export default function MultiArticlePanel({ articles: initialArticles, initialOperation, onClose, width, onResize }) {
   const [operation, setOperation] = useState(initialOperation || 'briefing');
   const [chips, setChips] = useState(() => initialArticles.map(a => a.id));
@@ -72,6 +116,7 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [copied, setCopied] = useState(false);
 
   const abortRef = useRef(false);
@@ -92,16 +137,23 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
     if (!countOk || generating) return;
     setOutput('');
     setError(null);
+    setNotice(null);
     setGenerated(false);
     setGenerating(true);
     abortRef.current = false;
     tokenBufferRef.current = '';
     rafRef.current = null;
 
-    const messages = buildMessages(operation, template, instructions, activeArticles);
-    const model = getBatchSettings().model || '';
-
-    if (!model) { setError('No AI model selected. Configure one in Settings → AI Processing.'); setGenerating(false); return; }
+    let request;
+    try {
+      request = await prepareRequest({ operation, template, instructions, articles: activeArticles });
+    } catch (err) {
+      setError(err.message);
+      setGenerating(false);
+      return;
+    }
+    const { model, messages } = request;
+    setNotice(request.notice);
 
     const flushTokens = () => {
       const buffered = tokenBufferRef.current;
@@ -285,6 +337,8 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
               <button className="btn btn-ghost btn-sm" onClick={generate}><HiOutlineArrowPath /> Retry</button>
             </div>
           )}
+
+          <MapNotice notice={notice} error={error} />
 
           {!error && !output && !generating && (
             <div className="map-placeholder">

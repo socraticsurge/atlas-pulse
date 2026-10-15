@@ -7,8 +7,9 @@ body:
     attributes:
       value: |
         Before suggesting, please note the project's core principles: local-first,
-        privacy-first, and AI only through a local Ollama instance. Features that
-        require cloud services, accounts, or hosted APIs are out of scope.
+        privacy-first, and AI only on-device (Gemini Nano in Chrome or a local
+        Ollama instance). Features that require cloud services, accounts, or
+        hosted APIs are out of scope.
   - type: textarea
     id: problem
     attributes:

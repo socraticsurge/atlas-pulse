@@ -1,3 +1,5 @@
+import { getNanoModel, isNanoModel, streamNanoChat } from './chromeAI.js';
+
 const API_BASE = '/api';
 
 // ── Ollama management ────────────────────────────────────────────────────────
@@ -252,20 +254,38 @@ export async function resetProcessingArticles() {
 export async function fetchCounts() { return readerFetch('/articles/counts'); }
 export async function clearAllData() { return readerFetch('/all', { method: 'DELETE' }); }
 
+// Installed Ollama models, or null when the server is unreachable.
+// (Ollama itself being absent is a normal empty list.)
+async function fetchOllamaModels() {
+  try {
+    const res = await fetch(`${API_BASE}/ai/models`);
+    return res.ok ? (await res.json()).models || [] : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchAIModels() {
-  const res = await fetch(`${API_BASE}/ai/models`);
-  if (!res.ok) throw new Error('Could not reach Ollama');
-  return res.json(); // { models: [{name, family, parameterSize, size}] }
+  const [ollamaModels, nano] = await Promise.all([fetchOllamaModels(), getNanoModel()]);
+  if (!ollamaModels && !nano) throw new Error('Could not reach the server');
+  // Gemini Nano first: it's the default engine; Ollama models are optional extras.
+  const models = nano ? [nano, ...(ollamaModels || [])] : ollamaModels;
+  return { models }; // { models: [{name, family, parameterSize, size}] }
 }
 
 /**
- * Streams a chat completion from Ollama via the local proxy.
+ * Streams a chat completion from Gemini Nano in the browser when that model
+ * is selected, otherwise from Ollama via the local proxy.
  * Yields string tokens as they arrive.
  * @param {string} model
  * @param {{role:string, content:string}[]} messages
  * @returns {AsyncGenerator<string>}
  */
-export async function* streamChat(model, messages) {
+export function streamChat(model, messages) {
+  return isNanoModel(model) ? streamNanoChat(messages) : streamOllamaChat(model, messages);
+}
+
+async function* streamOllamaChat(model, messages) {
   const res = await fetch(`${API_BASE}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -275,27 +295,34 @@ export async function* streamChat(model, messages) {
     const err = await res.json().catch(() => ({ error: 'AI request failed' }));
     throw new Error(err.error || 'AI request failed');
   }
+  for await (const chunk of readNdjson(res.body)) {
+    if (chunk.message?.content) yield chunk.message.content;
+    if (chunk.done) return;
+  }
+}
 
-  const reader = res.body.getReader();
+// Parses a newline-delimited JSON stream, skipping blank or malformed lines.
+async function* readNdjson(body) {
+  const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) return;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split('\n');
     buffer = lines.pop(); // keep any incomplete trailing line
+    yield* parseLines(lines);
+  }
+}
 
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const chunk = JSON.parse(line);
-        if (chunk.message?.content) yield chunk.message.content;
-        if (chunk.done) return;
-      } catch {
-        // ignore malformed chunks
-      }
+function* parseLines(lines) {
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    try {
+      yield JSON.parse(line);
+    } catch {
+      // ignore malformed chunks
     }
   }
 }

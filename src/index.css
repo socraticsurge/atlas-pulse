@@ -5055,3 +5055,13 @@ mark[data-highlight-id]:hover { filter: brightness(0.92); }
 .highlight-card-delete {
   flex-shrink: 0;
 }
+
+/* Multi-article panel: informational note (e.g. articles shortened to fit the model) */
+.map-notice {
+  margin: 16px 20px 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}

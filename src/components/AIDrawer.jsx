@@ -15,15 +15,18 @@ import {
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat, saveSummary, patchArticle } from '../utils/api.js';
-import { stripHtml } from '../utils/helpers.js';
+import { isNanoModel } from '../utils/chromeAI.js';
+import { htmlToText } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
-import OllamaSetup from './OllamaSetup.jsx';
+import { NoAIEngine } from './AIEngines.jsx';
 import { HIGHLIGHT_COLORS } from '../utils/constants.js';
 
 const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 const MAX_CHAT_MESSAGES = 40; // ~20 exchanges
 
 function pickDefaultModel(models) {
+  const nano = models.find((m) => isNanoModel(m.name));
+  if (nano) return nano.name;
   for (const pref of PREFERRED_MODELS) {
     const found = models.find((m) => m.name.toLowerCase().includes(pref));
     if (found) return found.name;
@@ -32,7 +35,7 @@ function pickDefaultModel(models) {
 }
 
 function buildArticleContext(article, extractedContent) {
-  const content = stripHtml(extractedContent || article?.content || article?.summary || '');
+  const content = htmlToText(extractedContent || article?.content || article?.summary || '');
   const truncated = content.length > 6000 ? content.slice(0, 6000) + '…' : content;
   return `Title: ${article?.title || 'Unknown'}
 Author: ${article?.author || 'Unknown'}
@@ -300,7 +303,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     setAnalysisError(null);
     abortRef.current = false;
 
-    const rawText = stripHtml(extractedContent || article.content || article.summary || '');
+    const rawText = htmlToText(extractedContent || article.content || article.summary || '');
     const text = rawText.length > 4000 ? rawText.slice(0, 4000) + '…' : rawText;
     const msgs = [
       { role: 'system', content: ANALYSIS_PROMPT },
@@ -534,10 +537,10 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         </div>
       </div>
 
-      {/* Ollama setup — only after check confirms it's NOT ready */}
+      {/* No AI engine — Gemini Nano missing and no Ollama models */}
       {ollamaChecked && !ollamaReady && (
         <div className="ai-drawer-setup">
-          <OllamaSetup compact onReady={loadModels} />
+          <NoAIEngine onReady={loadModels} />
         </div>
       )}
 
