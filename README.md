@@ -109,7 +109,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **Folders** | Create folders, move feeds into them, right-click to rename or delete |
 | **Saved / Bookmarks** | Bookmark any article; find them under "Saved" in the sidebar |
 | **Today view** | Shows only articles published today |
-| **Search** | AND-logic tokenized search — "cloud AI" matches articles containing both terms anywhere; quoted phrases for exact match; results ranked by relevance (title › source › AI topics › body) |
+| **Search** | AND-logic tokenized search — "cloud AI" matches articles containing both terms across the title, source, AI topics, and article excerpt; quoted phrases for exact match; results ranked by relevance (title › source › AI topics › excerpt). Full-text search is on the [roadmap](docs/TECH-DEBT.md) |
 | **Mark all read** | One-click button in the article list header |
 | **AI Only filter** | Toggle in the article list header to show only AI-analyzed articles |
 | **Content filters** | Per-dimension dropdown pills (Sentiment · Urgency · Frame · Tone · Depth) — shown when AI analysis data is available |
@@ -458,7 +458,7 @@ If you use the background service, check `npm run service status` and `npm run s
 
 ## Contributing
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, on-device AI only), development setup, and pull request guidelines. By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome! See [docs/TECH-DEBT.md](docs/TECH-DEBT.md) for the current maintainability assessment and planned work packages, and read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, on-device AI only), development setup, and pull request guidelines. By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 - **Found a bug?** [Open a bug report](https://github.com/socraticsurge/atlas-pulse/issues/new?template=bug_report.yml)
 - **Have an idea?** [Open a feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) or start a [discussion](https://github.com/socraticsurge/atlas-pulse/discussions)
@@ -489,6 +489,7 @@ Released under the [MIT License](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 - Multi-article actions (Compare, Newsletter, Briefing) no longer fail with "No AI model selected" when the model is set to **Auto**
 - Multi-article actions on Gemini Nano fit the selection to the model's context window by shortening every article evenly, instead of failing on large selections
 - A missing Ollama installation is treated as a normal state instead of logging server errors
+- **AI now reads the whole article.** A text helper silently cut every article to its first 160 characters, so summaries, analysis, chat, batch processing, and multi-article actions were working from little more than the headline. AI features now receive the full text (up to 6,000 characters for summaries and chat, 4,000 for analysis, 1,200 per article for multi-article actions)
 - Corrected the minimum Node.js version to 20.19 (required by Vite 8)
 
 **Security & maintenance** (since v1.3.0)
