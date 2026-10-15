@@ -1,0 +1,159 @@
+/* ═══════════════════════════════════════════════════════════════
+   OLLAMA SETUP
+   ═══════════════════════════════════════════════════════════════ */
+
+.ollama-setup-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 8px 0;
+}
+
+.ollama-setup-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 100%;
+}
+
+.ollama-setup-card.compact {
+  padding: 10px 12px;
+}
+
+.ollama-setup-emoji {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ollama-setup-card.compact .ollama-setup-emoji {
+  font-size: 22px;
+}
+
+.ollama-setup-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ollama-setup-body h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.ollama-setup-body p {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+
+.ollama-setup-error {
+  color: var(--danger) !important;
+  font-size: 12px !important;
+}
+
+.ollama-setup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.ollama-model-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.ollama-model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.ollama-model-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ollama-model-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.ollama-model-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.ollama-model-badge {
+  font-size: 11px;
+  padding: 1px 6px;
+  background: var(--accent-muted);
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.ollama-pull-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 120px;
+}
+
+.ollama-pull-track {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ollama-pull-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.ollama-pull-label {
+  font-size: 10.5px;
+  color: var(--text-tertiary);
+  text-align: right;
+}
+
+.ollama-ready-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ollama-ready-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
