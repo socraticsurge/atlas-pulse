@@ -83,21 +83,36 @@ export function Instructions({ operation, value, onChange, gen, ok, onGenerate }
   );
 }
 
-export function Output({ operation, gen, onRetry }) {
+function OutputError({ error, onRetry }) {
+  return (
+    <div className="ai-error" style={{ margin: '16px 20px' }}>
+      <HiOutlineExclamationCircle />
+      <span>{error}</span>
+      <button className="btn btn-ghost btn-sm" onClick={onRetry}><HiOutlineArrowPath /> Retry</button>
+    </div>
+  );
+}
+
+// Streamed text with a cursor while generating; keeps the end in view.
+function OutputText({ output, generating }) {
   const endRef = useRef(null);
   useEffect(() => {
-    if (gen.generating) endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [gen.output, gen.generating]);
+    if (generating) endRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [output, generating]);
+  return (
+    <div className="map-output-text">
+      <pre className="map-output-pre">{output}</pre>
+      {generating && <span className="map-cursor" />}
+      <div ref={endRef} />
+    </div>
+  );
+}
+
+export function Output({ operation, gen, onRetry }) {
   const empty = !gen.error && !gen.output && !gen.generating;
   return (
     <div className="map-output">
-      {gen.error && (
-        <div className="ai-error" style={{ margin: '16px 20px' }}>
-          <HiOutlineExclamationCircle />
-          <span>{gen.error}</span>
-          <button className="btn btn-ghost btn-sm" onClick={onRetry}><HiOutlineArrowPath /> Retry</button>
-        </div>
-      )}
+      {gen.error && <OutputError error={gen.error} onRetry={onRetry} />}
       {gen.notice && !gen.error && <div className="map-notice">{gen.notice}</div>}
       {empty && (
         <div className="map-placeholder">
@@ -105,13 +120,7 @@ export function Output({ operation, gen, onRetry }) {
           <p>{placeholderText(operation)}</p>
         </div>
       )}
-      {gen.output && (
-        <div className="map-output-text">
-          <pre className="map-output-pre">{gen.output}</pre>
-          {gen.generating && <span className="map-cursor" />}
-          <div ref={endRef} />
-        </div>
-      )}
+      {gen.output && <OutputText output={gen.output} generating={gen.generating} />}
     </div>
   );
 }
