@@ -1,23 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { HiOutlineArrowUpOnSquare, HiOutlineCheck, HiOutlineClipboardDocument, HiOutlineEnvelope } from 'react-icons/hi2';
 import { SiX } from 'react-icons/si';
 import { FaLinkedinIn } from 'react-icons/fa';
+import { useClickOutside } from '../../hooks/useClickOutside.js';
 import { canShareNatively, shareByEmail, shareNatively, shareOnLinkedIn, shareOnX } from '../../utils/share.js';
 
 /** Share popover: LinkedIn, X, email, native share, copy link. */
 export default function ShareMenu({ link, title }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useClickOutside(open, close);
 
   const shareWith = useCallback((share) => () => { share(); setOpen(false); }, []);
 
