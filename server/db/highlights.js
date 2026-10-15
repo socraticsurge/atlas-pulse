@@ -1,29 +1,11 @@
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { DATA_DIR, openDatabase } from './connection.js';
+import { MIGRATIONS } from './migrations/highlights.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data');
-const DB_PATH = join(DATA_DIR, 'highlights.db');
+const DB_FILE = 'highlights.db';
+const DB_PATH = join(DATA_DIR, DB_FILE);
 
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS highlights (
-    id               INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at       TEXT    NOT NULL,
-    article_url      TEXT,
-    article_title    TEXT,
-    article_source   TEXT,
-    highlighted_text TEXT    NOT NULL,
-    note             TEXT,
-    color            TEXT
-  )
-`);
+const db = openDatabase(DB_FILE, MIGRATIONS);
 
 const insert = db.prepare(`
   INSERT INTO highlights (created_at, article_url, article_title, article_source, highlighted_text, note, color)

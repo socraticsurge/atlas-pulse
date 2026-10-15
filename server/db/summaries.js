@@ -1,44 +1,11 @@
-import Database from 'better-sqlite3';
-import { existsSync, mkdirSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
+import { DATA_DIR, openDatabase } from './connection.js';
+import { MIGRATIONS } from './migrations/summaries.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(__dirname, '../../data');
-const DB_PATH = join(DATA_DIR, 'summaries.db');
+const DB_FILE = 'summaries.db';
+const DB_PATH = join(DATA_DIR, DB_FILE);
 
-// Ensure data/ folder exists
-if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-
-const db = new Database(DB_PATH);
-
-// Enable WAL mode for better performance and concurrent reads
-db.pragma('journal_mode = WAL');
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS summaries (
-    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-    created_at            TEXT    NOT NULL,
-
-    -- Article metadata
-    article_title         TEXT,
-    article_url           TEXT,
-    article_author        TEXT,
-    article_source        TEXT,
-    article_published_at  TEXT,
-
-    -- Generated summary
-    summary_text          TEXT    NOT NULL,
-
-    -- AI configuration that produced this summary
-    ai_model              TEXT,
-    ai_personas           TEXT,   -- JSON array, e.g. ["analyst","philosopher"]
-    ai_tone_voice         TEXT,
-    ai_tone_energy        TEXT,
-    ai_tone_angle         TEXT,
-    ai_custom_instructions TEXT
-  )
-`);
+const db = openDatabase(DB_FILE, MIGRATIONS);
 
 const insert = db.prepare(`
   INSERT INTO summaries (
