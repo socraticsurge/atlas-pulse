@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useClickOutside } from '../../hooks/useClickOutside.js';
 import { HiOutlineArrowDownTray, HiOutlineBookmark, HiOutlineCheckCircle, HiOutlineChevronDown, HiOutlineSparkles, HiOutlineXMark } from 'react-icons/hi2';
 
 const AI_OPERATIONS = {
@@ -23,14 +24,8 @@ function OperationOption({ op, count, onPick }) {
 
 function AIActionsMenu({ count, onOpenAIPanel }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useClickOutside(open, close);
 
   return (
     <div className="fab-ai-wrap" ref={ref}>

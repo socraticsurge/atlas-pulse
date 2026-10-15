@@ -1,21 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { HiOutlineChevronDown } from 'react-icons/hi2';
+import { useClickOutside } from '../../hooks/useClickOutside.js';
 
 const modelLabel = (name) => (name ? name.split(':')[0].replace(/-/g, ' ') : 'No model');
 
 /** Header dropdown for choosing the drawer's AI model. */
 export default function ModelPicker({ models, selectedModel, onSelect }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const close = useCallback(() => setOpen(false), []);
+  const ref = useClickOutside(open, close);
 
   return (
     <div className="ai-model-picker" ref={ref}>
