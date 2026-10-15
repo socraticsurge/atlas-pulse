@@ -37,7 +37,9 @@ function nestedFeed(node) {
 }
 
 export function parseOPML(xmlString) {
-  const xmlDoc = new DOMParser().parseFromString(xmlString, 'text/xml');
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+  
   if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
     throw new Error('Invalid XML format');
   }
