@@ -1,8 +1,8 @@
 {
   "name": "atlas-pulse",
   "private": true,
-  "version": "1.3.0",
-  "description": "Privacy-first RSS feed reader with fully local AI via Ollama. No cloud, no accounts, your data never leaves your machine.",
+  "version": "1.4.0",
+  "description": "Privacy-first RSS feed reader with on-device AI: Gemini Nano built into Chrome, or optional local Ollama models. No cloud, no accounts, your data never leaves your machine.",
   "license": "MIT",
   "author": "Vinay Chaganti",
   "repository": {
@@ -19,13 +19,16 @@
     "feed-reader",
     "ollama",
     "local-ai",
+    "on-device-ai",
+    "chrome-built-in-ai",
+    "gemini-nano",
     "local-first",
     "privacy",
     "react",
     "express"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=20.19"
   },
   "type": "module",
   "scripts": {
@@ -35,7 +38,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "node --test",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "service": "scripts/service.sh"
   },
   "dependencies": {
     "@extractus/article-extractor": "^8.1.0",
@@ -63,5 +67,8 @@
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
     "vite": "^8.0.9"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true
   }
 }

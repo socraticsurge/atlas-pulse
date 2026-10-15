@@ -1,6 +1,6 @@
 # Security Policy
 
-Atlas Pulse is a local-first application: it runs entirely on your machine, stores data in your browser's IndexedDB and a local SQLite file, and never sends your data to any external service. That design limits the attack surface, but security issues are still possible (for example in feed parsing, HTML sanitization of article content, or the local Express server).
+Atlas Pulse is a local-first application: it runs entirely on your machine, stores data in local SQLite files, runs AI on-device (Gemini Nano in Chrome or a local Ollama instance), and never sends your data to an Atlas Pulse server or hosted AI service. Outbound network requests are limited to fetching the feeds and articles you subscribe to. That design limits the attack surface, but security issues are still possible (for example in feed parsing, HTML sanitization of article content, or the local Express server).
 
 ## Supported versions
 

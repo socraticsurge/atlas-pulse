@@ -17,8 +17,8 @@
 - [ ] App starts cleanly with `npm run dev` and the affected flows work (tested manually)
 - [ ] Works in both dark and light themes (for UI changes)
 - [ ] README updated (features table, shortcuts, changelog) if user-facing behavior changed
-- [ ] IndexedDB schema changes use a new Dexie version with a migration (if applicable)
-- [ ] Respects the project principles: local-first, privacy-first, AI via local Ollama only
+- [ ] SQLite schema changes migrate existing databases in place (if applicable)
+- [ ] Respects the project principles: local-first, privacy-first, on-device AI only (Gemini Nano or Ollama)
 
 ## Screenshots (UI changes)
 

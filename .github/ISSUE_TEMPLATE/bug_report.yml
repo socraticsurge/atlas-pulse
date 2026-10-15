@@ -34,7 +34,7 @@ body:
         - AI features (summaries, analysis, chat, batch)
         - Multi-article AI actions (compare, newsletter, briefing)
         - UI and appearance (themes, layout, settings)
-        - Data (IndexedDB, SQLite library, OPML)
+        - Data (SQLite storage, libraries, OPML)
         - Other
     validations:
       required: true
@@ -43,14 +43,14 @@ body:
     attributes:
       label: Environment
       description: OS, browser, and Node.js version
-      placeholder: macOS 15, Chrome 138, Node 22
+      placeholder: macOS 15, Chrome 155, Node 22
     validations:
       required: true
   - type: input
     id: ollama
     attributes:
-      label: Ollama version and model (AI issues only)
-      placeholder: Ollama 0.9.x, qwen2.5:3b
+      label: AI engine and model (AI issues only)
+      placeholder: Gemini Nano in Chrome 155 — or — Ollama 0.40, qwen2.5:3b
   - type: textarea
     id: logs
     attributes:
