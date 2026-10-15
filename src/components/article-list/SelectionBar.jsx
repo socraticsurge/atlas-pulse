@@ -7,6 +7,20 @@ const AI_OPERATIONS = {
   briefing:   { min: 2, max: 15, label: 'Briefing',   hint: '2–15' },
 };
 
+function OperationOption({ op, count, onPick }) {
+  const disabled = count < op.min || count > op.max;
+  return (
+    <button
+      className={`fab-ai-option${disabled ? ' disabled' : ''}`}
+      onClick={() => { if (!disabled) onPick(); }}
+      title={disabled ? `${op.hint} articles required` : ''}
+    >
+      <span className="fab-ai-op-label">{op.label}</span>
+      <span className="fab-ai-op-hint">{op.hint}</span>
+    </button>
+  );
+}
+
 function AIActionsMenu({ count, onOpenAIPanel }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -31,20 +45,9 @@ function AIActionsMenu({ count, onOpenAIPanel }) {
       </button>
       {open && (
         <div className="fab-ai-menu">
-          {Object.entries(AI_OPERATIONS).map(([key, op]) => {
-            const disabled = count < op.min || count > op.max;
-            return (
-              <button
-                key={key}
-                className={`fab-ai-option${disabled ? ' disabled' : ''}`}
-                onClick={() => { if (!disabled) { setOpen(false); onOpenAIPanel(key); } }}
-                title={disabled ? `${op.hint} articles required` : ''}
-              >
-                <span className="fab-ai-op-label">{op.label}</span>
-                <span className="fab-ai-op-hint">{op.hint}</span>
-              </button>
-            );
-          })}
+          {Object.entries(AI_OPERATIONS).map(([key, op]) => (
+            <OperationOption key={key} op={op} count={count} onPick={() => { setOpen(false); onOpenAIPanel(key); }} />
+          ))}
         </div>
       )}
     </div>
