@@ -29,24 +29,9 @@ export async function streamModelPull(model, onProgress) {
   });
   if (!res.ok) throw new Error('Pull request failed');
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop();
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      try {
-        const chunk = JSON.parse(line);
-        onProgress(chunk);
-        if (chunk.status === 'success') return;
-      } catch { /* ignore malformed lines */ }
-    }
+  for await (const chunk of readNdjson(res.body)) {
+    onProgress(chunk);
+    if (chunk.status === 'success') return;
   }
 }
 
