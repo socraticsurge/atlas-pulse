@@ -1,7 +1,7 @@
 import { PERSONAS, TONE_GROUPS, getAISettings } from '../../utils/aiSettings.js';
 
 /** Badges showing the active personas, tones, and custom instructions. */
-export default function AIConfigStrip() {
+export default function AIConfigStrip({ className = '' }) {
   const settings = getAISettings();
   const personas = PERSONAS.filter((p) => settings.personas.includes(p.id));
   const tones = TONE_GROUPS.map((group) => {
@@ -10,7 +10,7 @@ export default function AIConfigStrip() {
   });
 
   return (
-    <div className="ai-config-strip">
+    <div className={`ai-config-strip ${className}`.trim()}>
       {personas.map((p) => (
         <span key={p.id} className="ai-config-badge">{p.emoji} {p.label}</span>
       ))}
