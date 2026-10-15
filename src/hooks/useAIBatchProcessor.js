@@ -1,49 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  streamChat, fetchAIModels,
+  fetchAIModels,
   patchArticle, bulkUpdateArticles, fetchQueueCount,
   fetchArticlesByAiStatus, resetProcessingArticles,
 } from '../utils/api.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
-import { htmlToText } from '../utils/helpers.js';
-
-const BATCH_SYSTEM_PROMPT = `Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
-{
-  "summary": "3-4 sentence summary in plain prose. Key finding/argument and one concrete takeaway. Do not start with 'This article'.",
-  "sentiment": "positive|neutral|negative",
-  "urgency": "breaking|developing|evergreen",
-  "frame": "conflict|human_interest|economic|analytical",
-  "tone": "alarming|analytical|optimistic|opinion",
-  "depth": "brief|standard|deep_dive",
-  "topics": ["tag1", "tag2", "tag3"]
-}`;
-
-function parseAnalysis(response) {
-  const stripped = response.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
-  const candidates = [];
-  let depth = 0, start = -1;
-  for (let i = 0; i < stripped.length; i++) {
-    if (stripped[i] === '{') { if (depth === 0) start = i; depth++; }
-    else if (stripped[i] === '}') { depth--; if (depth === 0 && start !== -1) { candidates.push(stripped.slice(start, i + 1)); start = -1; } }
-  }
-  for (let i = candidates.length - 1; i >= 0; i--) {
-    try {
-      const parsed = JSON.parse(candidates[i]);
-      if (parsed.sentiment || parsed.urgency || parsed.summary) {
-        return {
-          summary:   typeof parsed.summary === 'string' ? parsed.summary : '',
-          sentiment: parsed.sentiment || 'neutral',
-          urgency:   parsed.urgency   || 'evergreen',
-          frame:     parsed.frame     || 'analytical',
-          tone:      parsed.tone      || 'analytical',
-          depth:     parsed.depth     || 'standard',
-          topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
-        };
-      }
-    } catch { /* try next candidate */ }
-  }
-  throw new Error('No valid JSON found in model response');
-}
+import { batchMessages, collectResponse } from '../ai/tasks.js';
+import { parseBatchResult } from '../ai/parse.js';
 
 export function useAIBatchProcessor() {
   const [progress, setProgress] = useState({ total: 0, done: 0, failed: 0, running: false });
@@ -121,20 +84,8 @@ export function useAIBatchProcessor() {
         }));
       }
 
-      const rawText = htmlToText(article.content || article.summary || '');
-      const text = rawText.length > 4000 ? rawText.slice(0, 4000) + '…' : rawText;
-      const msgs = [
-        { role: 'system', content: BATCH_SYSTEM_PROMPT },
-        { role: 'user', content: `Title: ${article.title}\n\n${text}` },
-      ];
-
-      let response = '';
-      for await (const token of streamChat(model, msgs)) {
-        if (!mountedRef.current) break;
-        response += token;
-      }
-
-      const parsed = parseAnalysis(response);
+      const response = await collectResponse(model, batchMessages(article), () => !mountedRef.current);
+      const parsed = parseBatchResult(response);
       const features = settings.features || 'both';
       const updates = { aiStatus: 'done' };
 
