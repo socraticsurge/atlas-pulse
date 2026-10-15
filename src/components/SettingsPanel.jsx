@@ -18,8 +18,7 @@ import {
 } from '../utils/aiSettings.js';
 import { AUTO_REFRESH_OPTIONS, getAutoRefreshMinutes, saveAutoRefreshMinutes } from '../utils/constants.js';
 import { getBatchSettings, saveBatchSettings } from '../utils/batchSettings.js';
-import OllamaSetup from './OllamaSetup.jsx';
-import { isNanoModel } from '../utils/chromeAI.js';
+import { AIEngineSettings } from './AIEngines.jsx';
 
 const PRESET_COLORS = [
   { id: 'emerald', hex: '#00d4aa', label: 'Emerald' },
@@ -62,7 +61,6 @@ export default function SettingsPanel({
 }) {
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
-  const [showOllama, setShowOllama] = useState(false);
   const [pickerColor, setPickerColor] = useState(customAccentHex || '#00d4aa');
   const [pickerTextColor, setPickerTextColor] = useState(customTextColorHex || '#e8eaed');
   const [aiSettings, setAISettings] = useState(getAISettings);
@@ -380,35 +378,7 @@ export default function SettingsPanel({
           <div className="settings-group">
             <h3>AI Processing</h3>
 
-            {/* Gemini Nano — the default engine, built into Google Chrome */}
-            <div className="settings-row settings-row-col">
-              <label>Gemini Nano</label>
-              {availableModels?.some((m) => isNanoModel(m.name)) ? (
-                <div className="ollama-ready-status">
-                  <span className="ollama-ready-dot" />
-                  <span>Built into Chrome · runs on your device</span>
-                </div>
-              ) : (
-                <span className="settings-sublabel">
-                  Not available in this browser. Needs desktop Google Chrome 148+.
-                </span>
-              )}
-            </div>
-
-            {/* Ollama — optional; only checked once the user opens it */}
-            <div className="settings-row settings-row-col">
-              <label>
-                Ollama
-                <span className="settings-sublabel"> — optional, for larger local models</span>
-              </label>
-              {showOllama ? (
-                <OllamaSetup compact showReady />
-              ) : (
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowOllama(true)}>
-                  Set up Ollama
-                </button>
-              )}
-            </div>
+            <AIEngineSettings availableModels={availableModels} />
 
             {/* Model — shown once any engine has models */}
             {availableModels && availableModels.length > 0 && (

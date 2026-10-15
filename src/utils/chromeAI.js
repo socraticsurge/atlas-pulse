@@ -29,12 +29,17 @@ function isGoogleChrome() {
   return brands.some((b) => b.brand === 'Google Chrome');
 }
 
+function hasPromptApi() {
+  return typeof self !== 'undefined' && 'LanguageModel' in self;
+}
+
 /**
  * Returns a model entry shaped like the Ollama ones, or null when the browser
  * can't run Gemini Nano.
  */
 export async function getNanoModel() {
-  if (typeof self === 'undefined' || !('LanguageModel' in self) || !isGoogleChrome()) return null;
+  const supported = hasPromptApi() && isGoogleChrome();
+  if (!supported) return null;
   let availability;
   try {
     availability = await self.LanguageModel.availability();
@@ -70,28 +75,89 @@ async function createSession(messages) {
 export async function fitToNanoContext(systemContent, buildUserMessage, { maxChars, minChars = 200 }) {
   const session = await createSession([{ role: 'system', content: systemContent }]);
   try {
-    const windowSize = session.contextWindow ?? session.inputQuota;
-    if (!windowSize) return { chars: maxChars, trimmed: false };
-    const used = session.contextUsage ?? session.inputUsage ?? 0;
-    const budget = windowSize - used - OUTPUT_RESERVE_TOKENS;
+    const budget = contextBudget(session);
+    if (budget === null) return { chars: maxChars, trimmed: false };
     if (budget <= 0) throw new Error(TOO_LONG_ERROR);
-
-    const measureFn = session.measureContextUsage ?? session.measureInputUsage;
-    const measure = (text) => (measureFn
-      ? measureFn.call(session, text)
-      : Math.ceil(text.length / FALLBACK_CHARS_PER_TOKEN));
-
-    let chars = maxChars;
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const tokens = await measure(buildUserMessage(chars));
-      if (tokens <= budget) return { chars, trimmed: chars < maxChars };
-      if (chars <= minChars) break;
-      chars = Math.max(minChars, Math.floor(chars * (budget / tokens) * 0.9));
-    }
-    throw new Error(TOO_LONG_ERROR);
+    const chars = await shrinkToBudget(tokenCounter(session), buildUserMessage, budget, maxChars, minChars);
+    return { chars, trimmed: chars < maxChars };
   } finally {
     session.destroy();
   }
+}
+
+// Tokens left for the user message, or null when Chrome doesn't report a
+// context size. Property names changed across Chrome versions.
+function contextBudget(session) {
+  const windowSize = session.contextWindow ?? session.inputQuota;
+  if (!windowSize) return null;
+  const used = session.contextUsage ?? session.inputUsage ?? 0;
+  return windowSize - used - OUTPUT_RESERVE_TOKENS;
+}
+
+function tokenCounter(session) {
+  const measureFn = session.measureContextUsage ?? session.measureInputUsage;
+  if (measureFn) return (text) => measureFn.call(session, text);
+  return async (text) => Math.ceil(text.length / FALLBACK_CHARS_PER_TOKEN);
+}
+
+async function shrinkToBudget(countTokens, buildUserMessage, budget, maxChars, minChars) {
+  let chars = maxChars;
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const tokens = await countTokens(buildUserMessage(chars));
+    if (tokens <= budget) return chars;
+    if (chars <= minChars) break;
+    chars = Math.max(minChars, Math.floor(chars * (budget / tokens) * 0.9));
+  }
+  throw new Error(TOO_LONG_ERROR);
+}
+
+function isQuotaError(err) {
+  return err?.name === 'QuotaExceededError';
+}
+
+function tooLongError(cause) {
+  return new Error(TOO_LONG_ERROR, { cause });
+}
+
+// Keeps only the system prompt, halved — a last attempt when the history
+// doesn't fit Nano's context window.
+function trimHistory(history) {
+  const system = history.find((m) => m.role === 'system');
+  if (!system) return [];
+  const half = Math.floor(system.content.length / 2);
+  return [{ ...system, content: system.content.slice(0, half) + '…' }];
+}
+
+async function openSession(history) {
+  try {
+    return await createSession(history);
+  } catch (err) {
+    if (!isQuotaError(err)) throw err;
+  }
+  try {
+    return await createSession(trimHistory(history));
+  } catch (err) {
+    throw isQuotaError(err) ? tooLongError(err) : err;
+  }
+}
+
+// Passes chunks through, but holds back the first few characters until it's
+// clear the response isn't the Chromium stub echoing the prompt.
+async function* rejectStubOutput(stream) {
+  let head = '';
+  for await (const chunk of stream) {
+    if (head === null) { yield chunk; continue; }
+    head += chunk;
+    if (head.length < CHROMIUM_STUB_PREFIX.length) continue;
+    yield checkedHead(head);
+    head = null;
+  }
+  if (head) yield checkedHead(head);
+}
+
+function checkedHead(head) {
+  if (head.startsWith(CHROMIUM_STUB_PREFIX)) throw new Error(NOT_CHROME_ERROR);
+  return head;
 }
 
 /**
@@ -100,48 +166,14 @@ export async function fitToNanoContext(systemContent, buildUserMessage, { maxCha
  * Each call uses a fresh session so it stays stateless like the Ollama path.
  */
 export async function* streamNanoChat(messages) {
-  if (!('LanguageModel' in self)) {
-    throw new Error('Gemini Nano is not available in this browser (needs desktop Chrome 148+)');
-  }
+  if (!hasPromptApi()) throw new Error(NOT_CHROME_ERROR);
   const last = messages[messages.length - 1];
-  const history = messages.slice(0, -1);
-
-  let session;
-  try {
-    session = await createSession(history);
-  } catch (err) {
-    if (err?.name !== 'QuotaExceededError') throw err;
-    // Too long for Nano's context window: keep only the system prompt, halved.
-    const system = history.find((m) => m.role === 'system');
-    const trimmed = system
-      ? [{ ...system, content: system.content.slice(0, Math.floor(system.content.length / 2)) + '…' }]
-      : [];
-    session = await createSession(trimmed).catch((retryErr) => {
-      throw retryErr?.name === 'QuotaExceededError' ? new Error(TOO_LONG_ERROR, { cause: retryErr }) : retryErr;
-    });
-  }
-
+  const session = await openSession(messages.slice(0, -1));
   const controller = new AbortController();
   try {
-    const stream = session.promptStreaming(last.content, { signal: controller.signal });
-    // Hold back the first few characters until we know this isn't the Chromium stub.
-    let head = '';
-    let checked = false;
-    for await (const chunk of stream) {
-      if (checked) { yield chunk; continue; }
-      head += chunk;
-      if (head.length < CHROMIUM_STUB_PREFIX.length) continue;
-      if (head.startsWith(CHROMIUM_STUB_PREFIX)) throw new Error(NOT_CHROME_ERROR);
-      checked = true;
-      yield head;
-    }
-    if (!checked && head) {
-      if (head.startsWith(CHROMIUM_STUB_PREFIX)) throw new Error(NOT_CHROME_ERROR);
-      yield head;
-    }
+    yield* rejectStubOutput(session.promptStreaming(last.content, { signal: controller.signal }));
   } catch (err) {
-    if (err?.name === 'QuotaExceededError') throw new Error(TOO_LONG_ERROR, { cause: err });
-    throw err;
+    throw isQuotaError(err) ? tooLongError(err) : err;
   } finally {
     controller.abort();
     session.destroy();

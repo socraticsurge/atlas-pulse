@@ -66,6 +66,45 @@ function buildMessages(operation, template, instructions, articles, charsPerArti
   ];
 }
 
+const NO_MODEL_ERROR = 'No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.';
+
+// The batch model from Settings, or for "Auto" the first available model
+// (Gemini Nano when present).
+async function resolveModel() {
+  const saved = getBatchSettings().model;
+  if (saved) return saved;
+  const { models } = await fetchAIModels().catch(() => ({ models: [] }));
+  return models[0]?.name || '';
+}
+
+/**
+ * Picks the model and builds the messages. Gemini Nano has a small context
+ * window, so for Nano every article is shortened evenly until the whole
+ * selection fits, rather than failing or dropping articles.
+ * Returns { model, messages, notice }; throws with a user-facing message.
+ */
+async function prepareRequest(operation, template, instructions, articles) {
+  const model = await resolveModel();
+  if (!model) throw new Error(NO_MODEL_ERROR);
+  const build = (chars) => buildMessages(operation, template, instructions, articles, chars);
+  if (!isNanoModel(model)) return { model, messages: build(), notice: null };
+
+  const { chars, trimmed } = await fitToNanoContext(
+    build()[0].content,
+    (n) => build(n)[1].content,
+    { maxChars: MAX_CHARS_PER_ARTICLE },
+  );
+  const notice = trimmed
+    ? `To fit Gemini Nano, each article was shortened to its first ${chars.toLocaleString()} characters.`
+    : null;
+  return { model, messages: build(chars), notice };
+}
+
+function MapNotice({ notice, error }) {
+  if (!notice || error) return null;
+  return <div className="map-notice">{notice}</div>;
+}
+
 export default function MultiArticlePanel({ articles: initialArticles, initialOperation, onClose, width, onResize }) {
   const [operation, setOperation] = useState(initialOperation || 'briefing');
   const [chips, setChips] = useState(() => initialArticles.map(a => a.id));
@@ -103,34 +142,16 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
     tokenBufferRef.current = '';
     rafRef.current = null;
 
-    let messages = buildMessages(operation, template, instructions, activeArticles);
-    // "Auto" (empty) uses the first available model — Gemini Nano when present.
-    let model = getBatchSettings().model || '';
-    if (!model) {
-      model = await fetchAIModels().then(({ models }) => models[0]?.name || '').catch(() => '');
+    let request;
+    try {
+      request = await prepareRequest(operation, template, instructions, activeArticles);
+    } catch (err) {
+      setError(err.message);
+      setGenerating(false);
+      return;
     }
-
-    if (!model) { setError('No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.'); setGenerating(false); return; }
-
-    // Gemini Nano has a small context window: shorten every article evenly
-    // until the whole selection fits, rather than failing or dropping articles.
-    if (isNanoModel(model)) {
-      try {
-        const { chars, trimmed } = await fitToNanoContext(
-          messages[0].content,
-          (n) => buildMessages(operation, template, instructions, activeArticles, n)[1].content,
-          { maxChars: MAX_CHARS_PER_ARTICLE },
-        );
-        messages = buildMessages(operation, template, instructions, activeArticles, chars);
-        if (trimmed) {
-          setNotice(`To fit Gemini Nano, each article was shortened to its first ${chars.toLocaleString()} characters.`);
-        }
-      } catch (err) {
-        setError(err.message);
-        setGenerating(false);
-        return;
-      }
-    }
+    const { model, messages } = request;
+    setNotice(request.notice);
 
     const flushTokens = () => {
       const buffered = tokenBufferRef.current;
@@ -315,9 +336,7 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
             </div>
           )}
 
-          {notice && !error && (
-            <div className="map-notice">{notice}</div>
-          )}
+          <MapNotice notice={notice} error={error} />
 
           {!error && !output && !generating && (
             <div className="map-placeholder">
