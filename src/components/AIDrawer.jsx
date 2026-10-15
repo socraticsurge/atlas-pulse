@@ -15,6 +15,7 @@ import {
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat, saveSummary, patchArticle } from '../utils/api.js';
+import { isNanoModel } from '../utils/chromeAI.js';
 import { stripHtml } from '../utils/helpers.js';
 import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
 import OllamaSetup from './OllamaSetup.jsx';
@@ -24,6 +25,8 @@ const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
 const MAX_CHAT_MESSAGES = 40; // ~20 exchanges
 
 function pickDefaultModel(models) {
+  const nano = models.find((m) => isNanoModel(m.name));
+  if (nano) return nano.name;
   for (const pref of PREFERRED_MODELS) {
     const found = models.find((m) => m.name.toLowerCase().includes(pref));
     if (found) return found.name;
@@ -190,6 +193,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const [ollamaReady, setOllamaReady] = useState(false);
   const [ollamaChecked, setOllamaChecked] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  const [showOllamaSetup, setShowOllamaSetup] = useState(false);
 
   // Summary state
   const [summary, setSummary] = useState('');
@@ -534,10 +538,28 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         </div>
       </div>
 
-      {/* Ollama setup — only after check confirms it's NOT ready */}
+      {/* No AI engine — Gemini Nano missing and no Ollama models */}
       {ollamaChecked && !ollamaReady && (
         <div className="ai-drawer-setup">
-          <OllamaSetup compact onReady={loadModels} />
+          {showOllamaSetup ? (
+            <OllamaSetup compact onReady={loadModels} />
+          ) : (
+            <div className="ollama-setup-card compact">
+              <div className="ollama-setup-emoji">✨</div>
+              <div className="ollama-setup-body">
+                <h4>No AI model available</h4>
+                <p>
+                  AI features use Gemini Nano, built into desktop Google Chrome (148+) and run
+                  on your device. Open Atlas Pulse in Google Chrome, or use Ollama instead.
+                </p>
+                <div className="ollama-setup-actions">
+                  <button className="btn btn-ghost btn-sm" onClick={() => setShowOllamaSetup(true)}>
+                    Use Ollama instead
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -19,6 +19,7 @@ import {
 import { AUTO_REFRESH_OPTIONS, getAutoRefreshMinutes, saveAutoRefreshMinutes } from '../utils/constants.js';
 import { getBatchSettings, saveBatchSettings } from '../utils/batchSettings.js';
 import OllamaSetup from './OllamaSetup.jsx';
+import { isNanoModel } from '../utils/chromeAI.js';
 
 const PRESET_COLORS = [
   { id: 'emerald', hex: '#00d4aa', label: 'Emerald' },
@@ -61,6 +62,7 @@ export default function SettingsPanel({
 }) {
   const fileInputRef = useRef(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [showOllama, setShowOllama] = useState(false);
   const [pickerColor, setPickerColor] = useState(customAccentHex || '#00d4aa');
   const [pickerTextColor, setPickerTextColor] = useState(customTextColorHex || '#e8eaed');
   const [aiSettings, setAISettings] = useState(getAISettings);
@@ -378,13 +380,37 @@ export default function SettingsPanel({
           <div className="settings-group">
             <h3>AI Processing</h3>
 
-            {/* Ollama — always first, shows status or setup wizard */}
+            {/* Gemini Nano — the default engine, built into Google Chrome */}
             <div className="settings-row settings-row-col">
-              <label>Ollama</label>
-              <OllamaSetup compact showReady />
+              <label>Gemini Nano</label>
+              {availableModels?.some((m) => isNanoModel(m.name)) ? (
+                <div className="ollama-ready-status">
+                  <span className="ollama-ready-dot" />
+                  <span>Built into Chrome · runs on your device</span>
+                </div>
+              ) : (
+                <span className="settings-sublabel">
+                  Not available in this browser. Needs desktop Google Chrome 148+.
+                </span>
+              )}
             </div>
 
-            {/* Model — only shown once Ollama is confirmed running with models */}
+            {/* Ollama — optional; only checked once the user opens it */}
+            <div className="settings-row settings-row-col">
+              <label>
+                Ollama
+                <span className="settings-sublabel"> — optional, for larger local models</span>
+              </label>
+              {showOllama ? (
+                <OllamaSetup compact showReady />
+              ) : (
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowOllama(true)}>
+                  Set up Ollama
+                </button>
+              )}
+            </div>
+
+            {/* Model — shown once any engine has models */}
             {availableModels && availableModels.length > 0 && (
               <div className="settings-row">
                 <label>Model</label>
@@ -496,7 +522,7 @@ export default function SettingsPanel({
             <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7 }}>
               <p><strong>Atlas Pulse</strong> — A modern RSS feed reader</p>
               <p style={{ marginTop: 8 }}>
-                All data is stored locally in your browser using IndexedDB.
+                All data is stored locally on your machine.
                 No accounts, no cloud, no tracking.
               </p>
             </div>

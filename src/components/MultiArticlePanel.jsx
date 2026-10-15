@@ -9,7 +9,7 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineArrowPath,
 } from 'react-icons/hi2';
-import { streamChat } from '../utils/api.js';
+import { streamChat, fetchAIModels } from '../utils/api.js';
 import { stripHtml } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
@@ -99,9 +99,13 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
     rafRef.current = null;
 
     const messages = buildMessages(operation, template, instructions, activeArticles);
-    const model = getBatchSettings().model || '';
+    // "Auto" (empty) uses the first available model — Gemini Nano when present.
+    let model = getBatchSettings().model || '';
+    if (!model) {
+      model = await fetchAIModels().then(({ models }) => models[0]?.name || '').catch(() => '');
+    }
 
-    if (!model) { setError('No AI model selected. Configure one in Settings → AI Processing.'); setGenerating(false); return; }
+    if (!model) { setError('No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.'); setGenerating(false); return; }
 
     const flushTokens = () => {
       const buffered = tokenBufferRef.current;

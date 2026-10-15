@@ -5,7 +5,8 @@ const router = Router();
 
 /**
  * GET /api/ai/models
- * Returns list of locally available Ollama models.
+ * Returns list of locally available Ollama models. Ollama is optional, so
+ * "not running" returns an empty list rather than an error.
  */
 router.get('/models', async (req, res) => {
   const controller = new AbortController();
@@ -22,12 +23,9 @@ router.get('/models', async (req, res) => {
       size: m.size,
     }));
     res.json({ models });
-  } catch (err) {
+  } catch {
     clearTimeout(timeout);
-    if (err.name === 'AbortError') {
-      return res.status(504).json({ error: 'Ollama did not respond in time' });
-    }
-    res.status(503).json({ error: 'Ollama is not reachable', detail: err.message });
+    res.json({ models: [], ollamaAvailable: false });
   }
 });
 
