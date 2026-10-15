@@ -24,6 +24,14 @@ export default defineConfig([
     },
     rules: {
       'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // Maintainability guardrails (see docs/TECH-DEBT.md). Warnings, capped by
+      // --max-warnings in the lint script: existing debt is tolerated, new debt
+      // fails CI. Lower the cap as work packages land.
+      complexity: ['warn', 9],
+      'max-lines-per-function': ['warn', { max: 70, skipBlankLines: true, skipComments: true }],
+      'max-depth': ['warn', 3],
+      'max-params': ['warn', 4],
+      'max-nested-callbacks': ['warn', 3],
     },
   },
   {

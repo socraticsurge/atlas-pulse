@@ -143,5 +143,5 @@ Packages 1 and 2 come first because both new feature areas depend on them. The S
 ## 7. How to re-measure
 
 - **CodeScene:** project `atlas-pulse` → Technical Debt → Code Health. Compare against the tables above.
-- **Local complexity scan:** run ESLint with `complexity: 9`, `max-lines-per-function: 70`, `max-depth: 3`, `max-params: 4`, `max-nested-callbacks: 3` over `src` and `server`. Once Package 6 lands, these rules are part of `npm run lint`.
+- **Local complexity scan:** these rules (`complexity: 9`, `max-lines-per-function: 70`, `max-depth: 3`, `max-params: 4`, `max-nested-callbacks: 3`) are part of `npm run lint` as warnings. The lint script's `--max-warnings` cap is the ratchet: it started at **58** and is lowered as each package lands, so new debt fails CI.
 - **Article list payload:** `curl -so /dev/null -w '%{size_download}\n' http://localhost:3001/api/reader/articles`. The Package 1 target is a page under 1 MB.
