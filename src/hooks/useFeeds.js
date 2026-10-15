@@ -6,18 +6,19 @@ import { parseScope } from '../ai/batch.js';
 
 const REFRESH_CONCURRENCY = 5;
 
+// Optional text fields of a feed item, stored as '' when missing.
+const OPTIONAL_ITEM_FIELDS = ['content', 'summary', 'author', 'imageUrl'];
+
 // Article record for the server from a parsed feed item.
 function toArticle(item) {
+  const { link } = item;
   return {
-    guid: item.guid || item.link,
-    canonicalLink: canonicalizeUrl(item.link) || item.link || '',
+    ...Object.fromEntries(OPTIONAL_ITEM_FIELDS.map((key) => [key, item[key] || ''])),
+    guid: item.guid || link,
+    canonicalLink: canonicalizeUrl(link) || link || '',
     title: item.title,
-    link: item.link,
-    content: item.content || '',
-    summary: item.summary || '',
-    author: item.author || '',
+    link,
     publishedAt: item.publishedAt || new Date().toISOString(),
-    imageUrl: item.imageUrl || '',
   };
 }
 
@@ -94,6 +95,18 @@ async function importFeed(feed) {
   return Boolean(saved);
 }
 
+// Imports the OPML entries not already subscribed; resolves to how many were saved.
+async function importNewFeeds(parsedFeeds, feeds) {
+  const existingUrls = new Set(feeds.map(f => f.url));
+  let importedCount = 0;
+  for (const feed of parsedFeeds) {
+    if (existingUrls.has(feed.url) || !(await importFeed(feed))) continue;
+    existingUrls.add(feed.url);
+    importedCount++;
+  }
+  return importedCount;
+}
+
 // Refreshes feeds a few at a time; resolves to the total number of new articles.
 async function refreshInChunks(feeds, refreshFeed) {
   let totalNew = 0;
@@ -129,15 +142,7 @@ function useFeedSync({ feeds, setFeeds, replaceFeed, onDataChanged }) {
   }, [feeds, refreshFeed, onDataChanged]);
 
   const importFeedsFromOPML = useCallback(async (parsedFeeds) => {
-    let importedCount = 0;
-    const existingUrls = new Set(feeds.map(f => f.url));
-
-    for (const feed of parsedFeeds) {
-      if (existingUrls.has(feed.url) || !(await importFeed(feed))) continue;
-      existingUrls.add(feed.url);
-      importedCount++;
-    }
-
+    const importedCount = await importNewFeeds(parsedFeeds, feeds);
     if (importedCount > 0) {
       setFeeds(await api.fetchFeeds().catch(() => feeds));
       onDataChanged?.();
