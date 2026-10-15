@@ -250,74 +250,48 @@ Installed models appear in the model picker automatically.
 
 ## Project Structure
 
+The component boundaries and dependency rules are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ```
 atlas-pulse/
-│
 ├── package.json                  # Dependencies & npm scripts
 ├── vite.config.js                # Vite config + /api proxy to port 3001
-├── index.html                    # HTML entry point
-├── scripts/
-│   └── service.sh                # macOS background service (launchd) — npm run service
+├── scripts/service.sh            # macOS background service (launchd) — npm run service
+├── docs/                         # ARCHITECTURE.md, TECH-DEBT.md, screenshots
+├── data/                         # Local SQLite databases (created on first run, git-ignored)
+├── shared/searchQuery.js         # Search query tokenizer used by client and server
 │
 ├── server/                       # ── EXPRESS BACKEND (port 3001) ──
-│   ├── index.js                  # Server entry — mounts routes, serves dist/ when built
-│   ├── db/
-│   │   ├── reader.js             # SQLite: feeds, folders, articles (incl. AI fields)
-│   │   ├── summaries.js          # SQLite: saved AI summaries library
-│   │   └── highlights.js         # SQLite: saved highlights
-│   ├── routes/
-│   │   ├── reader.js             # CRUD for feeds, folders, articles
-│   │   ├── feeds.js              # POST /api/feeds/parse|refresh — fetch and parse RSS
-│   │   ├── discover.js           # POST /api/discover — auto-discover feeds
-│   │   ├── articles.js           # POST /api/articles/extract — full article extraction
-│   │   ├── summaries.js          # Saved summaries — CRUD + CSV export
-│   │   ├── highlights.js         # Saved highlights — CRUD + CSV export
-│   │   ├── ai.js                 # GET /api/ai/models · POST /api/ai/chat (Ollama proxy)
-│   │   └── ollama.js             # GET /api/ollama/status · POST /api/ollama/start|pull
-│   └── utils/
-│       ├── feedParser.js         # RSS/Atom parsing (rss-parser)
-│       ├── feedDiscovery.js      # HTML link tag + common path discovery
-│       ├── articleExtractor.js   # Full text extraction (@extractus/article-extractor)
-│       └── urlGuard.js           # SSRF protection for outbound fetches
-│
-├── data/                         # Local SQLite databases (created on first run, git-ignored)
+│   ├── index.js                  # Entry — mounts routes, serves dist/ when built
+│   ├── db/                       # SQLite access: reader, summaries, highlights
+│   │   ├── connection.js         # Opens a database and runs its migrations
+│   │   ├── migrate.js            # Migration runner (PRAGMA user_version)
+│   │   └── migrations/           # Numbered schema migrations per database
+│   ├── routes/                   # reader · feeds · discover · articles · summaries ·
+│   │                             # highlights · ai (Ollama proxy) · ollama (setup)
+│   └── utils/                    # feedParser · feedDiscovery · articleExtractor ·
+│                                 # urlGuard (SSRF) · text · stream
 │
 └── src/                          # ── REACT FRONTEND (port 5173) ──
-    ├── main.jsx                  # React entry — renders <App />
-    ├── App.jsx                   # Root — state, layout, auto-refresh, batch wiring
-    ├── index.css                 # Full design system (themes, typography, all components)
-    │
-    ├── components/
-    │   ├── Sidebar.jsx           # Left panel — nav, folders, feeds, library badges
-    │   ├── ArticleList.jsx       # Middle panel — grid/list/compact + multi-select + AI filters
-    │   ├── ArticleReader.jsx     # Right panel — reader, toolbar, progress bar, sharing
-    │   ├── HighlightToolbar.jsx  # Selection toolbar for saving highlights
-    │   ├── HighlightsLibrary.jsx # Full-panel highlights library
-    │   ├── AIDrawer.jsx          # AI panel — Summary / Analysis / Chat / Highlights tabs
-    │   ├── MultiArticlePanel.jsx # Multi-article AI panel — Compare / Newsletter / Briefing
-    │   ├── OllamaSetup.jsx       # Optional Ollama install/start/model-pull wizard
-    │   ├── LibraryView.jsx       # Full-panel saved summaries library
-    │   ├── AddFeedModal.jsx      # Add feeds via URL / search / popular
-    │   ├── SettingsPanel.jsx     # Appearance, Reading, AI Processing, Data settings
-    │   ├── ReaderSettings.jsx    # Inline reader typography controls
-    │   └── ResizableHandle.jsx   # Draggable panel resize handle
-    │
-    ├── utils/
-    │   ├── api.js                # HTTP client — all /api/* calls + streamChat() (routes to the active engine)
-    │   ├── chromeAI.js           # Gemini Nano adapter (Chrome Prompt API)
-    │   ├── aiSettings.js         # AI persona + tone configuration, buildSystemPrompt
-    │   ├── batchSettings.js      # Batch processor config (enabled, model, features, maxPerCycle)
-    │   ├── helpers.js            # Date formatting, read time, HTML stripping, canonicalizeUrl
-    │   ├── constants.js          # Auto-refresh options, popular feeds, highlight colors
-    │   ├── readerSettings.js     # Reader typography preferences
-    │   ├── opml.js               # OPML import/export
-    │   └── docx.js               # Client-side Markdown → .docx export
-    │
-    └── hooks/
-        ├── useFeeds.js           # Feed CRUD + refresh (dedup by canonicalLink, queues for batch)
-        ├── useFolders.js         # Folder management
-        └── useAIBatchProcessor.js # Background AI engine — queue watcher, processOne loop,
-                                  # triggerBatch (on-demand), pause/resume, progress tracking
+    ├── main.jsx · App.jsx        # Entry and app shell (composition only)
+    ├── index.css                 # Imports src/styles/*.css in cascade order
+    ├── styles/                   # Vanilla CSS, one file per feature area
+    ├── app/                      # Appearance, Toast and Library contexts; layout hooks
+    ├── ai/                       # AI tasks: prompts, context, parsing, batch helpers
+    ├── hooks/                    # Shared hooks: feeds, folders, batch processor, polling…
+    ├── utils/                    # api.js (HTTP + streamChat), chromeAI.js (Gemini Nano),
+    │                             # settings stores, helpers, OPML, DOCX export
+    └── components/
+        ├── Sidebar.jsx           + sidebar/        # Navigation, folder tree, context menu
+        ├── ArticleList.jsx       + article-list/   # List, filters, search, multi-select
+        ├── ArticleReader.jsx     + reader/         # Reader, toolbar, share, highlights
+        ├── AIDrawer.jsx          + ai-drawer/      # Summary · Analysis · Chat · Highlights
+        ├── MultiArticlePanel.jsx + multi-article/  # Compare · Newsletter · Briefing
+        ├── AddFeedModal.jsx      + add-feed/       # URL · search · catalog · OPML
+        ├── SettingsPanel.jsx     + settings/       # One component per section
+        ├── LibraryView.jsx · HighlightsLibrary.jsx + library/
+        ├── HighlightToolbar.jsx  + highlights/
+        └── OllamaSetup.jsx       + ollama/         # Optional Ollama wizard
 ```
 
 ---

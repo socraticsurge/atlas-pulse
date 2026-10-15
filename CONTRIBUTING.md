@@ -8,7 +8,7 @@ Before proposing a change, keep the project's core promises in mind. Contributio
 
 1. **Local-first, always.** All user data stays on the user's machine. No cloud services, no telemetry, no accounts, no external analytics.
 2. **AI is optional and on-device.** AI features must run on the user's own machine — through Gemini Nano built into Chrome (the default) or the user's local Ollama instance. No hosted LLM APIs, no API keys, no usage costs. New AI features must work with both engines.
-3. **No heavy frameworks for styling.** The design system is vanilla CSS in `src/index.css`. Please do not introduce Tailwind, CSS-in-JS, or component libraries.
+3. **No heavy frameworks for styling.** The design system is vanilla CSS in `src/styles/` (one file per feature area, imported in order by `src/index.css`). Please do not introduce Tailwind, CSS-in-JS, or component libraries.
 4. **Privacy over convenience.** When a feature trades privacy for convenience, privacy wins.
 
 ## Getting started
@@ -27,11 +27,12 @@ To work on AI features, open the app in desktop Google Chrome 148+ so Gemini Nan
 
 ## Project layout
 
-See the "Project Structure" and "Architecture Overview" sections of the [README](README.md). In short:
+Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before adding a feature. It maps each component, says where new code belongs, and lists the dependency rules. In short:
 
-- `src/` is the React 19 frontend. State lives in `App.jsx`. All AI calls go through `streamChat()` in `src/utils/api.js`, which routes to Gemini Nano (`src/utils/chromeAI.js`) or Ollama.
-- `server/` is the Express 5 backend: feed proxy with SSRF protection, full-text extraction, the optional Ollama bridge, and all persistent data in SQLite (`server/db/`, files in `data/`).
-- All `/api/*` calls from the frontend are proxied by Vite to port 3001.
+- `src/` is the React 19 frontend. App-wide state lives in contexts under `src/app/`. Each large component has a feature folder holding its hooks and subcomponents.
+- AI prompts and parsing live in `src/ai/`. All AI calls go through `streamChat()` in `src/utils/api.js`, which routes to Gemini Nano (`src/utils/chromeAI.js`) or Ollama.
+- `server/` is the Express 5 backend: a feed proxy with SSRF protection, full-text extraction, the optional Ollama bridge, and all persistent data in SQLite (`server/db/`, with files in `data/`).
+- Vite proxies all `/api/*` calls from the frontend to port 3001.
 
 ## Reporting bugs
 
@@ -53,7 +54,8 @@ Open a [feature request](https://github.com/socraticsurge/atlas-pulse/issues/new
 3. Run `npm run lint` and `npm test`, and make sure the app starts cleanly with `npm run dev`.
 4. Test the affected flows manually, and add tests where practical (`node --test`; see `server/utils/urlGuard.test.js`).
 5. If you change user-facing behavior, update the README (features table, shortcuts, changelog).
-6. If you change a SQLite schema in `server/db/`, migrate existing databases in place (for example `ALTER TABLE … ADD COLUMN`); never require users to delete their data.
+6. If you change a SQLite schema, add a new numbered migration in `server/db/migrations/`. Never edit a released migration, and never require users to delete their data.
+7. Keep `npm run lint` at zero warnings. The complexity rules (complexity 9, 70 lines per function, nesting depth 3, 4 parameters) are there to keep components small. Split the code rather than raising the limit.
 
 ### Commit messages
 
