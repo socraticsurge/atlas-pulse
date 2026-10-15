@@ -37,7 +37,7 @@ Server ─┼──────────────────────�
 | | **AI bridge** | `server/routes/{ai,ollama}.js`, `server/utils/stream.js` | Optional proxy to a local Ollama, plus its install and start helpers. |
 | Shared | **Search query** | `shared/searchQuery.js` | Query tokenizing, used by both the server's FTS search and the client's ranking. |
 | Client | **Shell** | `src/App.jsx`, `src/app/` | Layout, view selection, and the app-wide contexts (Appearance, Toast, Library). |
-| | **Feeds** | `src/components/AddFeedModal.jsx`, `src/components/add-feed/`, `src/hooks/useFeeds.js`, `src/hooks/useFolders.js`, `src/utils/opml.js` | Subscriptions, folders, refresh, OPML import and export. |
+| | **Feeds** | `src/components/AddFeedModal.jsx`, `src/components/add-feed/`, `src/hooks/useFeeds.js`, `src/utils/feedSync.js`, `src/hooks/useFolders.js`, `src/utils/opml.js` | Subscriptions, folders, refresh, OPML import and export. `feedSync.js` holds the operations; `useFeeds` wraps them in React state. |
 | | **Reading** | `src/components/{ArticleList,ArticleReader,HighlightToolbar}.jsx`, `src/components/{article-list,reader,highlights}/` | The list, the reader, highlights and search. |
 | | **AI engines** | `src/utils/chromeAI.js`, `streamChat()` in `src/utils/api.js` | One streaming interface over Gemini Nano and Ollama. |
 | | **AI tasks** | `src/ai/` | Prompts, article context, output parsing and the batch helpers. One module per concern; no React. |
@@ -71,7 +71,7 @@ List endpoints return `LIST_COLUMNS`, which leaves out the article body. The rea
 
 ## Request flows
 
-**Refreshing a feed.** `useFeeds.refreshFeed` → `POST /api/feeds/parse` (Ingestion fetches and normalizes the feed) → `bulkInsertArticles` (Storage skips known GUIDs and canonical links, writes rows, excerpts and FTS entries) → new articles in scope are queued for batch AI.
+**Refreshing a feed.** `useFeeds.refreshFeed` → `refreshOne` (`src/utils/feedSync.js`) → `POST /api/feeds/parse` (Ingestion fetches and normalizes the feed) → `bulkInsertArticles` (Storage skips known GUIDs and canonical links, writes rows, excerpts and FTS entries) → new articles in scope are queued for batch AI.
 
 **Summarizing an article.** `useArticleSummary` → `summaryMessages()` (`src/ai/tasks.js`) → `streamChat` → Gemini Nano or Ollama → tokens are batched to the UI with `useTokenBuffer` → the user saves → `POST /api/summaries`.
 
