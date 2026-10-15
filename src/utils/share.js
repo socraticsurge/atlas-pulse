@@ -11,3 +11,13 @@ export function shareOnX(link, text) {
   const url = encodeURIComponent(link);
   window.open(`https://x.com/intent/tweet?url=${url}&text=${encodeURIComponent(text || '')}`, '_blank', 'width=600,height=400,noopener');
 }
+
+export function shareByEmail(link, title) {
+  window.open(`mailto:?subject=${encodeURIComponent(title || '')}&body=${encodeURIComponent(link || '')}`);
+}
+
+export function shareNatively(link, title) {
+  navigator.share?.({ title, url: link }).catch(() => {});
+}
+
+export const canShareNatively = () => typeof navigator !== 'undefined' && Boolean(navigator.share);

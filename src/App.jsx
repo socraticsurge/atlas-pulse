@@ -11,7 +11,6 @@ import ResizableHandle from './components/ResizableHandle.jsx';
 import { useFeeds } from './hooks/useFeeds.js';
 import { useFolders } from './hooks/useFolders.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
-import { useFullArticle } from './hooks/useFullArticle.js';
 import { getAutoRefreshMinutes } from './utils/constants.js';
 import { fetchSummaries } from './utils/api.js';
 
@@ -251,8 +250,6 @@ function App() {
       if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
     };
   }, [feeds.length, autoRefreshMinutes, refreshAllFeeds]);
-
-  useFullArticle(selectedArticle, setSelectedArticle);
 
   const handleNavigateArticle = useCallback((direction) => {
     if (!selectedArticle || visibleArticles.length === 0) return;
