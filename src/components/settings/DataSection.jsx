@@ -17,7 +17,20 @@ function downloadOPML(feeds, folders) {
   URL.revokeObjectURL(url);
 }
 
-function ImportButton({ onImportOPML, onRefreshAll, onShowToast, onDone }) {
+// Imports the feeds in an OPML file and reports the result as a toast.
+async function importOPMLFile(file, { onImportOPML, onRefreshAll, onShowToast, onDone }) {
+  try {
+    const count = await onImportOPML(parseOPML(await file.text()));
+    if (count > 0) onRefreshAll();
+    const { text, type } = importResultMessage(count);
+    onShowToast?.(text, type === 'success' ? undefined : type);
+    onDone();
+  } catch (err) {
+    onShowToast?.(`Failed to import OPML: ${err.message}`, 'error');
+  }
+}
+
+function ImportButton(handlers) {
   const inputRef = useRef(null);
   const [importing, setImporting] = useState(false);
 
@@ -25,18 +38,9 @@ function ImportButton({ onImportOPML, onRefreshAll, onShowToast, onDone }) {
     const file = e.target.files?.[0];
     if (!file) return;
     setImporting(true);
-    try {
-      const count = await onImportOPML(parseOPML(await file.text()));
-      if (count > 0) onRefreshAll();
-      const { text, type } = importResultMessage(count);
-      onShowToast?.(text, type === 'success' ? undefined : type);
-      onDone();
-    } catch (err) {
-      onShowToast?.(`Failed to import OPML: ${err.message}`, 'error');
-    } finally {
-      setImporting(false);
-      if (inputRef.current) inputRef.current.value = '';
-    }
+    await importOPMLFile(file, handlers);
+    setImporting(false);
+    e.target.value = '';
   };
 
   return (
