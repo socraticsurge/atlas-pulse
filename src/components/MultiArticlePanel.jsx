@@ -1,304 +1,48 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import {
-  HiOutlineXMark,
-  HiOutlineSparkles,
-  HiOutlineClipboardDocument,
-  HiOutlineCheck,
-  HiOutlineArrowDownTray,
-  HiOutlineEnvelope,
-  HiOutlineExclamationCircle,
-  HiOutlineArrowPath,
-} from 'react-icons/hi2';
-import { streamChat } from '../utils/api.js';
-import { prepareMultiArticleRequest } from '../ai/multiArticle.js';
-import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
-import { getAISettings, PERSONAS, TONE_GROUPS } from '../utils/aiSettings.js';
+import { useEffect, useState } from 'react';
+import AIConfigStrip from './ai-drawer/AIConfigStrip.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
+import { countHint, countOk, OPERATIONS } from './multi-article/operations.js';
+import { ArticleChips, ExportBar, Instructions, Output, PanelHeader, TemplatePicker } from './multi-article/Panels.jsx';
+import { useMultiArticleGeneration } from './multi-article/useMultiArticleGeneration.js';
 
-const OPERATIONS = {
-  compare:    { label: 'Compare',    min: 2, max: 5,  hint: '2–5 articles' },
-  newsletter: { label: 'Newsletter', min: 3, max: 15, hint: '3–15 articles' },
-  briefing:   { label: 'Briefing',   min: 2, max: 15, hint: '2–15 articles' },
-};
-
-const NEWSLETTER_TEMPLATES = [
-  { id: 'digest',   label: 'Daily Digest' },
-  { id: 'roundup',  label: 'Weekly Roundup' },
-  { id: 'brief',    label: 'Executive Brief' },
-];
-
-function MapNotice({ notice, error }) {
-  if (!notice || error) return null;
-  return <div className="map-notice">{notice}</div>;
+// Slides in on mount.
+function useSlideIn() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => { requestAnimationFrame(() => setVisible(true)); }, []);
+  return visible;
 }
 
-export default function MultiArticlePanel({ articles: initialArticles, initialOperation, onClose, width, onResize }) {
+/** Multi-article AI panel: Compare, Newsletter, Briefing over the selected articles. */
+export default function MultiArticlePanel({ articles, initialOperation, onClose, width, onResize }) {
   const [operation, setOperation] = useState(initialOperation || 'briefing');
-  const [chips, setChips] = useState(() => initialArticles.map(a => a.id));
+  const [activeIds, setActiveIds] = useState(() => articles.map((a) => a.id));
   const [template, setTemplate] = useState('digest');
   const [instructions, setInstructions] = useState('');
-  const [output, setOutput] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [generated, setGenerated] = useState(false);
-  const [error, setError] = useState(null);
-  const [notice, setNotice] = useState(null);
-  const [copied, setCopied] = useState(false);
+  const gen = useMultiArticleGeneration();
+  const visible = useSlideIn();
 
-  const abortRef = useRef(false);
-  const tokenBufferRef = useRef('');
-  const rafRef = useRef(null);
-  const outputEndRef = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => { requestAnimationFrame(() => setIsVisible(true)); }, []);
-
-  const activeArticles = initialArticles.filter(a => chips.includes(a.id));
-  const op = OPERATIONS[operation];
-  const countOk = activeArticles.length >= op.min && activeArticles.length <= op.max;
-
-  const removeChip = (id) => setChips(prev => prev.filter(x => x !== id));
-
-  const generate = useCallback(async () => {
-    if (!countOk || generating) return;
-    setOutput('');
-    setError(null);
-    setNotice(null);
-    setGenerated(false);
-    setGenerating(true);
-    abortRef.current = false;
-    tokenBufferRef.current = '';
-    rafRef.current = null;
-
-    let request;
-    try {
-      request = await prepareMultiArticleRequest({ operation, template, instructions, articles: activeArticles });
-    } catch (err) {
-      setError(err.message);
-      setGenerating(false);
-      return;
-    }
-    const { model, messages } = request;
-    setNotice(request.notice);
-
-    const flushTokens = () => {
-      const buffered = tokenBufferRef.current;
-      tokenBufferRef.current = '';
-      rafRef.current = null;
-      if (buffered) setOutput(prev => prev + buffered);
-    };
-
-    try {
-      for await (const token of streamChat(model, messages)) {
-        if (abortRef.current) break;
-        tokenBufferRef.current += token;
-        if (!rafRef.current) rafRef.current = requestAnimationFrame(flushTokens);
-      }
-      if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null; }
-      flushTokens();
-      setGenerated(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setGenerating(false);
-    }
-  }, [countOk, generating, operation, template, instructions, activeArticles]);
-
-  const stop = () => { abortRef.current = true; };
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(output);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleDownloadDocx = () => {
-    downloadAsDocx(`atlas-pulse-${operation}`, output);
-  };
-
-  const handleDownloadMd = () => {
-    downloadAsMarkdown(`atlas-pulse-${operation}`, output);
-  };
-
-  const handleEmail = () => {
-    const subject = encodeURIComponent(`Atlas Pulse ${OPERATIONS[operation].label}`);
-    const body = encodeURIComponent(output.slice(0, 2000));
-    window.open(`mailto:?subject=${subject}&body=${body}`, '_self');
-  };
-
-  useEffect(() => {
-    if (generating) outputEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [output, generating]);
-
-  const operationTitle = { compare: 'Compare Sources', newsletter: 'Generate Newsletter', briefing: 'AI Briefing' };
+  const active = articles.filter((a) => activeIds.includes(a.id));
+  const ok = countOk(OPERATIONS[operation], active.length);
+  const generate = () => { if (ok) gen.generate({ operation, template, instructions, articles: active }); };
+  const changeOperation = (key) => { setOperation(key); gen.reset(); };
 
   return (
     <>
       <ResizableHandle onResize={onResize} />
-      <div
-        className={`article-reader-panel multi-article-panel${isVisible ? ' visible' : ''}`}
-        style={{ width }}
-      >
-        {/* Header */}
-        <div className="map-header">
-          <div className="map-header-left">
-            <HiOutlineSparkles className="map-header-icon" />
-            <span className="map-header-title">{operationTitle[operation]}</span>
-          </div>
-          <div className="map-header-ops">
-            {Object.entries(OPERATIONS).map(([key, def]) => (
-              <button
-                key={key}
-                className={`btn btn-ghost btn-sm map-op-btn${operation === key ? ' active' : ''}`}
-                onClick={() => { setOperation(key); setOutput(''); setGenerated(false); setError(null); }}
-              >
-                {def.label}
-              </button>
-            ))}
-          </div>
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} title="Close">
-            <HiOutlineXMark />
-          </button>
-        </div>
-
-        {/* Article chips */}
-        <div className="map-chips-section">
-          <div className="map-chips-row">
-            {initialArticles.map(a => {
-              const active = chips.includes(a.id);
-              return (
-                <div key={a.id} className={`map-chip${active ? '' : ' map-chip-removed'}`}>
-                  <span className="map-chip-title">{a.feedTitle || 'Unknown'} — {a.title?.slice(0, 40)}{(a.title?.length > 40) ? '…' : ''}</span>
-                  {active && (
-                    <button className="map-chip-remove" onClick={() => removeChip(a.id)} title="Remove">
-                      <HiOutlineXMark />
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className={`map-count-hint${!countOk ? ' map-count-warn' : ''}`}>
-            {operation === 'compare' && activeArticles.length > op.max
-              ? `Compare works best with up to ${op.max} articles — remove ${activeArticles.length - op.max} chip${activeArticles.length - op.max > 1 ? 's' : ''}`
-              : activeArticles.length < op.min
-              ? `Select at least ${op.min} articles for ${op.label}`
-              : `${activeArticles.length} article${activeArticles.length !== 1 ? 's' : ''} · ${op.hint}`}
-          </div>
-        </div>
-
-        {/* Operation-specific controls */}
-        {operation === 'newsletter' && (
-          <div className="map-templates">
-            {NEWSLETTER_TEMPLATES.map(t => (
-              <button
-                key={t.id}
-                className={`btn btn-sm map-template-btn${template === t.id ? ' active' : ''}`}
-                onClick={() => setTemplate(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Active AI config strip */}
-        {(() => {
-          const s = getAISettings();
-          const activePersonas = PERSONAS.filter(p => s.personas.includes(p.id));
-          const activeTones = TONE_GROUPS.map(g => {
-            const id = s.tone[g.id] || g.tones[0].id;
-            return g.tones.find(t => t.id === id) || g.tones[0];
-          });
-          return (
-            <div className="ai-config-strip map-config-strip">
-              {activePersonas.map(p => (
-                <span key={p.id} className="ai-config-badge">{p.emoji} {p.label}</span>
-              ))}
-              {activeTones.map(t => (
-                <span key={t.id} className="ai-config-badge ai-config-tone-badge">{t.label}</span>
-              ))}
-              {s.customInstructions?.trim() && (
-                <span className="ai-config-badge ai-config-custom-badge" title={s.customInstructions}>
-                  + Custom
-                </span>
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Instructions */}
-        <div className="map-instructions">
-          <textarea
-            className="map-instructions-input"
-            placeholder={operation === 'briefing'
-              ? 'Your prompt — e.g. "What are the conflicting claims?" or "Draft talking points for a meeting"'
-              : 'Additional instructions (optional)'}
-            value={instructions}
-            onChange={e => setInstructions(e.target.value)}
-            rows={operation === 'briefing' ? 3 : 2}
-          />
-          <div className="map-generate-row">
-            {generating ? (
-              <button className="btn btn-secondary btn-sm" onClick={stop}>Stop</button>
-            ) : (
-              <button
-                className="btn btn-accent btn-sm"
-                onClick={generate}
-                disabled={!countOk}
-                title={!countOk ? `Need ${op.min}–${op.max} articles` : 'Generate'}
-              >
-                <HiOutlineSparkles /> Generate
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Output */}
-        <div className="map-output">
-          {error && (
-            <div className="ai-error" style={{ margin: '16px 20px' }}>
-              <HiOutlineExclamationCircle />
-              <span>{error}</span>
-              <button className="btn btn-ghost btn-sm" onClick={generate}><HiOutlineArrowPath /> Retry</button>
-            </div>
-          )}
-
-          <MapNotice notice={notice} error={error} />
-
-          {!error && !output && !generating && (
-            <div className="map-placeholder">
-              <HiOutlineSparkles />
-              <p>{operation === 'briefing' ? 'Enter your prompt above and click Generate' : `Click Generate to ${operationTitle[operation].toLowerCase()}`}</p>
-            </div>
-          )}
-
-          {output && (
-            <div className="map-output-text">
-              <pre className="map-output-pre">{output}</pre>
-              {generating && <span className="map-cursor" />}
-              <div ref={outputEndRef} />
-            </div>
-          )}
-        </div>
-
-        {/* Export bar */}
-        {generated && output && (
-          <div className="map-export-bar">
-            <button className="btn btn-ghost btn-sm" onClick={handleCopy} title="Copy to clipboard">
-              {copied ? <HiOutlineCheck /> : <HiOutlineClipboardDocument />}
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={handleDownloadMd} title="Download as Markdown">
-              <HiOutlineArrowDownTray /> Markdown
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={handleDownloadDocx} title="Download as Word document">
-              <HiOutlineArrowDownTray /> Word
-            </button>
-            <button className="btn btn-ghost btn-sm" onClick={handleEmail} title="Open in email client">
-              <HiOutlineEnvelope /> Email
-            </button>
-          </div>
-        )}
+      <div className={`article-reader-panel multi-article-panel${visible ? ' visible' : ''}`} style={{ width }}>
+        <PanelHeader operation={operation} onOperationChange={changeOperation} onClose={onClose} />
+        <ArticleChips
+          articles={articles}
+          activeIds={activeIds}
+          onRemove={(id) => setActiveIds((prev) => prev.filter((x) => x !== id))}
+          hint={countHint(operation, active.length)}
+          ok={ok}
+        />
+        {operation === 'newsletter' && <TemplatePicker value={template} onChange={setTemplate} />}
+        <AIConfigStrip className="map-config-strip" />
+        <Instructions operation={operation} value={instructions} onChange={setInstructions} gen={gen} ok={ok} onGenerate={generate} />
+        <Output operation={operation} gen={gen} onRetry={generate} />
+        {gen.generated && gen.output && <ExportBar operation={operation} output={gen.output} />}
       </div>
     </>
   );
