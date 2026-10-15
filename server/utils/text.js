@@ -5,16 +5,30 @@ const ENTITIES = {
 // Plain-text excerpt length stored per article for list views and search.
 export const EXCERPT_LENGTH = 300;
 
-/** Strips tags (repeatedly, so nested fragments can't survive), decodes common entities, collapses whitespace. */
+/**
+ * Removes every `<...>` span in a single linear pass. Once no closing `>`
+ * remains, the rest is kept as text — so input like "<<<<…" can't trigger
+ * the quadratic backtracking a /<[^>]*>/ regex would.
+ */
+export function stripTags(html) {
+  const s = String(html);
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const open = s.indexOf('<', i);
+    if (open === -1) break;
+    const close = s.indexOf('>', open + 1);
+    if (close === -1) break;
+    out += s.slice(i, open) + ' ';
+    i = close + 1;
+  }
+  return out + s.slice(i);
+}
+
+/** Strips tags, decodes common entities, collapses whitespace. */
 export function htmlToText(html) {
   if (!html) return '';
-  let text = String(html);
-  let prev;
-  do {
-    prev = text;
-    text = text.replace(/<[^>]*>/g, ' ');
-  } while (text !== prev);
-  return text
+  return stripTags(html)
     .replace(/&(?:amp|lt|gt|quot|apos|nbsp|#39);/g, (m) => ENTITIES[m])
     .replace(/\s+/g, ' ')
     .trim();

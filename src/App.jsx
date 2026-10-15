@@ -254,10 +254,6 @@ function App() {
 
   useFullArticle(selectedArticle, setSelectedArticle);
 
-  const handleSelectArticle = useCallback((article) => {
-    setSelectedArticle(article);
-  }, []);
-
   const handleNavigateArticle = useCallback((direction) => {
     if (!selectedArticle || visibleArticles.length === 0) return;
     const currentIndex = visibleArticles.findIndex(a => a.id === selectedArticle.id);
@@ -354,7 +350,7 @@ function App() {
         <ArticleList
           activeView={activeView}
           selectedArticleId={selectedArticle?.id}
-          onSelectArticle={handleSelectArticle}
+          onSelectArticle={setSelectedArticle}
           onArticlesLoaded={setVisibleArticles}
           sidebarHidden={sidebarMode === 'hidden'}
           onShowSidebar={toggleSidebarMode}
