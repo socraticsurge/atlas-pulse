@@ -221,74 +221,78 @@ export function removeFeed(id) {
 
 // ── Article operations ────────────────────────────────────────────────────────
 
-export function bulkInsertArticles(feedId, items) {
-  if (items.length === 0) return 0;
+// SQLite only accepts numbers, strings, bigints, buffers, and null. RSS
+// parsers can return Date objects, arrays, or nested objects, so coerce.
+function toSqlText(v) {
+  if (v == null) return null;
+  if (v instanceof Date) return v.toISOString();
+  if (Array.isArray(v)) return v.join(', ');
+  return String(v);
+}
 
-  // SQLite only accepts: numbers, strings, bigints, buffers, null.
-  // RSS parsers can return Date objects, arrays, or nested objects — sanitize everything.
-  const toStr = (v) => {
-    if (v == null) return null;
-    if (typeof v === 'string') return v;
-    if (typeof v === 'number' || typeof v === 'bigint') return String(v);
-    if (v instanceof Date) return v.toISOString();
-    if (Array.isArray(v)) return v.join(', ');
-    return String(v);
-  };
+function existingCanonicalLinks(links) {
+  if (links.length === 0) return new Set();
+  const placeholders = links.map(() => '?').join(',');
+  return new Set(
+    db.prepare(`SELECT canonical_link FROM articles WHERE canonical_link IN (${placeholders})`)
+      .all(...links).map(r => r.canonical_link)
+  );
+}
 
+// Items not already stored: by guid within the feed, then by canonical link anywhere.
+function unseenItems(feedId, items) {
   const existingGuids = new Set(
     db.prepare(`SELECT guid FROM articles WHERE feed_id = ?`).all(feedId).map(r => r.guid)
   );
-
   const candidates = items.filter(a => !existingGuids.has(a.guid || a.link));
-  if (candidates.length === 0) return 0;
+  const known = existingCanonicalLinks(candidates.map(a => a.canonicalLink).filter(Boolean));
+  return candidates.filter(a => !a.canonicalLink || !known.has(a.canonicalLink));
+}
 
-  const canonicals = candidates.map(a => a.canonicalLink).filter(Boolean);
-  let existingCanonicals = new Set();
-  if (canonicals.length > 0) {
-    const placeholders = canonicals.map(() => '?').join(',');
-    existingCanonicals = new Set(
-      db.prepare(`SELECT canonical_link FROM articles WHERE canonical_link IN (${placeholders})`)
-        .all(...canonicals).map(r => r.canonical_link)
-    );
-  }
+function articleRow(feedId, a, now) {
+  const summary = toSqlText(a.summary);
+  const content = toSqlText(a.content);
+  return {
+    feed_id: feedId,
+    guid: toSqlText(a.guid || a.link),
+    title: toSqlText(a.title),
+    link: toSqlText(a.link),
+    canonical_link: toSqlText(a.canonicalLink),
+    published_at: toSqlText(a.publishedAt) || now,
+    content,
+    summary,
+    author: toSqlText(a.author),
+    image_url: toSqlText(a.imageUrl),
+    description: toSqlText(a.description),
+    favicon: null,
+    created_at: now,
+    excerpt: makeExcerpt(summary, content),
+  };
+}
 
-  const toInsert = candidates.filter(
-    a => !a.canonicalLink || !existingCanonicals.has(a.canonicalLink)
-  );
+const insertArticle = db.prepare(
+  `INSERT OR IGNORE INTO articles
+     (feed_id, guid, title, link, canonical_link, published_at, is_read, is_bookmarked,
+      content, summary, author, image_url, description, ai_status, favicon, created_at, excerpt)
+   VALUES
+     (@feed_id, @guid, @title, @link, @canonical_link, @published_at, 0, 0,
+      @content, @summary, @author, @image_url, @description, 'none', @favicon, @created_at, @excerpt)`
+);
+const indexArticle = db.prepare(`INSERT INTO articles_fts (rowid, body) VALUES (?, ?)`);
+
+/** Stores new items for a feed and indexes them for search; returns how many were added. */
+export function bulkInsertArticles(feedId, items) {
+  const toInsert = items.length === 0 ? [] : unseenItems(feedId, items);
   if (toInsert.length === 0) return 0;
 
-  const insertOne = db.prepare(
-    `INSERT OR IGNORE INTO articles
-       (feed_id, guid, title, link, canonical_link, published_at, is_read, is_bookmarked,
-        content, summary, author, image_url, description, ai_status, favicon, created_at, excerpt)
-     VALUES
-       (@feed_id, @guid, @title, @link, @canonical_link, @published_at, 0, 0,
-        @content, @summary, @author, @image_url, @description, 'none', @favicon, @created_at, @excerpt)`
-  );
-
-  const indexOne = db.prepare(`INSERT INTO articles_fts (rowid, body) VALUES (?, ?)`);
   const now = new Date().toISOString();
   let count = 0;
   db.transaction(() => {
     for (const a of toInsert) {
-      const info = insertOne.run({
-        feed_id: feedId,
-        guid: toStr(a.guid || a.link),
-        title: toStr(a.title),
-        link: toStr(a.link),
-        canonical_link: toStr(a.canonicalLink),
-        published_at: toStr(a.publishedAt) || now,
-        content: toStr(a.content),
-        summary: toStr(a.summary),
-        author: toStr(a.author),
-        image_url: toStr(a.imageUrl),
-        description: toStr(a.description),
-        favicon: null,
-        created_at: now,
-        excerpt: makeExcerpt(toStr(a.summary), toStr(a.content)),
-      });
+      const row = articleRow(feedId, a, now);
+      const info = insertArticle.run(row);
       if (info.changes > 0) {
-        indexOne.run(info.lastInsertRowid, searchText(toStr(a.summary), toStr(a.content)));
+        indexArticle.run(info.lastInsertRowid, searchText(row.summary, row.content));
         count++;
       }
     }

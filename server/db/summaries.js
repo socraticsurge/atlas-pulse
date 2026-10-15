@@ -33,23 +33,21 @@ const deleteById = db.prepare(`
   DELETE FROM summaries WHERE id = ?
 `);
 
+// Optional summary columns, stored as NULL when missing or empty.
+const OPTIONAL_FIELDS = [
+  'article_title', 'article_url', 'article_author', 'article_source', 'article_published_at',
+  'ai_model', 'ai_tone_voice', 'ai_tone_energy', 'ai_tone_angle', 'ai_custom_instructions',
+];
+
+const personasColumn = (personas) => (Array.isArray(personas) ? JSON.stringify(personas) : personas || null);
+
 export function saveSummary(data) {
+  const row = Object.fromEntries(OPTIONAL_FIELDS.map((key) => [key, data[key] || null]));
   const info = insert.run({
+    ...row,
     created_at: new Date().toISOString(),
-    article_title: data.article_title || null,
-    article_url: data.article_url || null,
-    article_author: data.article_author || null,
-    article_source: data.article_source || null,
-    article_published_at: data.article_published_at || null,
     summary_text: data.summary_text,
-    ai_model: data.ai_model || null,
-    ai_personas: Array.isArray(data.ai_personas)
-      ? JSON.stringify(data.ai_personas)
-      : data.ai_personas || null,
-    ai_tone_voice: data.ai_tone_voice || null,
-    ai_tone_energy: data.ai_tone_energy || null,
-    ai_tone_angle: data.ai_tone_angle || null,
-    ai_custom_instructions: data.ai_custom_instructions || null,
+    ai_personas: personasColumn(data.ai_personas),
   });
   return getById.get(info.lastInsertRowid);
 }
