@@ -225,6 +225,11 @@ export async function fetchArticles(view = 'all', id) {
   return readerFetch(`/articles?${params}`);
 }
 export async function fetchArticle(id) { return readerFetch(`/articles/${id}`); }
+
+// List items omit article bodies; load full articles for any that lack one.
+export async function withFullContent(articles) {
+  return Promise.all(articles.map((a) => ('content' in a ? a : fetchArticle(a.id).catch(() => a))));
+}
 export async function fetchArticleByLink(url) {
   return readerFetch(`/articles/by-link?url=${encodeURIComponent(url)}`);
 }

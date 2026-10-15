@@ -9,7 +9,7 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineArrowPath,
 } from 'react-icons/hi2';
-import { streamChat, fetchAIModels } from '../utils/api.js';
+import { streamChat, fetchAIModels, withFullContent } from '../utils/api.js';
 import { isNanoModel, fitToNanoContext } from '../utils/chromeAI.js';
 import { htmlToText } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
@@ -88,7 +88,8 @@ async function resolveModel() {
 async function prepareRequest(request) {
   const model = await resolveModel();
   if (!model) throw new Error(NO_MODEL_ERROR);
-  const build = (chars) => buildMessages(request, chars);
+  const full = { ...request, articles: await withFullContent(request.articles) };
+  const build = (chars) => buildMessages(full, chars);
   if (!isNanoModel(model)) return { model, messages: build(), notice: null };
 
   const { chars, trimmed } = await fitToNanoContext(

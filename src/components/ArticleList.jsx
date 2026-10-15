@@ -118,7 +118,7 @@ export default function ArticleList({
     const scored = [];
     for (const article of articles) {
       const title = (article.title || '').toLowerCase();
-      const body = stripHtml(article.summary || article.content || '').toLowerCase();
+      const body = (article.excerpt || '').toLowerCase();
       const source = (feedMap[article.feedId]?.title || '').toLowerCase();
       let topics = '';
       if (article.aiAnalysis) {
@@ -496,7 +496,7 @@ export default function ArticleList({
             }
 
             if (viewMode === 'excerpt') {
-              const summary = stripHtml(article.summary || article.content || '');
+              const summary = stripHtml(article.excerpt || '');
               return (
                 <div
                   key={article.id}
