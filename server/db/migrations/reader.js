@@ -1,4 +1,4 @@
-import { makeExcerpt } from '../../utils/text.js';
+import { makeExcerpt, searchText } from '../../utils/text.js';
 
 // Schema history for reader.db. Never edit a shipped migration; append a new one.
 export const MIGRATIONS = [
@@ -70,6 +70,27 @@ export const MIGRATIONS = [
       let lastId = 0;
       for (let rows = batch.all(lastId); rows.length > 0; rows = batch.all(lastId)) {
         for (const row of rows) update.run(makeExcerpt(row.summary, row.content), row.id);
+        lastId = rows[rows.length - 1].id;
+      }
+    },
+  },
+  {
+    version: 3,
+    description: 'Full-text index of article bodies (contentless FTS5)',
+    up: (db) => {
+      db.exec(`
+        CREATE VIRTUAL TABLE articles_fts USING fts5(
+          body, content='', contentless_delete=1, tokenize='porter unicode61'
+        );
+        CREATE TRIGGER articles_fts_delete AFTER DELETE ON articles BEGIN
+          DELETE FROM articles_fts WHERE rowid = old.id;
+        END;
+      `);
+      const batch = db.prepare('SELECT id, summary, content FROM articles WHERE id > ? ORDER BY id LIMIT 500');
+      const index = db.prepare('INSERT INTO articles_fts (rowid, body) VALUES (?, ?)');
+      let lastId = 0;
+      for (let rows = batch.all(lastId); rows.length > 0; rows = batch.all(lastId)) {
+        for (const row of rows) index.run(row.id, searchText(row.summary, row.content));
         lastId = rows[rows.length - 1].id;
       }
     },

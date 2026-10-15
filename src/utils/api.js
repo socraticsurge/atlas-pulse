@@ -225,6 +225,9 @@ export async function fetchArticles(view = 'all', id) {
   return readerFetch(`/articles?${params}`);
 }
 export async function fetchArticle(id) { return readerFetch(`/articles/${id}`); }
+export async function searchArticleBodies(query) {
+  return readerFetch(`/articles/search?q=${encodeURIComponent(query)}`);
+}
 
 // List items omit article bodies; load full articles for any that lack one.
 export async function withFullContent(articles) {

@@ -1,7 +1,7 @@
 import { join } from 'path';
 import { DATA_DIR, openDatabase } from './connection.js';
 import { MIGRATIONS } from './migrations/reader.js';
-import { makeExcerpt } from '../utils/text.js';
+import { makeExcerpt, searchText, tokenizeQuery } from '../utils/text.js';
 
 const DB_FILE = 'reader.db';
 export const DB_PATH = join(DATA_DIR, DB_FILE);
@@ -266,6 +266,7 @@ export function bulkInsertArticles(feedId, items) {
         @content, @summary, @author, @image_url, @description, 'none', @favicon, @created_at, @excerpt)`
   );
 
+  const indexOne = db.prepare(`INSERT INTO articles_fts (rowid, body) VALUES (?, ?)`);
   const now = new Date().toISOString();
   let count = 0;
   db.transaction(() => {
@@ -286,7 +287,10 @@ export function bulkInsertArticles(feedId, items) {
         created_at: now,
         excerpt: makeExcerpt(toStr(a.summary), toStr(a.content)),
       });
-      if (info.changes > 0) count++;
+      if (info.changes > 0) {
+        indexOne.run(info.lastInsertRowid, searchText(toStr(a.summary), toStr(a.content)));
+        count++;
+      }
     }
   })();
   return count;
@@ -317,6 +321,27 @@ export function getArticles(view, id) {
     default:
       return stmts.getAllArticles.all().map(toListItem);
   }
+}
+
+// FTS5 query for one search term: phrases match exactly, single words also
+// match as prefixes ("cloud" finds "clouds"). Quotes are escaped by doubling.
+function ftsTerm(token) {
+  const quoted = `"${token.replace(/"/g, '""')}"`;
+  return token.includes(' ') ? quoted : `${quoted}*`;
+}
+
+const stmtSearchTerm = db.prepare(`SELECT rowid AS id FROM articles_fts WHERE articles_fts MATCH ?`);
+
+/**
+ * Full-text body search. Returns the query terms and, aligned by index, the
+ * ids of articles whose body contains each term — callers combine these with
+ * title/source/topic matches. (Arrays, not an object keyed by user input, so
+ * a term like "__proto__" can't touch object prototypes.)
+ */
+export function searchArticleBodies(query) {
+  const tokens = tokenizeQuery(query).slice(0, 10);
+  const matches = tokens.map((token) => stmtSearchTerm.all(ftsTerm(token)).map((r) => r.id));
+  return { tokens, matches };
 }
 
 export function getArticleById(id) {

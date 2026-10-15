@@ -1,3 +1,5 @@
+export { tokenizeQuery } from '../../shared/searchQuery.js';
+
 const ENTITIES = {
   '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&apos;': "'", '&nbsp;': ' ',
 };
@@ -38,4 +40,9 @@ export function htmlToText(html) {
 export function makeExcerpt(...sources) {
   const source = sources.find((s) => s && String(s).trim());
   return htmlToText(source).slice(0, EXCERPT_LENGTH);
+}
+
+/** Plain text indexed for full-text search: RSS summary plus content. */
+export function searchText(summary, content) {
+  return htmlToText([summary, content].filter(Boolean).join(' '));
 }
