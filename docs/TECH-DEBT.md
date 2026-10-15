@@ -21,6 +21,36 @@ This document records where Atlas Pulse's maintainability stands, why, and the p
 
 No file is in CodeScene's red ("risky") band. The debt is broad rather than deep. It sits mainly in large React components that combine several features, plus a few structural gaps: no AI layer, no data-access paging, no schema migrations.
 
+## Status after the refactoring round (v1.5 foundations)
+
+Packages 1–6 below were carried out as a series of behavior-preserving pull requests between v1.4.0 and v1.5. The tables in sections 1 and 2 are the **baseline** and are kept for comparison.
+
+| Package | Outcome |
+|---|---|
+| 1 Data access | Done, except paging. Migration runner (`PRAGMA user_version`), list views without content, excerpt column, FTS5 body search. The article list payload fell from **78 MB to 7.8 MB**. It is still unpaginated, so the under-1 MB target is not met (see below). |
+| 2 AI tasks layer | Done. `src/ai/` holds the prompts, context building, one parser, the task runner and the batch helpers. Prompts are pinned byte for byte by tests. |
+| 3 Component decomposition | Done. `AIDrawer`, `ArticleReader`, `ArticleList`, `AddFeedModal`, `Sidebar`, `SettingsPanel`, `MultiArticlePanel`, the libraries, `HighlightToolbar`, `ReaderSettings` and `OllamaSetup` are split into feature folders. |
+| 4 State contexts | Done. Appearance, Toast and Library contexts replace prop drilling from `App.jsx`. |
+| 5 Ingestion and server cleanup | Done. Parsers, discovery, the URL guard, OPML, the AI and Ollama routes, `saveSummary` and `bulkInsertArticles`. Batch processor and feed hooks too. |
+| 6 Guardrails | CSS split into `src/styles/` (24 files, built output unchanged). The ESLint complexity ratchet went from 58 warnings to **0**. CodeScene components and PR integration still need configuring by a maintainer. |
+
+The test suite grew from 20 to 79 tests. The architecture is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+
+**Fixed along the way:**
+- "Mark all read" now asks for confirmation.
+- The batch processor stops polling when its queue is empty. It used to re-query every 50 ms.
+- ReDoS-safe tag stripping.
+- Rate limiting on static files.
+
+### Still open
+
+- **Article list paging.** The list still loads every article (7.8 MB on a 9,500-article library). This needs a paginated endpoint and incremental loading in `ArticleList`.
+- **Large feeds fail to refresh.** `express.json` is limited to 2 MB, and `bulkInsertArticles` receives every item with its full content. A feed whose items exceed 2 MB fails to refresh, and the only sign is a `PayloadTooLargeError` in the server log. Fix it by raising the limit for that route or sending items in chunks.
+- **Highlights spanning element boundaries.** `applyHighlights` matches text inside a single text node. A highlight that crosses a link or other inline element is saved but not redrawn when the article is reopened.
+- **Scroll restore.** The reader restores scroll position before full-text extraction finishes. When the extracted text is longer than the feed's version, the restored position can land in the wrong place. Positions are remembered only for the current session.
+- **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
+- **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
+
 ## 1. File-level Code Health (CodeScene)
 
 | Band | Files |
@@ -81,7 +111,7 @@ Ranked by impact.
 Only utilities are tested: the SSRF guard, OPML URLs, the Gemini Nano adapter, the API client, and text helpers. That is 20 tests. Database modules, routes, hooks and components have none.
 
 ### 3.6 Styling
-`src/index.css` is a single 5,067-line file, organized by comment banners.
+At baseline, `src/index.css` was a single 5,067-line file, organized by comment banners. It is now split by feature into `src/styles/`.
 
 ### 3.7 Tooling
 - CodeScene PR checks currently run through a different CodeScene project's PR integration. The `atlas-pulse` project has PR integration unset and **no architectural components defined**.
@@ -143,5 +173,5 @@ Packages 1 and 2 come first because both new feature areas depend on them. The S
 ## 7. How to re-measure
 
 - **CodeScene:** project `atlas-pulse` → Technical Debt → Code Health. Compare against the tables above.
-- **Local complexity scan:** these rules (`complexity: 9`, `max-lines-per-function: 70`, `max-depth: 3`, `max-params: 4`, `max-nested-callbacks: 3`) are part of `npm run lint` as warnings. The lint script's `--max-warnings` cap is the ratchet: it started at **58** and is lowered as each package lands, so new debt fails CI.
+- **Local complexity scan:** these rules (`complexity: 9`, `max-lines-per-function: 70`, `max-depth: 3`, `max-params: 4`, `max-nested-callbacks: 3`) are part of `npm run lint` as warnings. The lint script's `--max-warnings` cap is the ratchet: it started at **58**, was lowered as each package landed, and is now **0**, so any new finding fails CI.
 - **Article list payload:** `curl -so /dev/null -w '%{size_download}\n' http://localhost:3001/api/reader/articles`. The Package 1 target is a page under 1 MB.
