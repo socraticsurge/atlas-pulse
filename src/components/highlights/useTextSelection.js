@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
 import { toolbarPosition } from './toolbarPosition.js';
 
+// The window's selection if it covers some text, else null.
+function activeSelection() {
+  const selection = window.getSelection();
+  const hasRange = selection?.rangeCount > 0 && !selection.isCollapsed;
+  return hasRange ? selection : null;
+}
+
 // The current selection inside the article body, or null.
 function selectionInArticle(container) {
-  const selection = window.getSelection();
-  if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
+  const selection = activeSelection();
+  if (!selection) return null;
   const text = selection.toString().trim();
   const content = container?.querySelector('.reader-article-content');
   if (!text || !content) return null;
