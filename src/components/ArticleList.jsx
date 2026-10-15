@@ -16,6 +16,8 @@ import {
 } from 'react-icons/hi2';
 import { fetchArticles, fetchFeeds, bulkUpdateArticles } from '../utils/api.js';
 import { timeAgo, stripHtml } from '../utils/helpers.js';
+import { useArticleSearch } from '../hooks/useArticleSearch.js';
+import { useOnKeyChange } from '../hooks/useOnKeyChange.js';
 
 const FILTER_DIMS = [
   { key: 'sentiment', label: 'Sentiment', values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative' } },
@@ -68,7 +70,8 @@ export default function ArticleList({
   onCountChanged,
 }) {
   const [articles, setArticles] = useState([]);
-  const [loading, setLoading] = useState(false);
+  // Key of the view whose articles are loaded; loading while it differs from the current one.
+  const [loadedKey, setLoadedKey] = useState(null);
   const [feeds, setFeeds] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -88,13 +91,18 @@ export default function ArticleList({
     fetchFeeds().then(setFeeds).catch(() => {});
   }, []);
 
-  // Load articles whenever the view or refreshKey changes
+  // Load articles whenever the view or refreshKey changes. Stale responses
+  // (from a view the user already left) are ignored.
+  const viewKey = `${activeView.type}:${activeView.id}:${refreshKey}`;
+  const loading = loadedKey !== viewKey;
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetchArticles(activeView.type, activeView.id)
-      .then(data => { setArticles(data); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, [activeView.type, activeView.id, refreshKey]);
+      .then(data => { if (!cancelled) setArticles(data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoadedKey(viewKey); });
+    return () => { cancelled = true; };
+  }, [activeView.type, activeView.id, viewKey]);
 
   const feedMap = useMemo(() => {
     const m = {};
@@ -107,40 +115,9 @@ export default function ArticleList({
     setArticles(prev => prev.map(a => a.id === id ? { ...a, ...changes } : a));
   }, []);
 
-  // Filter articles by search query
-  const filteredBySearch = useMemo(() => {
-    if (!searchQuery.trim()) return articles;
-    const tokens = [];
-    const tokenRe = /"([^"]+)"|(\S+)/g;
-    let m;
-    while ((m = tokenRe.exec(searchQuery)) !== null) tokens.push((m[1] || m[2]).toLowerCase());
-
-    const scored = [];
-    for (const article of articles) {
-      const title = (article.title || '').toLowerCase();
-      const body = (article.excerpt || '').toLowerCase();
-      const source = (feedMap[article.feedId]?.title || '').toLowerCase();
-      let topics = '';
-      if (article.aiAnalysis) {
-        try { topics = (JSON.parse(article.aiAnalysis).topics || []).join(' ').toLowerCase(); } catch { /* malformed aiAnalysis — skip topics */ }
-      }
-      let score = 0, allMatch = true;
-      for (const token of tokens) {
-        const inTitle = title.includes(token);
-        const inBody = body.includes(token);
-        const inSource = source.includes(token);
-        const inTopics = topics.includes(token);
-        if (!inTitle && !inBody && !inSource && !inTopics) { allMatch = false; break; }
-        if (inTitle) score += 10;
-        if (inSource) score += 5;
-        if (inTopics) score += 3;
-        if (inBody) score += 1;
-      }
-      if (allMatch) scored.push({ article, score });
-    }
-    scored.sort((a, b) => b.score - a.score);
-    return scored.map(s => s.article);
-  }, [articles, searchQuery, feedMap]);
+  // Filter and rank articles by search query (title, source, AI topics, full text)
+  const sourceOf = useCallback((article) => feedMap[article.feedId]?.title, [feedMap]);
+  const filteredBySearch = useArticleSearch(articles, searchQuery, sourceOf);
 
   const availableFilters = useMemo(() => {
     const result = {};
@@ -187,7 +164,9 @@ export default function ArticleList({
     return () => clearTimeout(notifyTimerRef.current);
   }, [filteredArticles, onArticlesLoaded]);
 
-  useEffect(() => { setSelectedIds(new Set()); }, [activeView.type, activeView.id]);
+  // Clear the multi-selection when the view changes (adjusted during render,
+  // so the new view never paints with the old selection).
+  useOnKeyChange(`${activeView.type}:${activeView.id}`, () => setSelectedIds(new Set()));
 
   useEffect(() => {
     const handler = (e) => {

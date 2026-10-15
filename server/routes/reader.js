@@ -3,7 +3,7 @@ import {
   createFolder, listFolders, updateFolderById, removeFolderById, removeFolderAndFeedsById,
   findFolderByName,
   createFeed, listFeeds, getFeed, updateFeed, removeFeed,
-  bulkInsertArticles, getArticles, getArticleById, findArticleByLink,
+  bulkInsertArticles, getArticles, getArticleById, findArticleByLink, searchArticleBodies,
   updateArticle, bulkUpdateArticles, getArticlesByAiStatus, getUnprocessedForFeed,
   getQueueCount, resetProcessingToQueued, getCounts, clearAll,
   DB_PATH,
@@ -131,6 +131,13 @@ router.get('/articles/unprocessed', (req, res) => {
   const limit = Number(req.query.limit) || 10;
   if (!Number.isInteger(feedId)) return res.status(400).json({ error: 'feedId is required' });
   try { res.json(getUnprocessedForFeed(feedId, limit)); }
+  catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Full-text body matches per search term: { tokens, matches: { term: [ids] } }
+router.get('/articles/search', (req, res) => {
+  const q = String(req.query.q || '').slice(0, 500);
+  try { res.json(searchArticleBodies(q)); }
   catch (err) { res.status(500).json({ error: err.message }); }
 });
 
