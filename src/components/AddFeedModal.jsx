@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HiOutlineBell, HiOutlineGlobeAlt, HiOutlineMagnifyingGlass, HiOutlineRss, HiOutlineXMark } from 'react-icons/hi2';
+import { useLibrary } from '../app/LibraryContext.jsx';
 import { AlertsTab } from './add-feed/AlertsTab.jsx';
 import { useAsyncStatus, useFeedAdder, useFeedDiscovery, useGoogleNews } from './add-feed/hooks.js';
 import { PopularTab } from './add-feed/PopularTab.jsx';
@@ -26,7 +27,8 @@ function FolderPicker({ folders, value, onChange }) {
 }
 
 /** Add Content modal: add feeds by URL, catalog search, popular categories, or Google Alerts. */
-export default function AddFeedModal({ isOpen, onClose, onAddFeed, existingFeedUrls, folders }) {
+export default function AddFeedModal({ isOpen, onClose }) {
+  const { onAddFeed, existingFeedUrls, folders } = useLibrary();
   const [tab, setTab] = useState('discover');
   const [folderId, setFolderId] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
