@@ -33,7 +33,8 @@ export function useArticleAnalysis({ article, extractedContent, model }) {
   });
 
   const run = useCallback(async () => {
-    if (!article || !model || analyzing) return;
+    if (analyzing) return;
+    if (!article || !model) return;
     setAnalyzing(true);
     setError(null);
     abortRef.current = false;

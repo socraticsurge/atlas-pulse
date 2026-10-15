@@ -32,6 +32,14 @@ export function batchMessages(article) {
   ];
 }
 
+/** Streams a task's tokens to onToken until done or shouldStop() turns true. */
+export async function streamTokens(model, messages, onToken, shouldStop = () => false) {
+  for await (const token of streamChat(model, messages)) {
+    if (shouldStop()) return;
+    onToken(token);
+  }
+}
+
 /** Runs a task and returns the full response; stops early if shouldStop() turns true. */
 export async function collectResponse(model, messages, shouldStop = () => false) {
   let response = '';

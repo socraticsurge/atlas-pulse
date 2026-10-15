@@ -16,11 +16,56 @@ function ChatMessage({ msg, typing }) {
   );
 }
 
+function ChatEmpty({ onSuggest }) {
+  return (
+    <div className="ai-chat-empty">
+      <HiOutlineSparkles />
+      <p>Ask anything about this article</p>
+      <div className="ai-chat-suggestions">
+        {SUGGESTIONS.map((s) => (
+          <button key={s} className="ai-suggestion-chip" onClick={() => onSuggest(s)}>{s}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatInput({ chat, inputRef }) {
+  const { input, setInput, loading, send, stop } = chat;
+  const handleKeyDown = (e) => {
+    if (e.key !== 'Enter' || e.shiftKey) return;
+    e.preventDefault();
+    send();
+  };
+  return (
+    <div className="ai-chat-input-row">
+      <textarea
+        ref={inputRef}
+        className="ai-chat-input"
+        placeholder="Ask about this article…"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        rows={1}
+        disabled={loading}
+      />
+      <button
+        className="btn btn-primary ai-send-btn"
+        onClick={loading ? stop : send}
+        disabled={!loading && !input.trim()}
+        title={loading ? 'Stop' : 'Send'}
+      >
+        {loading ? <HiOutlineXMark /> : <HiOutlinePaperAirplane />}
+      </button>
+    </div>
+  );
+}
+
 /** Chat tab: conversation about the article. chat = useArticleChat(). */
 export default function ChatTab({ chat }) {
   const endRef = useRef(null);
   const inputRef = useRef(null);
-  const { messages, input, setInput, loading, error, send, stop } = chat;
+  const { messages, loading, error, setInput } = chat;
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => {
@@ -28,34 +73,15 @@ export default function ChatTab({ chat }) {
     return () => clearTimeout(t);
   }, []);
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      send();
-    }
-  };
+  const suggest = (text) => { setInput(text); inputRef.current?.focus(); };
 
   return (
     <div className="ai-chat-container">
       <div className="ai-chat-messages">
-        {messages.length === 0 && (
-          <div className="ai-chat-empty">
-            <HiOutlineSparkles />
-            <p>Ask anything about this article</p>
-            <div className="ai-chat-suggestions">
-              {SUGGESTIONS.map((s) => (
-                <button key={s} className="ai-suggestion-chip" onClick={() => { setInput(s); inputRef.current?.focus(); }}>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
+        {messages.length === 0 && <ChatEmpty onSuggest={suggest} />}
         {messages.map((msg, i) => (
           <ChatMessage key={i} msg={msg} typing={loading && i === messages.length - 1} />
         ))}
-
         {error && (
           <div className="ai-error">
             <HiOutlineExclamationCircle />
@@ -64,27 +90,7 @@ export default function ChatTab({ chat }) {
         )}
         <div ref={endRef} />
       </div>
-
-      <div className="ai-chat-input-row">
-        <textarea
-          ref={inputRef}
-          className="ai-chat-input"
-          placeholder="Ask about this article…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          disabled={loading}
-        />
-        <button
-          className="btn btn-primary ai-send-btn"
-          onClick={loading ? stop : send}
-          disabled={!loading && !input.trim()}
-          title={loading ? 'Stop' : 'Send'}
-        >
-          {loading ? <HiOutlineXMark /> : <HiOutlinePaperAirplane />}
-        </button>
-      </div>
+      <ChatInput chat={chat} inputRef={inputRef} />
     </div>
   );
 }

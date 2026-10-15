@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import { saveSummary, streamChat } from '../../utils/api.js';
+import { saveSummary } from '../../utils/api.js';
 import { getAISettings } from '../../utils/aiSettings.js';
-import { summaryMessages } from '../../ai/tasks.js';
+import { streamTokens, summaryMessages } from '../../ai/tasks.js';
 import { useArticleFieldSync } from './useArticleFieldSync.js';
 
 const orNull = (fields) => Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v || null]));
@@ -27,50 +27,41 @@ function summaryRecord(article = {}, feedTitle, summary, model) {
   };
 }
 
-/** Summary tab state: generation, batch results, copy, and save to library. */
-export function useArticleSummary({ article, extractedContent, model, feedTitle, onSummarySaved }) {
+const copyWithLink = (summary, link) => navigator.clipboard.writeText(`${summary}\n\nRead more: ${link || ''}`);
+
+/** Summary text: generated on demand, or a background batch summary as it lands. */
+function useSummaryGeneration({ article, extractedContent, model, onArticleChange }) {
   const [summary, setSummary] = useState(article?.aiSummary || '');
   const [isBatchSummary, setIsBatchSummary] = useState(Boolean(article?.aiSummary));
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState(null);
-  const [copied, setCopied] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const abortRef = useRef(false);
 
-  // Reset on article change; adopt batch summaries as they land.
+  const showBatch = (batchSummary) => {
+    setSummary(batchSummary || '');
+    setIsBatchSummary(Boolean(batchSummary));
+  };
   useArticleFieldSync(article, 'aiSummary', {
     onArticleChange: (batchSummary) => {
-      setSummary(batchSummary || '');
-      setIsBatchSummary(Boolean(batchSummary));
+      showBatch(batchSummary);
       setError(null);
       setSummarizing(false);
-      setSaved(false);
+      onArticleChange();
     },
-    onFieldChange: (batchSummary) => {
-      if (!batchSummary) return;
-      setSummary(batchSummary);
-      setIsBatchSummary(true);
-    },
+    onFieldChange: (batchSummary) => { if (batchSummary) showBatch(batchSummary); },
   });
 
   const generate = useCallback(async () => {
-    if (!article || !model || summarizing) return;
+    if (summarizing) return;
+    if (!article || !model) return;
     setSummarizing(true);
-    setSummary('');
-    setIsBatchSummary(false);
+    showBatch('');
     setError(null);
     abortRef.current = false;
-    try {
-      for await (const token of streamChat(model, summaryMessages(article, extractedContent, getAISettings()))) {
-        if (abortRef.current) break;
-        setSummary((prev) => prev + token);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSummarizing(false);
-    }
+    const messages = summaryMessages(article, extractedContent, getAISettings());
+    await streamTokens(model, messages, (token) => setSummary((prev) => prev + token), () => abortRef.current)
+      .catch((err) => setError(err.message));
+    setSummarizing(false);
   }, [article, extractedContent, model, summarizing]);
 
   const stop = useCallback(() => {
@@ -78,16 +69,28 @@ export function useArticleSummary({ article, extractedContent, model, feedTitle,
     setSummarizing(false);
   }, []);
 
+  return { summary, isBatchSummary, summarizing, error, generate, stop };
+}
+
+/** Summary tab: generation plus copy and save to library. */
+export function useArticleSummary({ article, extractedContent, model, feedTitle, onSummarySaved }) {
+  const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const generation = useSummaryGeneration({ article, extractedContent, model, onArticleChange: () => setSaved(false) });
+  const { summary } = generation;
+
   const copy = useCallback(() => {
     if (!summary) return;
-    navigator.clipboard.writeText(`${summary}\n\nRead more: ${article?.link || ''}`).then(() => {
+    copyWithLink(summary, article?.link).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
   }, [summary, article]);
 
   const save = useCallback(async () => {
-    if (!summary || saving) return;
+    if (saving) return;
+    if (!summary) return;
     setSaving(true);
     try {
       await saveSummary(summaryRecord(article ?? undefined, feedTitle, summary, model));
@@ -100,5 +103,5 @@ export function useArticleSummary({ article, extractedContent, model, feedTitle,
     }
   }, [summary, saving, article, feedTitle, model, onSummarySaved]);
 
-  return { summary, isBatchSummary, summarizing, error, copied, saving, saved, generate, stop, copy, save };
+  return { ...generation, copied, saving, saved, copy, save };
 }
