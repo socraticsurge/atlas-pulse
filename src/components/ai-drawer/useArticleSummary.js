@@ -29,47 +29,46 @@ function summaryRecord(article = {}, feedTitle, summary, model) {
 
 const copyWithLink = (summary, link) => navigator.clipboard.writeText(`${summary}\n\nRead more: ${link || ''}`);
 
+// Summary text plus whether it came from background batch processing.
+const fromBatch = (text) => ({ summary: text || '', isBatchSummary: Boolean(text) });
+const canGenerate = (article, model) => Boolean(article && model);
+
 /** Summary text: generated on demand, or a background batch summary as it lands. */
 function useSummaryGeneration({ article, extractedContent, model, onArticleChange }) {
-  const [summary, setSummary] = useState(article?.aiSummary || '');
-  const [isBatchSummary, setIsBatchSummary] = useState(Boolean(article?.aiSummary));
+  const [text, setText] = useState(() => fromBatch(article?.aiSummary));
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState(null);
   const abortRef = useRef(false);
 
-  const showBatch = (batchSummary) => {
-    setSummary(batchSummary || '');
-    setIsBatchSummary(Boolean(batchSummary));
-  };
   useArticleFieldSync(article, 'aiSummary', {
     onArticleChange: (batchSummary) => {
-      showBatch(batchSummary);
+      setText(fromBatch(batchSummary));
       setError(null);
       setSummarizing(false);
       onArticleChange();
     },
-    onFieldChange: (batchSummary) => { if (batchSummary) showBatch(batchSummary); },
+    onFieldChange: (batchSummary) => batchSummary && setText(fromBatch(batchSummary)),
   });
 
+  const appendToken = useCallback((token) => setText((t) => ({ ...t, summary: t.summary + token })), []);
+
   const generate = useCallback(async () => {
-    if (summarizing) return;
-    if (!article || !model) return;
+    if (summarizing || !canGenerate(article, model)) return;
     setSummarizing(true);
-    showBatch('');
+    setText(fromBatch(''));
     setError(null);
     abortRef.current = false;
     const messages = summaryMessages(article, extractedContent, getAISettings());
-    await streamTokens(model, messages, (token) => setSummary((prev) => prev + token), () => abortRef.current)
-      .catch((err) => setError(err.message));
+    await streamTokens(model, messages, appendToken, () => abortRef.current).catch((err) => setError(err.message));
     setSummarizing(false);
-  }, [article, extractedContent, model, summarizing]);
+  }, [article, extractedContent, model, summarizing, appendToken]);
 
   const stop = useCallback(() => {
     abortRef.current = true;
     setSummarizing(false);
   }, []);
 
-  return { summary, isBatchSummary, summarizing, error, generate, stop };
+  return { ...text, summarizing, error, generate, stop };
 }
 
 /** Summary tab: generation plus copy and save to library. */
