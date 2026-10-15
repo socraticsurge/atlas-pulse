@@ -78,7 +78,7 @@ export async function fitToNanoContext(systemContent, buildUserMessage, { maxCha
     const budget = contextBudget(session);
     if (budget === null) return { chars: maxChars, trimmed: false };
     if (budget <= 0) throw new Error(TOO_LONG_ERROR);
-    const chars = await shrinkToBudget(tokenCounter(session), buildUserMessage, budget, maxChars, minChars);
+    const chars = await shrinkToBudget(tokenCounter(session), buildUserMessage, { budget, maxChars, minChars });
     return { chars, trimmed: chars < maxChars };
   } finally {
     session.destroy();
@@ -100,7 +100,7 @@ function tokenCounter(session) {
   return async (text) => Math.ceil(text.length / FALLBACK_CHARS_PER_TOKEN);
 }
 
-async function shrinkToBudget(countTokens, buildUserMessage, budget, maxChars, minChars) {
+async function shrinkToBudget(countTokens, buildUserMessage, { budget, maxChars, minChars }) {
   let chars = maxChars;
   for (let attempt = 0; attempt < 6; attempt++) {
     const tokens = await countTokens(buildUserMessage(chars));

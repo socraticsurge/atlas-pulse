@@ -39,7 +39,9 @@ function buildArticleContext(articles, charsPerArticle) {
   }).join('\n\n');
 }
 
-function buildMessages(operation, template, instructions, articles, charsPerArticle = MAX_CHARS_PER_ARTICLE) {
+// request: { operation, template, instructions, articles }
+function buildMessages(request, charsPerArticle = MAX_CHARS_PER_ARTICLE) {
+  const { operation, template, instructions, articles } = request;
   const articleContext = buildArticleContext(articles, charsPerArticle);
   const aiSettings = getAISettings();
   let basePrompt, userMessage;
@@ -83,10 +85,10 @@ async function resolveModel() {
  * selection fits, rather than failing or dropping articles.
  * Returns { model, messages, notice }; throws with a user-facing message.
  */
-async function prepareRequest(operation, template, instructions, articles) {
+async function prepareRequest(request) {
   const model = await resolveModel();
   if (!model) throw new Error(NO_MODEL_ERROR);
-  const build = (chars) => buildMessages(operation, template, instructions, articles, chars);
+  const build = (chars) => buildMessages(request, chars);
   if (!isNanoModel(model)) return { model, messages: build(), notice: null };
 
   const { chars, trimmed } = await fitToNanoContext(
@@ -144,7 +146,7 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
 
     let request;
     try {
-      request = await prepareRequest(operation, template, instructions, activeArticles);
+      request = await prepareRequest({ operation, template, instructions, articles: activeArticles });
     } catch (err) {
       setError(err.message);
       setGenerating(false);
