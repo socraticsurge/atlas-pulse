@@ -55,7 +55,10 @@ function sendOllamaError(res, err) {
   }
 }
 
-const isValidChat = ({ model, messages }) => Boolean(model) && Array.isArray(messages) && messages.length > 0;
+function isValidChat({ model, messages }) {
+  if (!model || !Array.isArray(messages)) return false;
+  return messages.length > 0;
+}
 
 /**
  * POST /api/ai/chat
