@@ -8,13 +8,9 @@ function jsonCandidates(raw) {
   let depth = 0;
   let start = -1;
   for (let i = 0; i < text.length; i++) {
-    if (text[i] === '{') {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (text[i] === '}' && depth > 0) {
-      depth--;
-      if (depth === 0) blocks.push(text.slice(start, i + 1));
-    }
+    const ch = text[i];
+    if (ch === '{' && depth++ === 0) start = i;
+    else if (ch === '}' && depth > 0 && --depth === 0) blocks.push(text.slice(start, i + 1));
   }
   return blocks;
 }
