@@ -16,8 +16,9 @@ import {
 import { FaLinkedinIn } from 'react-icons/fa';
 import { fetchAIModels, streamChat, saveSummary, patchArticle } from '../utils/api.js';
 import { isNanoModel } from '../utils/chromeAI.js';
-import { htmlToText } from '../utils/helpers.js';
-import { PERSONAS, TONE_GROUPS, getAISettings, buildSystemPrompt } from '../utils/aiSettings.js';
+import { PERSONAS, TONE_GROUPS, getAISettings } from '../utils/aiSettings.js';
+import { analysisMessages, chatMessages, summaryMessages } from '../ai/tasks.js';
+import { parseAnalysis } from '../ai/parse.js';
 import { NoAIEngine } from './AIEngines.jsx';
 import { HIGHLIGHT_COLORS } from '../utils/constants.js';
 
@@ -34,30 +35,6 @@ function pickDefaultModel(models) {
   return models[0]?.name || '';
 }
 
-function buildArticleContext(article, extractedContent) {
-  const content = htmlToText(extractedContent || article?.content || article?.summary || '');
-  const truncated = content.length > 6000 ? content.slice(0, 6000) + '…' : content;
-  return `Title: ${article?.title || 'Unknown'}
-Author: ${article?.author || 'Unknown'}
-Published: ${article?.publishedAt ? new Date(article.publishedAt).toDateString() : 'Unknown'}
-
-${truncated}`;
-}
-
-const BASE_SUMMARY = `You are an editorial reading assistant. Read the article and write a concise, insightful summary in 3–4 sentences. Focus on the key finding or argument, why it matters, and one concrete takeaway. Write in plain prose, no bullet points. Do not start with "This article".`;
-
-const BASE_CHAT = `You are a reading assistant. Answer questions about the article clearly and concisely. Stay grounded in the article content. If something is not covered in the article, say so briefly.`;
-
-const ANALYSIS_PROMPT = `Analyze the article and respond with ONLY a valid JSON object — no markdown, no explanation, no code blocks. Use exactly these fields:
-{
-  "sentiment": "positive|neutral|negative",
-  "urgency": "breaking|developing|evergreen",
-  "frame": "conflict|human_interest|economic|analytical",
-  "tone": "alarming|analytical|optimistic|opinion",
-  "depth": "brief|standard|deep_dive",
-  "topics": ["tag1", "tag2", "tag3"]
-}`;
-
 const ANALYSIS_DIMS = [
   { key: 'sentiment', label: 'Sentiment', values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative' } },
   { key: 'urgency',   label: 'Urgency',   values: { breaking: '🔴 Breaking', developing: '🟡 Developing', evergreen: '🟢 Evergreen' } },
@@ -65,35 +42,6 @@ const ANALYSIS_DIMS = [
   { key: 'tone',      label: 'Tone',      values: { alarming: '🚨 Alarming', analytical: '💡 Analytical', optimistic: '✨ Optimistic', opinion: '💭 Opinion' } },
   { key: 'depth',     label: 'Depth',     values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
 ];
-
-function parseAnalysisJSON(raw) {
-  // Strip markdown code fences (models sometimes wrap JSON in ```json ... ```)
-  const stripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
-  // Collect all balanced {} blocks using bracket depth tracking
-  const candidates = [];
-  let depth = 0, start = -1;
-  for (let i = 0; i < stripped.length; i++) {
-    if (stripped[i] === '{') { if (depth === 0) start = i; depth++; }
-    else if (stripped[i] === '}') { depth--; if (depth === 0 && start !== -1) { candidates.push(stripped.slice(start, i + 1)); start = -1; } }
-  }
-  // Try from last to first — reasoning models often output reasoning prose then JSON at the end
-  for (let i = candidates.length - 1; i >= 0; i--) {
-    try {
-      const parsed = JSON.parse(candidates[i]);
-      if (parsed.sentiment || parsed.urgency || parsed.frame) {
-        return {
-          sentiment: parsed.sentiment || 'neutral',
-          urgency:   parsed.urgency   || 'evergreen',
-          frame:     parsed.frame     || 'analytical',
-          tone:      parsed.tone      || 'analytical',
-          depth:     parsed.depth     || 'standard',
-          topics:    Array.isArray(parsed.topics) ? parsed.topics.slice(0, 5) : [],
-        };
-      }
-    } catch { /* try next candidate */ }
-  }
-  throw new Error('Could not extract valid analysis from model response');
-}
 
 // Grouped analysis display — shown inside the Summary tab
 function AnalysisPanel({ analysis, analyzing, error, onRun, canRun }) {
@@ -303,12 +251,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     setAnalysisError(null);
     abortRef.current = false;
 
-    const rawText = htmlToText(extractedContent || article.content || article.summary || '');
-    const text = rawText.length > 4000 ? rawText.slice(0, 4000) + '…' : rawText;
-    const msgs = [
-      { role: 'system', content: ANALYSIS_PROMPT },
-      { role: 'user', content: `Title: ${article.title}\n\n${text}` },
-    ];
+    const msgs = analysisMessages(article, extractedContent);
 
     try {
       let response = '';
@@ -316,7 +259,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
         if (abortRef.current) break;
         response += token;
       }
-      const parsed = parseAnalysisJSON(response);
+      const parsed = parseAnalysis(response);
       setAnalysis(parsed);
       await patchArticle(article.id, { aiAnalysis: JSON.stringify(parsed) }).catch(() => {});
     } catch (err) {
@@ -334,13 +277,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     setSummaryError(null);
     abortRef.current = false;
 
-    const settings = getAISettings();
-    const systemPrompt = buildSystemPrompt(BASE_SUMMARY, settings);
-    const articleContext = buildArticleContext(article, extractedContent);
-    const msgs = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: articleContext },
-    ];
+    const msgs = summaryMessages(article, extractedContent, getAISettings());
 
     try {
       for await (const token of streamChat(selectedModel, msgs)) {
@@ -366,11 +303,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     setChatError(null);
     abortRef.current = false;
 
-    const settings = getAISettings();
-    const systemPrompt = buildSystemPrompt(BASE_CHAT, settings);
-    const articleContext = buildArticleContext(article, extractedContent);
-    const systemMsg = { role: 'system', content: `${systemPrompt}\n\nARTICLE:\n${articleContext}` };
-    const ollamaMsgs = [systemMsg, ...nextMessages];
+    const chatMsgs = chatMessages(article, extractedContent, getAISettings(), nextMessages);
 
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
     tokenBufferRef.current = '';
@@ -392,7 +325,7 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
     };
 
     try {
-      for await (const token of streamChat(selectedModel, ollamaMsgs)) {
+      for await (const token of streamChat(selectedModel, chatMsgs)) {
         if (abortRef.current) break;
         tokenBufferRef.current += token;
         if (!rafRef.current) {

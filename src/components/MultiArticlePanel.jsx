@@ -9,12 +9,10 @@ import {
   HiOutlineExclamationCircle,
   HiOutlineArrowPath,
 } from 'react-icons/hi2';
-import { streamChat, fetchAIModels, withFullContent } from '../utils/api.js';
-import { isNanoModel, fitToNanoContext } from '../utils/chromeAI.js';
-import { htmlToText } from '../utils/helpers.js';
+import { streamChat } from '../utils/api.js';
+import { prepareMultiArticleRequest } from '../ai/multiArticle.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
-import { getBatchSettings } from '../utils/batchSettings.js';
-import { getAISettings, buildSystemPrompt, PERSONAS, TONE_GROUPS } from '../utils/aiSettings.js';
+import { getAISettings, PERSONAS, TONE_GROUPS } from '../utils/aiSettings.js';
 import ResizableHandle from './ResizableHandle.jsx';
 
 const OPERATIONS = {
@@ -28,80 +26,6 @@ const NEWSLETTER_TEMPLATES = [
   { id: 'roundup',  label: 'Weekly Roundup' },
   { id: 'brief',    label: 'Executive Brief' },
 ];
-
-const MAX_CHARS_PER_ARTICLE = 1200;
-
-function buildArticleContext(articles, charsPerArticle) {
-  return articles.map((a, i) => {
-    const content = htmlToText(a.content || a.summary || '').slice(0, charsPerArticle);
-    const date = a.publishedAt ? new Date(a.publishedAt).toDateString() : 'Unknown';
-    return `=== ARTICLE ${i + 1} ===\nTitle: ${a.title || 'Untitled'}\nSource: ${a.feedTitle || 'Unknown'}\nPublished: ${date}\nURL: ${a.link || ''}\n\n${content}`;
-  }).join('\n\n');
-}
-
-// request: { operation, template, instructions, articles }
-function buildMessages(request, charsPerArticle = MAX_CHARS_PER_ARTICLE) {
-  const { operation, template, instructions, articles } = request;
-  const articleContext = buildArticleContext(articles, charsPerArticle);
-  const aiSettings = getAISettings();
-  let basePrompt, userMessage;
-
-  if (operation === 'compare') {
-    basePrompt = `You are a media analyst comparing how different sources cover the same topic.\n\nFor each dimension below, show how each article approaches it — reference the source by name:\n\n1. **Angle & Framing** — What perspective does each source emphasize?\n2. **Key Claims** — What are the main factual claims?\n3. **What's Missing** — What does each source omit or downplay?\n4. **Tone** — How does the language differ?\n5. **Evidence** — What sources or data does each cite?\n\nUse markdown with clear headers. Be specific and grounded in the text.`;
-    userMessage = `${articleContext}\n\n---\nCompare these ${articles.length} articles across the dimensions above.${instructions ? `\n\nAdditional focus: ${instructions}` : ''}`;
-  } else if (operation === 'newsletter') {
-    const templateInstructions = {
-      digest:   'Write a concise daily digest. Keep summaries to 2-3 sentences each. Informative tone. One-line intro and brief closing.',
-      roundup:  'Write a weekly roundup. Include more context and commentary. Group related stories if applicable. Conversational yet professional.',
-      brief:    'Write an executive briefing. Lead with the most critical stories. Use bullet points for key takeaways. Be direct; focus on strategic implications.',
-    };
-    basePrompt = `You are a professional newsletter writer creating a curated digest.\n\n${templateInstructions[template] || templateInstructions.digest}\n\nFormat with clear markdown headers (## for section titles), bullet points for takeaways, and attribution for each story.`;
-    userMessage = `${articleContext}\n\n---\nWrite the newsletter from these ${articles.length} articles.${instructions ? `\n\nAdditional instructions: ${instructions}` : ''}`;
-  } else {
-    basePrompt = `You are an expert analyst. Answer the user's question using only information from the provided articles. Be precise. Cite which article supports each point by source name.`;
-    userMessage = `${articleContext}\n\n---\n${instructions || 'Summarize the key themes across these articles.'}`;
-  }
-
-  return [
-    { role: 'system', content: buildSystemPrompt(basePrompt, aiSettings) },
-    { role: 'user',   content: userMessage },
-  ];
-}
-
-const NO_MODEL_ERROR = 'No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.';
-
-// The batch model from Settings, or for "Auto" the first available model
-// (Gemini Nano when present).
-async function resolveModel() {
-  const saved = getBatchSettings().model;
-  if (saved) return saved;
-  const { models } = await fetchAIModels().catch(() => ({ models: [] }));
-  return models[0]?.name || '';
-}
-
-/**
- * Picks the model and builds the messages. Gemini Nano has a small context
- * window, so for Nano every article is shortened evenly until the whole
- * selection fits, rather than failing or dropping articles.
- * Returns { model, messages, notice }; throws with a user-facing message.
- */
-async function prepareRequest(request) {
-  const model = await resolveModel();
-  if (!model) throw new Error(NO_MODEL_ERROR);
-  const full = { ...request, articles: await withFullContent(request.articles) };
-  const build = (chars) => buildMessages(full, chars);
-  if (!isNanoModel(model)) return { model, messages: build(), notice: null };
-
-  const { chars, trimmed } = await fitToNanoContext(
-    build()[0].content,
-    (n) => build(n)[1].content,
-    { maxChars: MAX_CHARS_PER_ARTICLE },
-  );
-  const notice = trimmed
-    ? `To fit Gemini Nano, each article was shortened to its first ${chars.toLocaleString()} characters.`
-    : null;
-  return { model, messages: build(chars), notice };
-}
 
 function MapNotice({ notice, error }) {
   if (!notice || error) return null;
@@ -147,7 +71,7 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
 
     let request;
     try {
-      request = await prepareRequest({ operation, template, instructions, articles: activeArticles });
+      request = await prepareMultiArticleRequest({ operation, template, instructions, articles: activeArticles });
     } catch (err) {
       setError(err.message);
       setGenerating(false);
