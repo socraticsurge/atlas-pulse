@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { pipeBody, setStreamHeaders } from '../utils/stream.js';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import rateLimit from 'express-rate-limit';
@@ -92,10 +93,7 @@ router.post('/pull', processLimiter, async (req, res) => {
   const { model } = req.body;
   if (!model) return res.status(400).json({ error: 'model is required' });
 
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
+  setStreamHeaders(res);
 
   try {
     const ollamaRes = await fetch(`${OLLAMA_BASE}/api/pull`, {
@@ -103,30 +101,11 @@ router.post('/pull', processLimiter, async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: model, stream: true }),
     });
-
     if (!ollamaRes.ok) {
       res.write(JSON.stringify({ error: 'Pull request failed' }) + '\n');
-      res.end();
       return;
     }
-
-    const reader = ollamaRes.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    req.on('close', () => reader.cancel());
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (line.trim()) res.write(line + '\n');
-      }
-    }
-    if (buffer.trim()) res.write(buffer + '\n');
+    await pipeBody(ollamaRes.body, req, res);
   } catch (err) {
     if (!res.writableEnded) {
       res.write(JSON.stringify({ error: err.message }) + '\n');

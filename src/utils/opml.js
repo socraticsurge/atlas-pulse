@@ -12,6 +12,30 @@ export function safeHttpUrl(value) {
   }
 }
 
+const outlineName = (node) => node.getAttribute('title') || node.getAttribute('text');
+const isOutline = (node) => node?.tagName.toLowerCase() === 'outline';
+
+// Feed entry for an outline node, or null when it has no usable xmlUrl.
+function feedFromOutline(node, folderName) {
+  const url = safeHttpUrl(node.getAttribute('xmlUrl'));
+  if (!url) return null;
+  return { title: outlineName(node) || url, url, siteUrl: safeHttpUrl(node.getAttribute('htmlUrl')), folderName };
+}
+
+// Top-level outlines: a folder (has child outlines) or a feed on its own.
+function topLevelFeeds(outline) {
+  const children = Array.from(outline.children).filter(isOutline);
+  if (children.length === 0) return [feedFromOutline(outline, null)];
+  const folderName = outlineName(outline) || 'Uncategorized';
+  return children.map((child) => feedFromOutline(child, folderName));
+}
+
+// Any feed at any depth, filed under its parent outline when it has one.
+function nestedFeed(node) {
+  const parent = node.parentElement;
+  return feedFromOutline(node, isOutline(parent) ? outlineName(parent) : null);
+}
+
 export function parseOPML(xmlString) {
   const parser = new DOMParser();
   const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
@@ -20,144 +44,62 @@ export function parseOPML(xmlString) {
     throw new Error('Invalid XML format');
   }
 
-  const feeds = [];
-  
-  // Find all outline nodes directly in the body
-  const rootOutlines = xmlDoc.querySelectorAll('body > outline');
-  
-  rootOutlines.forEach(outline => {
-    // Check if it's a folder (has nested outlines and usually no xmlUrl)
-    const children = Array.from(outline.children).filter(child => child.tagName.toLowerCase() === 'outline');
-    
-    if (children.length > 0) {
-      // It's a folder
-      const folderName = outline.getAttribute('title') || outline.getAttribute('text') || 'Uncategorized';
-      
-      children.forEach(child => {
-        const xmlUrl = safeHttpUrl(child.getAttribute('xmlUrl'));
-        if (xmlUrl) {
-          feeds.push({
-            title: child.getAttribute('title') || child.getAttribute('text') || xmlUrl,
-            url: xmlUrl,
-            siteUrl: safeHttpUrl(child.getAttribute('htmlUrl')),
-            folderName: folderName
-          });
-        }
-      });
-    } else {
-      // It's a direct feed
-      const xmlUrl = safeHttpUrl(outline.getAttribute('xmlUrl'));
-      if (xmlUrl) {
-        feeds.push({
-          title: outline.getAttribute('title') || outline.getAttribute('text') || xmlUrl,
-          url: xmlUrl,
-          siteUrl: safeHttpUrl(outline.getAttribute('htmlUrl')),
-          folderName: null
-        });
-      }
+  const feeds = Array.from(xmlDoc.querySelectorAll('body > outline')).flatMap(topLevelFeeds).filter(Boolean);
+
+  // Also catch deeply nested feeds (some Feedly exports), without duplicates.
+  const seen = new Set(feeds.map((f) => f.url));
+  for (const node of xmlDoc.querySelectorAll('outline[xmlUrl]')) {
+    const feed = nestedFeed(node);
+    if (feed && !seen.has(feed.url)) {
+      feeds.push(feed);
+      seen.add(feed.url);
     }
-  });
-
-  // Also catch any deeply nested ones just in case Feedly exports them weirdly
-  // but avoid duplicating the ones we already found.
-  const allFeeds = Array.from(xmlDoc.querySelectorAll('outline[xmlUrl]'));
-  const existingUrls = new Set(feeds.map(f => f.url));
-  
-  allFeeds.forEach(feedNode => {
-    const xmlUrl = safeHttpUrl(feedNode.getAttribute('xmlUrl'));
-    if (xmlUrl && !existingUrls.has(xmlUrl)) {
-      // Try to find parent folder if it exists
-      const parent = feedNode.parentElement;
-      let folderName = null;
-      if (parent && parent.tagName.toLowerCase() === 'outline') {
-        folderName = parent.getAttribute('title') || parent.getAttribute('text');
-      }
-
-      feeds.push({
-        title: feedNode.getAttribute('title') || feedNode.getAttribute('text') || xmlUrl,
-        url: xmlUrl,
-        siteUrl: safeHttpUrl(feedNode.getAttribute('htmlUrl')),
-        folderName: folderName
-      });
-      existingUrls.add(xmlUrl);
-    }
-  });
-
+  }
   return feeds;
 }
 
+const XML_ENTITIES = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '\'': '&apos;', '"': '&quot;' };
+
+export function escapeXML(str) {
+  return str ? str.replace(/[<>&'"]/g, (c) => XML_ENTITIES[c]) : '';
+}
+
+function feedLine(feed, indent) {
+  const title = escapeXML(feed.title);
+  return `${indent}<outline type="rss" text="${title}" title="${title}" xmlUrl="${escapeXML(feed.url)}" htmlUrl="${escapeXML(feed.siteUrl)}" />\n`;
+}
+
+function folderBlock(name, folderFeeds) {
+  const folderName = escapeXML(name);
+  const lines = folderFeeds.map((feed) => feedLine(feed, '      ')).join('');
+  return `    <outline text="${folderName}" title="${folderName}">\n${lines}    </outline>\n`;
+}
+
+// Feeds grouped by folder id, plus the feeds with no (known) folder.
+function groupByFolder(feeds, folders) {
+  const byFolder = new Map(folders.map((f) => [f.id, []]));
+  const uncategorized = [];
+  for (const feed of feeds) {
+    (byFolder.get(feed.folderId) || uncategorized).push(feed);
+  }
+  return { byFolder, uncategorized };
+}
+
 export function generateOPML(feeds, folders) {
-  // Map folders for easy lookup
-  const folderMap = {};
-  folders.forEach(f => {
-    folderMap[f.id] = f.name;
-  });
+  const { byFolder, uncategorized } = groupByFolder(feeds, folders);
+  const ordered = [...folders].sort((a, b) => a.id - b.id);
+  const folderXml = ordered
+    .filter((f) => byFolder.get(f.id).length > 0)
+    .map((f) => folderBlock(f.name, byFolder.get(f.id)))
+    .join('');
 
-  // Group feeds by folder
-  const feedsByFolder = { uncategorized: [] };
-  folders.forEach(f => {
-    feedsByFolder[f.id] = [];
-  });
-
-  feeds.forEach(feed => {
-    if (feed.folderId && feedsByFolder[feed.folderId]) {
-      feedsByFolder[feed.folderId].push(feed);
-    } else {
-      feedsByFolder.uncategorized.push(feed);
-    }
-  });
-
-  // Generate XML
-  const escapeXML = (str) => {
-    if (!str) return '';
-    return str.replace(/[<>&'"]/g, c => {
-      switch (c) {
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        case '&': return '&amp;';
-        case '\'': return '&apos;';
-        case '"': return '&quot;';
-        default: return c;
-      }
-    });
-  };
-
-  let opml = `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <opml version="2.0">
   <head>
     <title>Atlas Pulse Subscriptions</title>
     <dateCreated>${new Date().toUTCString()}</dateCreated>
   </head>
-  <body>\n`;
-
-  // Write categorized feeds
-  for (const folderId in feedsByFolder) {
-    if (folderId === 'uncategorized') continue;
-    
-    const folderFeeds = feedsByFolder[folderId];
-    if (folderFeeds.length === 0) continue;
-    
-    const folderName = escapeXML(folderMap[folderId]);
-    opml += `    <outline text="${folderName}" title="${folderName}">\n`;
-    
-    folderFeeds.forEach(feed => {
-      const title = escapeXML(feed.title);
-      const xmlUrl = escapeXML(feed.url);
-      const htmlUrl = escapeXML(feed.siteUrl);
-      opml += `      <outline type="rss" text="${title}" title="${title}" xmlUrl="${xmlUrl}" htmlUrl="${htmlUrl}" />\n`;
-    });
-    
-    opml += `    </outline>\n`;
-  }
-
-  // Write uncategorized feeds
-  feedsByFolder.uncategorized.forEach(feed => {
-    const title = escapeXML(feed.title);
-    const xmlUrl = escapeXML(feed.url);
-    const htmlUrl = escapeXML(feed.siteUrl);
-    opml += `    <outline type="rss" text="${title}" title="${title}" xmlUrl="${xmlUrl}" htmlUrl="${htmlUrl}" />\n`;
-  });
-
-  opml += `  </body>\n</opml>`;
-  return opml;
+  <body>
+${folderXml}${uncategorized.map((feed) => feedLine(feed, '    ')).join('')}  </body>
+</opml>`;
 }

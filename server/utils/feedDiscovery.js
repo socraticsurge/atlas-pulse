@@ -16,15 +16,41 @@ const COMMON_FEED_PATHS = [
   '/wp-json/wp/v2/posts?_fields=link',
 ];
 
-/**
- * Discover RSS/Atom feed URLs from a given website URL.
- */
-export async function discoverFeeds(websiteUrl) {
-  const feeds = [];
-  // Rejects loopback/private/link-local targets before any server-side fetch.
-  const baseUrl = await assertPublicHttpUrl(websiteUrl);
+const FEED_LINK_SELECTOR = 'link[type="application/rss+xml"], link[type="application/atom+xml"], link[type="application/feed+json"]';
+const FEED_ANCHOR_SELECTOR = 'a[href*="rss"], a[href*="feed"], a[href*="atom"]';
+const FEED_HREF_HINTS = ['/rss', '/feed', '/atom', '.xml'];
+const FEED_CONTENT_TYPES = ['xml', 'rss', 'atom', 'json'];
 
-  // Step 1: Fetch the HTML and look for <link rel="alternate"> tags
+const looksLikeFeedHref = (href) => FEED_HREF_HINTS.some((hint) => href.includes(hint));
+const isFeedContentType = (type) => FEED_CONTENT_TYPES.some((t) => type.includes(t));
+
+// Appends feeds whose URL isn't already listed.
+function addUnique(feeds, candidates) {
+  for (const feed of candidates) {
+    if (!feeds.some((f) => f.url === feed.url)) feeds.push(feed);
+  }
+  return feeds;
+}
+
+/** Feed links advertised in a page: <link rel="alternate"> tags, then feed-like anchors. */
+export function feedsInHtml(html, baseUrl) {
+  const $ = cheerio.load(html);
+  const feeds = [];
+  $(FEED_LINK_SELECTOR).each((_, el) => {
+    const href = $(el).attr('href');
+    if (href) feeds.push({ url: new URL(href, baseUrl).href, title: $(el).attr('title') || '', type: 'discovered' });
+  });
+  const anchors = [];
+  $(FEED_ANCHOR_SELECTOR).each((_, el) => {
+    const href = $(el).attr('href');
+    if (href && looksLikeFeedHref(href)) {
+      anchors.push({ url: new URL(href, baseUrl).href, title: $(el).text().trim(), type: 'link' });
+    }
+  });
+  return addUnique(feeds, anchors);
+}
+
+async function fetchPageFeeds(baseUrl) {
   try {
     const response = await safeFetch(baseUrl.href, {
       headers: {
@@ -33,70 +59,37 @@ export async function discoverFeeds(websiteUrl) {
       },
       signal: AbortSignal.timeout(10000),
     });
-
-    if (response.ok) {
-      const html = await response.text();
-      const $ = cheerio.load(html);
-
-      // Find RSS/Atom link tags
-      $('link[type="application/rss+xml"], link[type="application/atom+xml"], link[type="application/feed+json"]').each((_, el) => {
-        const href = $(el).attr('href');
-        const title = $(el).attr('title') || '';
-        if (href) {
-          const feedUrl = new URL(href, baseUrl).href;
-          feeds.push({ url: feedUrl, title, type: 'discovered' });
-        }
-      });
-
-      // Look for common RSS link patterns in anchor tags
-      $('a[href*="rss"], a[href*="feed"], a[href*="atom"]').each((_, el) => {
-        const href = $(el).attr('href');
-        if (href && (href.includes('/rss') || href.includes('/feed') || href.includes('/atom') || href.includes('.xml'))) {
-          const feedUrl = new URL(href, baseUrl).href;
-          if (!feeds.some(f => f.url === feedUrl)) {
-            feeds.push({ url: feedUrl, title: $(el).text().trim() || '', type: 'link' });
-          }
-        }
-      });
-    }
+    return response.ok ? feedsInHtml(await response.text(), baseUrl) : [];
   } catch {
-    // HTML fetch failed, continue with probe
+    return []; // HTML fetch failed; the caller falls back to probing
   }
+}
 
-  // Step 2: If no feeds found, probe common paths
-  if (feeds.length === 0) {
-    const probePromises = COMMON_FEED_PATHS.map(async (path) => {
-      const probeUrl = new URL(path, baseUrl).href;
-      try {
-        const resp = await safeFetch(probeUrl, {
-          method: 'HEAD',
-          headers: { 'User-Agent': 'RSS-Feed-Reader/1.0' },
-          signal: AbortSignal.timeout(5000),
-        });
-
-        const contentType = resp.headers.get('content-type') || '';
-        if (
-          resp.ok &&
-          (contentType.includes('xml') ||
-            contentType.includes('rss') ||
-            contentType.includes('atom') ||
-            contentType.includes('json'))
-        ) {
-          return { url: probeUrl, title: '', type: 'probed' };
-        }
-      } catch {
-        // Probe failed
-      }
-      return null;
+async function probePath(path, baseUrl) {
+  const probeUrl = new URL(path, baseUrl).href;
+  try {
+    const resp = await safeFetch(probeUrl, {
+      method: 'HEAD',
+      headers: { 'User-Agent': 'RSS-Feed-Reader/1.0' },
+      signal: AbortSignal.timeout(5000),
     });
-
-    const results = await Promise.all(probePromises);
-    results.forEach((r) => {
-      if (r && !feeds.some((f) => f.url === r.url)) {
-        feeds.push(r);
-      }
-    });
+    const contentType = resp.headers.get('content-type') || '';
+    if (resp.ok && isFeedContentType(contentType)) return { url: probeUrl, title: '', type: 'probed' };
+  } catch {
+    // Probe failed
   }
+  return null;
+}
 
-  return feeds;
+/**
+ * Discover RSS/Atom feed URLs from a given website URL: feeds the page
+ * advertises, or else whichever common feed paths respond like a feed.
+ */
+export async function discoverFeeds(websiteUrl) {
+  // Rejects loopback/private/link-local targets before any server-side fetch.
+  const baseUrl = await assertPublicHttpUrl(websiteUrl);
+  const feeds = await fetchPageFeeds(baseUrl);
+  if (feeds.length > 0) return feeds;
+  const probed = await Promise.all(COMMON_FEED_PATHS.map((path) => probePath(path, baseUrl)));
+  return addUnique([], probed.filter(Boolean));
 }

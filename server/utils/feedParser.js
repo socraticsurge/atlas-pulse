@@ -17,55 +17,68 @@ const parser = new RSSParser({
   },
 });
 
+// First truthy value, or '' when none is.
+const firstOf = (...values) => values.find(Boolean) || '';
+
+const itemHtml = (item) => firstOf(item.contentEncoded, item['content:encoded'], item.content);
+
+/** Normalizes one rss-parser item into the shape the client stores. */
+export function normalizeItem(item) {
+  return {
+    title: item.title || 'Untitled',
+    link: item.link || '',
+    content: firstOf(itemHtml(item), item.summary),
+    summary: firstOf(item.contentSnippet, item.summary),
+    author: firstOf(item.dcCreator, item.creator, item.author),
+    publishedAt: firstOf(item.isoDate, item.pubDate) || new Date().toISOString(),
+    guid: firstOf(item.guid, item.id, item.link),
+    imageUrl: extractImageUrl(item),
+    categories: item.categories || [],
+  };
+}
+
+/** Normalizes an rss-parser feed. */
+export function normalizeFeed(feed, feedUrl) {
+  return {
+    title: feed.title || 'Untitled Feed',
+    description: feed.description || '',
+    link: feed.link || feedUrl,
+    feedUrl,
+    language: feed.language || '',
+    image: firstOf(feed.image?.url, feed.itunes?.image),
+    items: (feed.items || []).map(normalizeItem),
+  };
+}
+
 /**
  * Parse an RSS/Atom feed URL and return structured data.
  */
 export async function parseFeed(feedUrl) {
   try {
     await assertPublicHttpUrl(feedUrl);
-    const feed = await parser.parseURL(feedUrl);
-
-    return {
-      title: feed.title || 'Untitled Feed',
-      description: feed.description || '',
-      link: feed.link || feedUrl,
-      feedUrl: feedUrl,
-      language: feed.language || '',
-      image: feed.image?.url || feed.itunes?.image || '',
-      items: (feed.items || []).map((item) => ({
-        title: item.title || 'Untitled',
-        link: item.link || '',
-        content: item.contentEncoded || item['content:encoded'] || item.content || item.summary || '',
-        summary: item.contentSnippet || item.summary || '',
-        author: item.dcCreator || item.creator || item.author || '',
-        publishedAt: item.isoDate || item.pubDate || new Date().toISOString(),
-        guid: item.guid || item.id || item.link || '',
-        imageUrl: extractImageUrl(item),
-        categories: item.categories || [],
-      })),
-    };
+    return normalizeFeed(await parser.parseURL(feedUrl), feedUrl);
   } catch (error) {
     throw new Error(`Failed to parse feed: ${error.message}`, { cause: error });
   }
 }
 
+function enclosureImage(enclosure) {
+  return enclosure?.type?.startsWith('image/') ? enclosure.url : '';
+}
+
+function firstImgSrc(html) {
+  return html.match(/<img[^>]+src=["']([^"']+)["']/i)?.[1] || '';
+}
+
 /**
- * Extract the best image URL from a feed item.
+ * Extract the best image URL from a feed item: media tags, then an image
+ * enclosure, then the first <img> in the content.
  */
-function extractImageUrl(item) {
-  // Try media content
-  if (item.mediaContent?.$?.url) return item.mediaContent.$.url;
-  if (item.mediaThumbnail?.$?.url) return item.mediaThumbnail.$.url;
-
-  // Try enclosure
-  if (item.enclosure?.url && item.enclosure.type?.startsWith('image/')) {
-    return item.enclosure.url;
-  }
-
-  // Try to extract from content HTML
-  const content = item.contentEncoded || item['content:encoded'] || item.content || '';
-  const imgMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i);
-  if (imgMatch) return imgMatch[1];
-
-  return '';
+export function extractImageUrl(item) {
+  return firstOf(
+    item.mediaContent?.$?.url,
+    item.mediaThumbnail?.$?.url,
+    enclosureImage(item.enclosure),
+    firstImgSrc(itemHtml(item)),
+  );
 }

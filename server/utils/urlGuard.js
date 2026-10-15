@@ -61,31 +61,22 @@ function isBlockedIp(ip) {
   return true; // not a recognizable IP — refuse
 }
 
-/**
- * Throw if the URL is not a safe, public http(s) target.
- * Returns the parsed URL on success.
- */
-export async function assertPublicHttpUrl(rawUrl) {
+function parseHttpUrl(rawUrl) {
   let url;
   try {
     url = new URL(rawUrl);
   } catch {
     throw new Error('Invalid URL');
   }
-
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     throw new Error(`Blocked URL scheme: ${url.protocol}`);
   }
+  return url;
+}
 
-  const host = url.hostname;
-
-  // Literal IP in the URL — check directly, no DNS.
-  if (net.isIP(host)) {
-    if (isBlockedIp(host)) throw new Error('Blocked private or loopback address');
-    return url;
-  }
-
-  // Hostname — resolve and check every returned address.
+// Addresses the host resolves to; a literal IP resolves to itself (no DNS).
+async function resolveHost(host) {
+  if (net.isIP(host)) return [host];
   let records;
   try {
     records = await dns.lookup(host, { all: true });
@@ -93,12 +84,17 @@ export async function assertPublicHttpUrl(rawUrl) {
     throw new Error(`Could not resolve host: ${host}`);
   }
   if (records.length === 0) throw new Error(`Could not resolve host: ${host}`);
-  for (const { address } of records) {
-    if (isBlockedIp(address)) {
-      throw new Error('Blocked private or loopback address');
-    }
-  }
+  return records.map((r) => r.address);
+}
 
+/**
+ * Throw if the URL is not a safe, public http(s) target.
+ * Returns the parsed URL on success.
+ */
+export async function assertPublicHttpUrl(rawUrl) {
+  const url = parseHttpUrl(rawUrl);
+  const addresses = await resolveHost(url.hostname);
+  if (addresses.some(isBlockedIp)) throw new Error('Blocked private or loopback address');
   return url;
 }
 

@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { pipeBody, setStreamHeaders } from '../utils/stream.js';
 
 const OLLAMA_BASE = 'http://localhost:11434';
 const router = Router();
@@ -29,6 +30,36 @@ router.get('/models', async (req, res) => {
   }
 });
 
+// POSTs a chat request to Ollama, aborting if it hasn't answered within 15 s.
+async function postOllamaChat(body) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    return await fetch(`${OLLAMA_BASE}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function sendOllamaError(res, err) {
+  if (res.headersSent) return;
+  if (err.name === 'AbortError') {
+    res.status(504).json({ error: 'Ollama did not respond in time. Is the model loaded?' });
+  } else {
+    res.status(503).json({ error: 'Ollama is not reachable', detail: err.message });
+  }
+}
+
+function isValidChat({ model, messages }) {
+  if (!model || !Array.isArray(messages)) return false;
+  return messages.length > 0;
+}
+
 /**
  * POST /api/ai/chat
  * Proxies a chat request to Ollama and streams the NDJSON response back.
@@ -36,64 +67,21 @@ router.get('/models', async (req, res) => {
  */
 router.post('/chat', async (req, res) => {
   const { model, messages, stream = true } = req.body;
-
-  if (!model || !Array.isArray(messages) || messages.length === 0) {
+  if (!isValidChat(req.body)) {
     return res.status(400).json({ error: 'model and messages[] are required' });
   }
 
-  const connectController = new AbortController();
-  const connectTimeout = setTimeout(() => connectController.abort(), 15000);
-
   try {
-    const ollamaRes = await fetch(`${OLLAMA_BASE}/api/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, stream }),
-      signal: connectController.signal,
-    });
-    clearTimeout(connectTimeout);
-
+    const ollamaRes = await postOllamaChat({ model, messages, stream });
     if (!ollamaRes.ok) {
-      const text = await ollamaRes.text();
-      return res.status(ollamaRes.status).json({ error: text });
+      return res.status(ollamaRes.status).json({ error: await ollamaRes.text() });
     }
+    if (!stream) return res.json(await ollamaRes.json());
 
-    if (stream) {
-      res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-
-      const reader = ollamaRes.body.getReader();
-      const decoder = new TextDecoder();
-
-      const pump = async () => {
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            res.write(decoder.decode(value, { stream: true }));
-          }
-        } finally {
-          res.end();
-        }
-      };
-
-      // If the client disconnects, cancel the Ollama stream
-      req.on('close', () => reader.cancel());
-      pump();
-    } else {
-      const data = await ollamaRes.json();
-      res.json(data);
-    }
+    setStreamHeaders(res);
+    pipeBody(ollamaRes.body, req, res).catch(() => {}).finally(() => res.end());
   } catch (err) {
-    clearTimeout(connectTimeout);
-    if (!res.headersSent) {
-      if (err.name === 'AbortError') {
-        return res.status(504).json({ error: 'Ollama did not respond in time. Is the model loaded?' });
-      }
-      res.status(503).json({ error: 'Ollama is not reachable', detail: err.message });
-    }
+    sendOllamaError(res, err);
   }
 });
 
