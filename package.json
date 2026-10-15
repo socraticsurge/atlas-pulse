@@ -36,7 +36,7 @@
     "dev:frontend": "vite",
     "dev:server": "node server/index.js",
     "build": "vite build",
-    "lint": "eslint . --max-warnings=36",
+    "lint": "eslint . --max-warnings=33",
     "test": "node --test",
     "preview": "vite preview",
     "service": "scripts/service.sh"
