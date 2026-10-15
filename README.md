@@ -494,7 +494,7 @@ Released under the [MIT License](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 **Security & maintenance** (since v1.3.0)
 - SSRF guard on every user-supplied URL the server fetches, loopback-only server binding, CORS restricted to local origins, and an iframe allowlist
 - Resolved all CodeQL code-scanning findings; added SSRF and OPML regression tests to CI
-- Patched dependency CVEs; upgraded to ESLint 10 and concurrently 10; Dependabot updates for dependencies and GitHub Actions
+- Patched all known dependency vulnerabilities (`npm audit`: 0), including `proxy-addr`, `dompurify`, and `undici`; upgraded to ESLint 10 and concurrently 10; Dependabot updates for dependencies and GitHub Actions
 
 **Documentation**
 - README, CONTRIBUTING, and SECURITY now reflect the SQLite storage model, the Highlights feature, and both AI engines
