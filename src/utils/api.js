@@ -1,3 +1,5 @@
+import { getNanoModel, isNanoModel, streamNanoChat } from './chromeAI.js';
+
 const API_BASE = '/api';
 
 // ── Ollama management ────────────────────────────────────────────────────────
@@ -253,19 +255,32 @@ export async function fetchCounts() { return readerFetch('/articles/counts'); }
 export async function clearAllData() { return readerFetch('/all', { method: 'DELETE' }); }
 
 export async function fetchAIModels() {
-  const res = await fetch(`${API_BASE}/ai/models`);
-  if (!res.ok) throw new Error('Could not reach Ollama');
-  return res.json(); // { models: [{name, family, parameterSize, size}] }
+  const [ollama, nano] = await Promise.all([
+    fetch(`${API_BASE}/ai/models`)
+      .then((res) => (res.ok ? res.json() : null))
+      .catch(() => null),
+    getNanoModel(),
+  ]);
+  // Gemini Nano first: it's the default engine; Ollama models are optional extras.
+  const models = [...(nano ? [nano] : []), ...(ollama?.models || [])];
+  if (!ollama && !nano) throw new Error('Could not reach the server');
+  return { models }; // { models: [{name, family, parameterSize, size}] }
 }
 
 /**
- * Streams a chat completion from Ollama via the local proxy.
+ * Streams a chat completion from Ollama via the local proxy, or from
+ * Gemini Nano in the browser when that model is selected.
  * Yields string tokens as they arrive.
  * @param {string} model
  * @param {{role:string, content:string}[]} messages
  * @returns {AsyncGenerator<string>}
  */
 export async function* streamChat(model, messages) {
+  if (isNanoModel(model)) {
+    yield* streamNanoChat(messages);
+    return;
+  }
+
   const res = await fetch(`${API_BASE}/ai/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
