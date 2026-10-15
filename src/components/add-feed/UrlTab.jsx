@@ -42,40 +42,58 @@ function DiscoveredFeeds({ feeds, adder, onPreview }) {
   );
 }
 
-/** URL tab: paste a site or feed URL; preview a direct feed or pick from discovered ones. */
-export function UrlTab({ discovery, loading, adder }) {
-  const { url, setUrl, preview, discovered } = discovery;
-  const addFromPreview = async () => {
-    await adder.add(preview.feedUrl);
-    discovery.clear();
-  };
+function UrlInput({ discovery, loading }) {
+  const { url, setUrl } = discovery;
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <HiOutlineGlobeAlt className="input-icon-left" />
-          <input
-            className="input"
-            style={{ paddingLeft: 36 }}
-            placeholder="Paste website URL or RSS feed URL..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && discovery.discover()}
-          />
-        </div>
-        <button className="btn btn-primary" onClick={discovery.discover} disabled={loading || !url.trim()}>
-          {loading ? <span className="spinner" /> : <HiOutlineMagnifyingGlass />}
-          {loading ? 'Searching...' : 'Find Feeds'}
-        </button>
+    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ position: 'relative', flex: 1 }}>
+        <HiOutlineGlobeAlt className="input-icon-left" />
+        <input
+          className="input"
+          style={{ paddingLeft: 36 }}
+          placeholder="Paste website URL or RSS feed URL..."
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && discovery.discover()}
+        />
       </div>
-      {preview && <FeedPreview preview={preview} adder={adder} onAdd={addFromPreview} />}
-      {discovered.length > 0 && !preview && <DiscoveredFeeds feeds={discovered} adder={adder} onPreview={discovery.previewFeed} />}
-      {loading && !preview && (
+      <button className="btn btn-primary" onClick={discovery.discover} disabled={loading || !url.trim()}>
+        {loading ? <span className="spinner" /> : <HiOutlineMagnifyingGlass />}
+        {loading ? 'Searching...' : 'Find Feeds'}
+      </button>
+    </div>
+  );
+}
+
+// A previewed feed wins over the discovered list; otherwise a spinner while searching.
+function UrlResults({ discovery, loading, adder }) {
+  const { preview, discovered } = discovery;
+  if (preview) {
+    const addFromPreview = async () => {
+      await adder.add(preview.feedUrl);
+      discovery.clear();
+    };
+    return <FeedPreview preview={preview} adder={adder} onAdd={addFromPreview} />;
+  }
+  return (
+    <>
+      {discovered.length > 0 && <DiscoveredFeeds feeds={discovered} adder={adder} onPreview={discovery.previewFeed} />}
+      {loading && (
         <div className="loading-overlay">
           <span className="spinner" />
           <span>Searching for feeds...</span>
         </div>
       )}
+    </>
+  );
+}
+
+/** URL tab: paste a site or feed URL; preview a direct feed or pick from discovered ones. */
+export function UrlTab({ discovery, loading, adder }) {
+  return (
+    <div>
+      <UrlInput discovery={discovery} loading={loading} />
+      <UrlResults discovery={discovery} loading={loading} adder={adder} />
     </div>
   );
 }
