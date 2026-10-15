@@ -9,7 +9,7 @@ import {
   applyFilters, articlesToCSV, availableFilters, downloadCSV, emptyStateText, viewTitle,
 } from './article-list/listLogic.js';
 import { useArticleListData } from './article-list/useArticleListData.js';
-import { useConfirmAction } from './article-list/useConfirmAction.js';
+import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
 import { useSelection } from './article-list/useSelection.js';
 
