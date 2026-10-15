@@ -194,7 +194,7 @@ When Gemini Nano is available, Atlas Pulse selects it automatically. You can swi
 
 **Known limitations**
 
-- **Smaller context.** Gemini Nano accepts less input than most Ollama models. Single-article features fit comfortably; multi-article actions with many long articles can exceed the limit and return an error. Select fewer articles, or switch to an Ollama model for large comparisons.
+- **Smaller context.** Gemini Nano accepts less input than most Ollama models. Single-article features fit comfortably. For multi-article actions, Atlas Pulse measures the available context and shortens every selected article evenly so the whole selection fits; the panel tells you when this happens. For full-length comparisons of many articles, switch to an Ollama model.
 - **The tab must stay open.** Gemini Nano runs inside the page, so background batch processing pauses when the tab is closed.
 - **No model choice.** Chrome manages and updates the model; output can change between Chrome versions.
 - **Terms.** Use of Gemini Nano is governed by Google Chrome's terms, including Google's [Generative AI Prohibited Use Policy](https://policies.google.com/terms/generative-ai/use-policy).
@@ -429,8 +429,8 @@ If you use the background service, check `npm run service status` and `npm run s
 - Chrome is downloading the model on first use. Later requests start immediately
 - If it never finishes, confirm you have about 22 GB of free disk space
 
-### Gemini Nano: multi-article action fails with a quota or length error
-- The selected articles exceed Gemini Nano's input limit. Select fewer articles, or choose an Ollama model in **Settings → AI Processing**
+### Gemini Nano: "articles were shortened" or "too long for Gemini Nano"
+- Multi-article actions shorten each article evenly to fit Gemini Nano's context window. If even shortened articles don't fit, the request is too long: select fewer articles, or choose an Ollama model in **Settings → AI Processing**
 
 ### No Ollama models in the model dropdown
 - Make sure Ollama is running: `ollama serve`, then verify with `curl http://localhost:11434`
@@ -487,6 +487,7 @@ Released under the [MIT License](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 **Fixes**
 - Multi-article actions (Compare, Newsletter, Briefing) no longer fail with "No AI model selected" when the model is set to **Auto**
+- Multi-article actions on Gemini Nano fit the selection to the model's context window by shortening every article evenly, instead of failing on large selections
 - A missing Ollama installation is treated as a normal state instead of logging server errors
 - Corrected the minimum Node.js version to 20.19 (required by Vite 8)
 

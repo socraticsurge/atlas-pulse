@@ -10,6 +10,7 @@ import {
   HiOutlineArrowPath,
 } from 'react-icons/hi2';
 import { streamChat, fetchAIModels } from '../utils/api.js';
+import { isNanoModel, fitToNanoContext } from '../utils/chromeAI.js';
 import { stripHtml } from '../utils/helpers.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../utils/docx.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
@@ -28,16 +29,18 @@ const NEWSLETTER_TEMPLATES = [
   { id: 'brief',    label: 'Executive Brief' },
 ];
 
-function buildArticleContext(articles) {
+const MAX_CHARS_PER_ARTICLE = 1200;
+
+function buildArticleContext(articles, charsPerArticle) {
   return articles.map((a, i) => {
-    const content = stripHtml(a.content || a.summary || '').slice(0, 1200);
+    const content = stripHtml(a.content || a.summary || '').slice(0, charsPerArticle);
     const date = a.publishedAt ? new Date(a.publishedAt).toDateString() : 'Unknown';
     return `=== ARTICLE ${i + 1} ===\nTitle: ${a.title || 'Untitled'}\nSource: ${a.feedTitle || 'Unknown'}\nPublished: ${date}\nURL: ${a.link || ''}\n\n${content}`;
   }).join('\n\n');
 }
 
-function buildMessages(operation, template, instructions, articles) {
-  const articleContext = buildArticleContext(articles);
+function buildMessages(operation, template, instructions, articles, charsPerArticle = MAX_CHARS_PER_ARTICLE) {
+  const articleContext = buildArticleContext(articles, charsPerArticle);
   const aiSettings = getAISettings();
   let basePrompt, userMessage;
 
@@ -72,6 +75,7 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [error, setError] = useState(null);
+  const [notice, setNotice] = useState(null);
   const [copied, setCopied] = useState(false);
 
   const abortRef = useRef(false);
@@ -92,13 +96,14 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
     if (!countOk || generating) return;
     setOutput('');
     setError(null);
+    setNotice(null);
     setGenerated(false);
     setGenerating(true);
     abortRef.current = false;
     tokenBufferRef.current = '';
     rafRef.current = null;
 
-    const messages = buildMessages(operation, template, instructions, activeArticles);
+    let messages = buildMessages(operation, template, instructions, activeArticles);
     // "Auto" (empty) uses the first available model — Gemini Nano when present.
     let model = getBatchSettings().model || '';
     if (!model) {
@@ -106,6 +111,26 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
     }
 
     if (!model) { setError('No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.'); setGenerating(false); return; }
+
+    // Gemini Nano has a small context window: shorten every article evenly
+    // until the whole selection fits, rather than failing or dropping articles.
+    if (isNanoModel(model)) {
+      try {
+        const { chars, trimmed } = await fitToNanoContext(
+          messages[0].content,
+          (n) => buildMessages(operation, template, instructions, activeArticles, n)[1].content,
+          { maxChars: MAX_CHARS_PER_ARTICLE },
+        );
+        messages = buildMessages(operation, template, instructions, activeArticles, chars);
+        if (trimmed) {
+          setNotice(`To fit Gemini Nano, each article was shortened to its first ${chars.toLocaleString()} characters.`);
+        }
+      } catch (err) {
+        setError(err.message);
+        setGenerating(false);
+        return;
+      }
+    }
 
     const flushTokens = () => {
       const buffered = tokenBufferRef.current;
@@ -288,6 +313,10 @@ export default function MultiArticlePanel({ articles: initialArticles, initialOp
               <span>{error}</span>
               <button className="btn btn-ghost btn-sm" onClick={generate}><HiOutlineArrowPath /> Retry</button>
             </div>
+          )}
+
+          {notice && !error && (
+            <div className="map-notice">{notice}</div>
           )}
 
           {!error && !output && !generating && (

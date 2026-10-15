@@ -10,6 +10,12 @@ export const NANO_MODEL_NAME = 'gemini-nano';
 // just echoes the prompt back, prefixed with this message.
 const CHROMIUM_STUB_PREFIX = 'On-device model is not available';
 const NOT_CHROME_ERROR = 'Gemini Nano needs Google Chrome (desktop, 148+). This browser exposes the API but has no on-device model.';
+const TOO_LONG_ERROR = 'This request is too long for Gemini Nano. Select fewer articles, or switch to an Ollama model in Settings → AI Processing.';
+
+// Room left in the context window for the model's answer.
+const OUTPUT_RESERVE_TOKENS = 1536;
+// Rough chars-per-token used only when Chrome can't measure input for us.
+const FALLBACK_CHARS_PER_TOKEN = 3;
 
 export function isNanoModel(name) {
   return name === NANO_MODEL_NAME;
@@ -54,6 +60,41 @@ async function createSession(messages) {
 }
 
 /**
+ * Finds the largest per-item character limit (≤ maxChars) for which the user
+ * message fits in Gemini Nano's context window alongside the system prompt
+ * and room for the answer. buildUserMessage(chars) renders the message with
+ * each item trimmed to `chars`. Shrinking every item evenly keeps all of them
+ * in the prompt instead of cutting the last ones off.
+ * Returns { chars, trimmed }; throws when even minChars doesn't fit.
+ */
+export async function fitToNanoContext(systemContent, buildUserMessage, { maxChars, minChars = 200 }) {
+  const session = await createSession([{ role: 'system', content: systemContent }]);
+  try {
+    const windowSize = session.contextWindow ?? session.inputQuota;
+    if (!windowSize) return { chars: maxChars, trimmed: false };
+    const used = session.contextUsage ?? session.inputUsage ?? 0;
+    const budget = windowSize - used - OUTPUT_RESERVE_TOKENS;
+    if (budget <= 0) throw new Error(TOO_LONG_ERROR);
+
+    const measureFn = session.measureContextUsage ?? session.measureInputUsage;
+    const measure = (text) => (measureFn
+      ? measureFn.call(session, text)
+      : Math.ceil(text.length / FALLBACK_CHARS_PER_TOKEN));
+
+    let chars = maxChars;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const tokens = await measure(buildUserMessage(chars));
+      if (tokens <= budget) return { chars, trimmed: chars < maxChars };
+      if (chars <= minChars) break;
+      chars = Math.max(minChars, Math.floor(chars * (budget / tokens) * 0.9));
+    }
+    throw new Error(TOO_LONG_ERROR);
+  } finally {
+    session.destroy();
+  }
+}
+
+/**
  * Streams a completion from Gemini Nano. Same contract as streamChat():
  * takes the full message list, yields string tokens.
  * Each call uses a fresh session so it stays stateless like the Ollama path.
@@ -75,7 +116,9 @@ export async function* streamNanoChat(messages) {
     const trimmed = system
       ? [{ ...system, content: system.content.slice(0, Math.floor(system.content.length / 2)) + '…' }]
       : [];
-    session = await createSession(trimmed);
+    session = await createSession(trimmed).catch((retryErr) => {
+      throw retryErr?.name === 'QuotaExceededError' ? new Error(TOO_LONG_ERROR, { cause: retryErr }) : retryErr;
+    });
   }
 
   const controller = new AbortController();
@@ -96,6 +139,9 @@ export async function* streamNanoChat(messages) {
       if (head.startsWith(CHROMIUM_STUB_PREFIX)) throw new Error(NOT_CHROME_ERROR);
       yield head;
     }
+  } catch (err) {
+    if (err?.name === 'QuotaExceededError') throw new Error(TOO_LONG_ERROR, { cause: err });
+    throw err;
   } finally {
     controller.abort();
     session.destroy();
