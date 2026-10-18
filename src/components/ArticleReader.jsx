@@ -71,7 +71,7 @@ export default function ArticleReader({
   const extraction = useArticleExtraction(articleId, link);
   const { highlights, reload: reloadHighlights, remove: removeHighlight } = useArticleHighlights(articleId, link);
   const feedTitle = useFeedTitle(feedId);
-  const progress = useReaderScroll(contentRef, articleId, isOpen);
+  const progress = useReaderScroll(contentRef, articleId, isOpen, extraction.settled);
   const visible = useSlideIn(isOpen);
   const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark });
   const { displayContent, html, previewHtml } = useArticleContent(current, extraction.content);
