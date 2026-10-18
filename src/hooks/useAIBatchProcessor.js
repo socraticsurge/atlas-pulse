@@ -6,6 +6,7 @@ import {
 } from '../utils/api.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 import { batchMessages, collectResponse } from '../ai/tasks.js';
+import { getAISettings } from '../utils/aiSettings.js';
 import { parseBatchResult } from '../ai/parse.js';
 import {
   IDLE_PROGRESS, batchStatus, batchUpdates, newestFirst, pickBatchModel, progressAfter, progressStarted,
@@ -27,7 +28,7 @@ async function processNext({ model, features, onStart, shouldStop }) {
     articleId = article.id;
     await patchArticle(articleId, { aiStatus: 'processing' });
     onStart(queued.length);
-    const response = await collectResponse(model, batchMessages(article), shouldStop);
+    const response = await collectResponse(model, batchMessages(article, getAISettings()), shouldStop);
     await patchArticle(articleId, batchUpdates(parseBatchResult(response), features));
     return 'done';
   } catch (err) {

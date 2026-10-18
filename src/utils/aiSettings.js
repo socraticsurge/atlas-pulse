@@ -129,10 +129,10 @@ export function saveAISettings(settings) {
 }
 
 /**
- * Injects persona lenses, tone instruction, and custom instructions
- * into a base system prompt string.
+ * The reader's voice for a prompt: persona lens(es), tone instruction, and
+ * custom instructions, as text to append to a base system prompt.
  */
-export function buildSystemPrompt(basePrompt, settings) {
+export function voiceInstructions(settings) {
   const {
     personas = ['analyst'],
     tone = DEFAULT_AI_SETTINGS.tone,
@@ -148,22 +148,30 @@ export function buildSystemPrompt(basePrompt, settings) {
     return found.instruction;
   });
 
-  let prompt = basePrompt;
+  let voice = '';
 
   if (selectedPersonas.length === 1) {
-    prompt += `\n\nPerspective: ${selectedPersonas[0].lens}`;
+    voice += `\n\nPerspective: ${selectedPersonas[0].lens}`;
   } else if (selectedPersonas.length > 1) {
-    prompt += `\n\nBlend the following perspectives naturally — do not label or separate them in your response, just let them inform a unified voice:\n`;
+    voice += `\n\nBlend the following perspectives naturally — do not label or separate them in your response, just let them inform a unified voice:\n`;
     selectedPersonas.forEach((p) => {
-      prompt += `• ${p.label}: ${p.lens}\n`;
+      voice += `• ${p.label}: ${p.lens}\n`;
     });
   }
 
-  prompt += `\n\nTone: ${activeToneInstructions.join(' ')}`;
+  voice += `\n\nTone: ${activeToneInstructions.join(' ')}`;
 
   if (customInstructions.trim()) {
-    prompt += `\n\nAdditional instructions from the reader: ${customInstructions.trim()}`;
+    voice += `\n\nAdditional instructions from the reader: ${customInstructions.trim()}`;
   }
 
-  return prompt;
+  return voice;
+}
+
+/**
+ * Injects persona lenses, tone instruction, and custom instructions
+ * into a base system prompt string.
+ */
+export function buildSystemPrompt(basePrompt, settings) {
+  return basePrompt + voiceInstructions(settings);
 }
