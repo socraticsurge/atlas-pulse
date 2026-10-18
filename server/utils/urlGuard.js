@@ -1,7 +1,7 @@
 import dns from 'node:dns/promises';
 import dnsCallback from 'node:dns';
 import net from 'node:net';
-import { Agent } from 'undici';
+import { Agent, fetch as undiciFetch } from 'undici';
 
 /**
  * SSRF guard. Feed/discovery/extraction endpoints fetch user-supplied URLs
@@ -122,8 +122,13 @@ export function guardedLookup(hostname, options, callback) {
   });
 }
 
-// The connection pool for guarded fetches: every connect resolves through guardedLookup.
+// The connection pool for guarded fetches: every connect resolves through
+// guardedLookup. undici's own fetch is used with it (not the global fetch),
+// so the client and the pool always come from the same undici version.
 const guardedAgent = new Agent({ connect: { lookup: guardedLookup } });
+
+/** One HTTP request through the guarded pool (redirects are handled by safeFetch). */
+export const guardedRequest = (url, options) => undiciFetch(url, { ...options, dispatcher: guardedAgent });
 
 const MAX_REDIRECTS = 5;
 
@@ -133,11 +138,12 @@ const MAX_REDIRECTS = 5;
  * redirect hop, so a public URL cannot 3xx-redirect the server into a
  * loopback/private/metadata address. Redirects are followed manually
  * (redirect: 'manual') precisely so each Location can be checked first.
+ * `request` is the single-hop HTTP call (tests pass a stub).
  */
-export async function safeFetch(rawUrl, options = {}) {
+export async function safeFetch(rawUrl, options = {}, request = guardedRequest) {
   let current = (await assertPublicHttpUrl(rawUrl)).href;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const res = await fetch(current, { ...options, redirect: 'manual', dispatcher: guardedAgent });
+    const res = await request(current, { ...options, redirect: 'manual' });
     const isRedirect = res.status >= 300 && res.status < 400 && res.headers.has('location');
     if (!isRedirect) return res;
     const next = new URL(res.headers.get('location'), current).href;

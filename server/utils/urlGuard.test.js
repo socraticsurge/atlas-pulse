@@ -40,29 +40,27 @@ test('assertPublicHttpUrl blocks multicast and broadcast, and reads bracketed IP
 // server into a private/metadata address. If someone removes the per-hop
 // re-validation from safeFetch, this test fails.
 test('safeFetch blocks a redirect that points at a private address', async () => {
-  mock.method(globalThis, 'fetch', async () =>
-    new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } }));
+  const request = async () => new Response(null, { status: 302, headers: { location: 'http://169.254.169.254/' } });
   await assert.rejects(
-    () => safeFetch('http://93.184.216.34/'), // literal public IP — no DNS needed
+    () => safeFetch('http://93.184.216.34/', {}, request), // literal public IP — no DNS needed
     /Blocked private or loopback address/,
   );
 });
 
 test('safeFetch returns a non-redirect response unchanged', async () => {
-  mock.method(globalThis, 'fetch', async () => new Response('ok', { status: 200 }));
-  const res = await safeFetch('http://93.184.216.34/');
+  const res = await safeFetch('http://93.184.216.34/', {}, async () => new Response('ok', { status: 200 }));
   assert.equal(res.status, 200);
 });
 
 test('safeFetch follows a redirect to another public address', async () => {
   let calls = 0;
-  mock.method(globalThis, 'fetch', async () => {
+  const request = async () => {
     calls += 1;
     return calls === 1
       ? new Response(null, { status: 301, headers: { location: 'http://93.184.216.35/' } })
       : new Response('final', { status: 200 });
-  });
-  const res = await safeFetch('http://93.184.216.34/');
+  };
+  const res = await safeFetch('http://93.184.216.34/', {}, request);
   assert.equal(res.status, 200);
   assert.equal(calls, 2);
 });
