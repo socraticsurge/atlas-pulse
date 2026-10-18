@@ -15,6 +15,9 @@ import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
 import { ToastProvider, useToast } from './app/ToastContext.jsx';
 import { useLayout } from './app/useLayout.js';
 import { usePaneKeyboard } from './app/usePaneKeyboard.js';
+import { useCommandPalette } from './app/useCommandPalette.js';
+import { usePaletteCommands } from './app/usePaletteCommands.js';
+import CommandPalette from './components/shell/CommandPalette.jsx';
 import { useArticleNavigation, useSummaryCount } from './app/useWorkspace.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 
@@ -50,6 +53,14 @@ function useBatchActions(batch) {
   return { trigger, clear };
 }
 
+// The ⌘K palette with the workspace's commands and the current list's articles.
+function PaletteHost({ open, onOpenChange, articles, onOpenArticle, commands }) {
+  const { feeds } = useLibrary();
+  const groups = usePaletteCommands(commands);
+  const sourceOf = useCallback((article) => feeds.find((f) => f.id === article.feedId)?.title || '', [feeds]);
+  return <CommandPalette open={open} onOpenChange={onOpenChange} groups={groups} articles={articles} sourceOf={sourceOf} onOpenArticle={onOpenArticle} />;
+}
+
 function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArticle }) {
   const library = useLibrary();
   const layout = useLayout();
@@ -63,7 +74,10 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const onArticleChanged = useCallback((updated) => { library.bumpCounts(); setChangedArticle(updated); }, [library]);
   const onLibraryChanged = useCallback(() => { refreshSummaryCount(); library.bumpCounts(); }, [refreshSummaryCount, library]);
   const nav = useArticleNavigation(selectedArticle, setSelectedArticle, visibleArticles);
-  usePaneKeyboard({ isModalOpen: modal !== null, toggleSidebar: layout.toggleSidebarMode, toggleList: layout.toggleList });
+  const [paletteOpen, setPaletteOpen] = useCommandPalette();
+  const overlayOpen = modal !== null || paletteOpen; // single-key shortcuts pause while one is open
+  usePaneKeyboard({ isModalOpen: overlayOpen, toggleSidebar: layout.toggleSidebarMode, toggleList: layout.toggleList });
+  const goToView = useCallback((view) => { setActiveView(view); setSelectedArticle(null); }, [setActiveView, setSelectedArticle]);
 
   const closeReader = useCallback(() => setSelectedArticle(null), [setSelectedArticle]);
   const openFromLibrary = useCallback((article) => { setActiveView({ type: 'all' }); setSelectedArticle(article); }, [setActiveView, setSelectedArticle]);
@@ -74,10 +88,8 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
       <Sidebar
         mode={layout.sidebarMode}
         activeView={activeView}
-        onViewChange={(view) => { setActiveView(view); setSelectedArticle(null); }}
-        onAddFeed={() => setModal('addFeed')}
-        onSettings={() => setModal('settings')}
-        onToggleMode={layout.toggleSidebarMode}
+        onViewChange={goToView}
+        onAddFeed={() => setModal('addFeed')} onSettings={() => setModal('settings')} onToggleMode={layout.toggleSidebarMode}
         librarySummaryCount={summaryCount}
         style={{ width: layout.effectiveSidebarWidth, minWidth: layout.effectiveSidebarWidth }}
       />
@@ -103,21 +115,19 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
             onCloseMulti={() => setMultiPanel(null)}
             layout={layout}
             reader={{
-              article: selectedArticle,
-              isModalOpen: modal !== null,
-              onClose: closeReader,
-              onNavigate: nav.navigate,
-              hasPrev: nav.hasPrev,
-              hasNext: nav.hasNext,
-              currentIndex: nav.index,
-              totalCount: visibleArticles.length,
-              onSummarySaved: refreshSummaryCount,
-              onArticleChanged,
+              article: selectedArticle, isModalOpen: overlayOpen, onClose: closeReader, onArticleChanged,
+              onNavigate: nav.navigate, hasPrev: nav.hasPrev, hasNext: nav.hasNext, currentIndex: nav.index,
+              totalCount: visibleArticles.length, onSummarySaved: refreshSummaryCount,
             }}
           />
         </>
       )}
 
+      <PaletteHost
+        open={paletteOpen} onOpenChange={setPaletteOpen} articles={visibleArticles}
+        onOpenArticle={LibraryScreen ? openFromLibrary : setSelectedArticle}
+        commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
+      />
       <AddFeedModal isOpen={modal === 'addFeed'} onClose={() => setModal(null)} />
       <SettingsPanel isOpen={modal === 'settings'} onClose={() => setModal(null)} availableModels={batch.availableModels} />
     </div>

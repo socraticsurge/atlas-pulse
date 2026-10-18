@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../utils/api.js';
+import { on } from '../lib/appEvents.js';
 import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js';
 import { useOnKeyChange } from '../hooks/useOnKeyChange.js';
 import AIDrawer from './AIDrawer.jsx';
@@ -65,6 +66,7 @@ export default function ArticleReader({
 }) {
   const [readerSettings, setReaderSettings] = useState(getReaderSettings);
   const rail = useAIRail();
+  useEffect(() => on('toggle-ai', rail.toggle), [rail.toggle]); // from the command palette
   const contentRef = useRef(null);
 
   const { id: articleId, link, feedId } = article || {};

@@ -17,6 +17,7 @@ import { useListKeyboard } from './article-list/useListKeyboard.js';
 import { useSelection } from './article-list/useSelection.js';
 import { VirtualArticleList } from './article-list/VirtualArticleList.jsx';
 import ListKeyHints from './shell/ListKeyHints.jsx';
+import { on } from '../lib/appEvents.js';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
 // Extra class on the scroll container per view mode.
@@ -28,6 +29,7 @@ function useViewMode() {
     setViewMode(mode);
     writeStored(VIEW_MODE_KEY, mode);
   }, []);
+  useEffect(() => on('view-mode', change), [change]); // from the command palette
   return [viewMode, change];
 }
 

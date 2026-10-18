@@ -1,15 +1,9 @@
 import {
-  HiOutlineBars3, HiOutlineBars3BottomLeft, HiOutlineCheckCircle, HiOutlineDocumentText, HiOutlineMagnifyingGlass,
-  HiOutlinePause, HiOutlineQueueList, HiOutlineRectangleStack, HiOutlineSparkles, HiOutlineXMark,
+  HiOutlineBars3, HiOutlineCheckCircle, HiOutlineMagnifyingGlass, HiOutlinePause, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
+import { VIEW_MODES } from './viewModes.js';
 import { useConfirmAction } from '../../hooks/useConfirmAction.js';
 
-const VIEW_MODES = [
-  { id: 'rows', label: 'Rows', title: 'Rows view — dense two-line rows with day headings', Icon: HiOutlineBars3BottomLeft },
-  { id: 'magazine', label: 'Grid', title: 'Grid view — portrait thumbnail cards', Icon: HiOutlineRectangleStack },
-  { id: 'excerpt', label: 'List', title: 'List view — title with excerpt and thumbnail', Icon: HiOutlineDocumentText },
-  { id: 'compact', label: 'Compact', title: 'Compact view — dense single-line rows', Icon: HiOutlineQueueList },
-];
 
 function ViewModeToggle({ viewMode, onChange }) {
   return (

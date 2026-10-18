@@ -1,6 +1,7 @@
 import ResizableHandle from '../ResizableHandle.jsx';
 
 const SHORTCUTS = [
+  ['⌘K', 'command palette'],
   ['j / k', 'next / previous article'],
   ['o', 'open the original'],
   ['b', 'bookmark'],

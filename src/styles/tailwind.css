@@ -54,3 +54,13 @@
   --color-ring: var(--accent);
   --font-sans: var(--font-family);
 }
+
+/* Without preflight, Tailwind borders default to currentColor. shadcn parts
+   (everything with data-slot) get the theme's border color instead; legacy
+   elements keep their own. */
+@layer base {
+  [data-slot],
+  [data-slot] * {
+    border-color: var(--color-border);
+  }
+}
