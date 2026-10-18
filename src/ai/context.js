@@ -1,7 +1,6 @@
 import { htmlToText } from '../utils/helpers.js';
 
-// Character budgets for article text sent to a model.
-export const LIMITS = { article: 6000, analysis: 4000, perArticle: 1200 };
+import { getLimit } from './limits.js';
 
 export function truncate(text, max) {
   return text.length > max ? text.slice(0, max) + '…' : text;
@@ -19,10 +18,10 @@ export function articleContext(article, extractedContent) {
 Author: ${article?.author || 'Unknown'}
 Published: ${published}
 
-${truncate(articleText(article, extractedContent), LIMITS.article)}`;
+${truncate(articleText(article, extractedContent), getLimit('article'))}`;
 }
 
 /** Title plus truncated text, for classification. */
-export function titledText(article, extractedContent, max = LIMITS.analysis) {
+export function titledText(article, extractedContent, max = getLimit('analysis')) {
   return `Title: ${article.title}\n\n${truncate(articleText(article, extractedContent), max)}`;
 }

@@ -1,5 +1,6 @@
-// System prompts for single-article AI tasks. Multi-article prompts live in
-// multiArticle.js.
+// The default text of every AI prompt. Users can replace any of them in
+// Settings → Prompts (see promptRegistry.js); code reads them through
+// getPrompt(), never directly.
 
 export const BASE_SUMMARY = `You are an editorial reading assistant. Read the article and write a concise, insightful summary in 3–4 sentences. Focus on the key finding or argument, why it matters, and one concrete takeaway. Write in plain prose, no bullet points. Do not start with "This article".`;
 
@@ -25,3 +26,21 @@ export const ANALYSIS_PROMPT = jsonSpec(ANALYSIS_FIELDS);
 
 /** Summary + classification in one call (background batch processing). */
 export const BATCH_PROMPT = jsonSpec([SUMMARY_FIELD, ...ANALYSIS_FIELDS]);
+
+/** Added to the batch prompt before the reader's voice (persona, tone, instructions). */
+export const BATCH_VOICE = 'Write the "summary" value in the voice described below. Keep the other fields plain, neutral classifications.';
+
+// ── Multi-article actions ────────────────────────────────────────────────────
+
+export const COMPARE_SYSTEM = `You are a media analyst comparing how different sources cover the same topic.\n\nFor each dimension below, show how each article approaches it — reference the source by name:\n\n1. **Angle & Framing** — What perspective does each source emphasize?\n2. **Key Claims** — What are the main factual claims?\n3. **What's Missing** — What does each source omit or downplay?\n4. **Tone** — How does the language differ?\n5. **Evidence** — What sources or data does each cite?\n\nUse markdown with clear headers. Be specific and grounded in the text.`;
+
+/** Newsletter system prompt; {style} is replaced by the chosen style's text. */
+export const NEWSLETTER_SYSTEM = 'You are a professional newsletter writer creating a curated digest.\n\n{style}\n\nFormat with clear markdown headers (## for section titles), bullet points for takeaways, and attribution for each story.';
+
+export const NEWSLETTER_STYLES = {
+  digest:  'Write a concise daily digest. Keep summaries to 2-3 sentences each. Informative tone. One-line intro and brief closing.',
+  roundup: 'Write a weekly roundup. Include more context and commentary. Group related stories if applicable. Conversational yet professional.',
+  brief:   'Write an executive briefing. Lead with the most critical stories. Use bullet points for key takeaways. Be direct; focus on strategic implications.',
+};
+
+export const BRIEFING_SYSTEM = `You are an expert analyst. Answer the user's question using only information from the provided articles. Be precise. Cite which article supports each point by source name.`;
