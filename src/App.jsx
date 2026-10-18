@@ -5,7 +5,7 @@ import ArticleReader from './components/ArticleReader.jsx';
 import HighlightsScreen from './components/library/HighlightsScreen.jsx';
 import SummariesScreen from './components/library/SummariesScreen.jsx';
 import MultiArticlePanel from './components/MultiArticlePanel.jsx';
-import ReaderErrorBoundary from './components/ReaderErrorBoundary.jsx';
+import ReaderErrorBoundary from './components/reader/ReaderErrorBoundary.jsx';
 import ReaderPlaceholder from './components/shell/ReaderPlaceholder.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
 import SettingsScreen from './components/settings/SettingsScreen.jsx';
