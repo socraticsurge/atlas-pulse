@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DATA_DIR } from './db/connection.js';
-import { isSyncedSetting, MAX_SETTING_LENGTH } from '../shared/settingsKeys.js';
+import { isSyncedSetting, MAX_SETTING_LENGTH, SYNCED_SETTING_KEYS } from '../shared/settingsKeys.js';
 
 // Settings live in one JSON file beside the databases: readable, hand-editable
 // and easy to back up. Values are the strings the browser stores.
@@ -38,13 +38,21 @@ export function validateChanges(changes) {
   }
 }
 
-/** Applies a change set (null deletes) and writes the file atomically. Returns all settings. */
+// The value a key ends up with: its change if there is one (null removes it), else its current value.
+const valueAfter = (key, changes, current) => (Object.hasOwn(changes, key) ? changes[key] : current[key]);
+
+/**
+ * Applies a change set (null deletes) and writes the file atomically. The
+ * file is rebuilt from the known keys only, so it never holds anything else.
+ * Returns all settings.
+ */
 export function updateSettings(changes, path = SETTINGS_PATH) {
   validateChanges(changes);
-  const next = { ...readSettings(path) };
-  for (const [key, value] of Object.entries(changes)) {
-    if (value === null) delete next[key];
-    else next[key] = value;
+  const current = readSettings(path);
+  const next = {};
+  for (const key of SYNCED_SETTING_KEYS) {
+    const value = valueAfter(key, changes, current);
+    if (typeof value === 'string') next[key] = value;
   }
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, `${JSON.stringify(next, null, 2)}\n`);
