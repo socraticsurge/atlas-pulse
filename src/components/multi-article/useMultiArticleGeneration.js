@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { prepareMultiArticleRequest } from '../../ai/multiArticle.js';
 import { streamTokens } from '../../ai/tasks.js';
+import { useStreamRun } from '../../hooks/useStreamRun.js';
 import { useTokenBuffer } from '../../hooks/useTokenBuffer.js';
 
 /** Generates a Compare / Newsletter / Briefing output with streaming and stop. */
@@ -10,7 +11,7 @@ export function useMultiArticleGeneration() {
   const [generated, setGenerated] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
-  const abortRef = useRef(false);
+  const streamRun = useStreamRun();
   const onFlush = useCallback((text) => setOutput((prev) => prev + text), []);
   const tokens = useTokenBuffer(onFlush);
 
@@ -20,10 +21,12 @@ export function useMultiArticleGeneration() {
     setError(null);
   }, []);
 
-  const run = useCallback(async (request) => {
+  const run = useCallback(async (request, signal) => {
     const { model, messages, notice: fitNotice } = await prepareMultiArticleRequest(request);
+    if (signal.aborted) return;
     setNotice(fitNotice);
-    await streamTokens(model, messages, tokens.push, () => abortRef.current);
+    const push = (token) => { if (!signal.aborted) tokens.push(token); };
+    await streamTokens(model, messages, push, signal);
     tokens.flush();
     setGenerated(true);
   }, [tokens]);
@@ -33,13 +36,13 @@ export function useMultiArticleGeneration() {
     reset();
     setNotice(null);
     setGenerating(true);
-    abortRef.current = false;
     tokens.reset();
-    await run(request).catch((err) => setError(err.message));
+    const signal = streamRun.start();
+    await run(request, signal).catch((err) => { if (!signal.aborted) setError(err.message); });
     setGenerating(false);
-  }, [generating, reset, run, tokens]);
+  }, [generating, reset, run, tokens, streamRun]);
 
-  const stop = useCallback(() => { abortRef.current = true; }, []);
+  const stop = useCallback(() => streamRun.cancel(), [streamRun]);
 
   return { output, generating, generated, error, notice, generate, stop, reset };
 }

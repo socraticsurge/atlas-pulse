@@ -165,11 +165,12 @@ function checkedHead(head) {
  * takes the full message list, yields string tokens.
  * Each call uses a fresh session so it stays stateless like the Ollama path.
  */
-export async function* streamNanoChat(messages) {
+export async function* streamNanoChat(messages, signal) {
   if (!hasPromptApi()) throw new Error(NOT_CHROME_ERROR);
   const last = messages[messages.length - 1];
   const session = await openSession(messages.slice(0, -1));
   const controller = new AbortController();
+  signal?.addEventListener('abort', () => controller.abort(), { once: true });
   try {
     yield* rejectStubOutput(session.promptStreaming(last.content, { signal: controller.signal }));
   } catch (err) {

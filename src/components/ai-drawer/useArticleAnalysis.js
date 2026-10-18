@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { patchArticle } from '../../utils/api.js';
 import { analysisMessages, collectResponse } from '../../ai/tasks.js';
 import { parseAnalysis } from '../../ai/parse.js';
+import { useStreamRun, whileCurrent } from '../../hooks/useStreamRun.js';
 import { useArticleFieldSync } from './useArticleFieldSync.js';
 
 function parseStoredAnalysis(raw) {
@@ -13,18 +14,31 @@ function parseStoredAnalysis(raw) {
   }
 }
 
+// Runs the analysis and stores it on the article; resolves to the parsed
+// result, or null when the run was stopped or superseded.
+async function analyzeArticle(model, article, extractedContent, signal) {
+  const response = await collectResponse(model, analysisMessages(article, extractedContent), signal);
+  if (signal.aborted) return null;
+  const parsed = parseAnalysis(response);
+  await patchArticle(article.id, { aiAnalysis: JSON.stringify(parsed) }).catch(() => {});
+  return parsed;
+}
+
 /** Analysis tab state: on-demand classification and batch results. */
 export function useArticleAnalysis({ article, extractedContent, model }) {
   const [analysis, setAnalysis] = useState(() => parseStoredAnalysis(article?.aiAnalysis));
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState(null);
-  const abortRef = useRef(false);
+  const streamRun = useStreamRun();
 
-  // Reset on article change; adopt batch analyses as they land.
+  // Reset on article change (dropping a run for the previous article); adopt
+  // batch analyses as they land.
   useArticleFieldSync(article, 'aiAnalysis', {
     onArticleChange: (raw) => {
+      streamRun.cancel();
       setAnalysis(parseStoredAnalysis(raw));
       setError(null);
+      setAnalyzing(false);
     },
     onFieldChange: (raw) => {
       const parsed = parseStoredAnalysis(raw);
@@ -37,23 +51,16 @@ export function useArticleAnalysis({ article, extractedContent, model }) {
     if (!article || !model) return;
     setAnalyzing(true);
     setError(null);
-    abortRef.current = false;
-    try {
-      const response = await collectResponse(model, analysisMessages(article, extractedContent), () => abortRef.current);
-      const parsed = parseAnalysis(response);
-      setAnalysis(parsed);
-      await patchArticle(article.id, { aiAnalysis: JSON.stringify(parsed) }).catch(() => {});
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setAnalyzing(false);
-    }
-  }, [article, extractedContent, model, analyzing]);
+    const signal = streamRun.start();
+    await analyzeArticle(model, article, extractedContent, signal)
+      .then(whileCurrent(signal, setAnalysis), whileCurrent(signal, (err) => setError(err.message)));
+    whileCurrent(signal, setAnalyzing)(false);
+  }, [article, extractedContent, model, analyzing, streamRun]);
 
   const stop = useCallback(() => {
-    abortRef.current = true;
+    streamRun.cancel();
     setAnalyzing(false);
-  }, []);
+  }, [streamRun]);
 
   return { analysis, analyzing, error, run, stop };
 }
