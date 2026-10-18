@@ -116,4 +116,14 @@ export const MIGRATIONS = [
       }
     },
   },
+  {
+    version: 5,
+    description: 'Remember why a feed last failed to refresh (shown in the sidebar)',
+    up: (db) => {
+      db.exec(`
+        ALTER TABLE feeds ADD COLUMN last_error TEXT;
+        ALTER TABLE feeds ADD COLUMN last_error_at TEXT;
+      `);
+    },
+  },
 ];

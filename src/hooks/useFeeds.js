@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as api from '../utils/api.js';
-import { createFeed, importNewFeeds, refreshInChunks, refreshOne } from '../utils/feedSync.js';
+import { createFeed, importNewFeeds, recordRefreshError, refreshInChunks, refreshOne } from '../utils/feedSync.js';
 
 // The subscribed feeds, loaded once, plus a helper to swap in an updated one.
 function useFeedList() {
@@ -13,26 +13,36 @@ function useFeedList() {
   return { feeds, setFeeds, replaceFeed, reloadFeeds };
 }
 
-// Refreshing one feed or all of them; resolves to the number of new articles.
+// Refreshes one feed: { inserted, failed }. A failure is remembered on the
+// feed (the sidebar shows it); a success clears it.
+async function refreshAndRecord(feed, replaceFeed) {
+  try {
+    const { inserted, updated } = await refreshOne(feed);
+    replaceFeed(updated);
+    return { inserted, failed: false };
+  } catch (err) {
+    console.error(`Failed to refresh feed ${feed.title}:`, err);
+    await recordRefreshError(feed, err).then(replaceFeed).catch(() => {});
+    return { inserted: 0, failed: true };
+  }
+}
+
+// Refreshing one feed or all of them; resolves to { inserted, failed }.
 function useFeedRefresh({ feeds, replaceFeed, onDataChanged }) {
   const refreshFeed = useCallback(async (feedId) => {
     const feed = feeds.find((f) => f.id === feedId);
-    if (!feed) return 0;
-    try {
-      const { inserted, updated } = await refreshOne(feed);
-      replaceFeed(updated);
-      return inserted;
-    } catch (err) {
-      console.error(`Failed to refresh feed ${feed.title}:`, err);
-      return 0;
-    }
-  }, [feeds, replaceFeed]);
+    if (!feed) return { inserted: 0, failed: false };
+    const result = await refreshAndRecord(feed, replaceFeed);
+    if (result.inserted > 0) onDataChanged?.();
+    return result;
+  }, [feeds, replaceFeed, onDataChanged]);
 
+  // Every feed; resolves to { inserted, failed: [feed titles] }.
   const refreshAllFeeds = useCallback(async () => {
-    const totalNew = await refreshInChunks(feeds, refreshFeed);
-    if (totalNew > 0) onDataChanged?.();
-    return totalNew;
-  }, [feeds, refreshFeed, onDataChanged]);
+    const tally = await refreshInChunks(feeds, (id) => refreshAndRecord(feeds.find((f) => f.id === id), replaceFeed));
+    if (tally.inserted > 0) onDataChanged?.();
+    return tally;
+  }, [feeds, replaceFeed, onDataChanged]);
 
   return { refreshFeed, refreshAllFeeds };
 }
@@ -47,11 +57,8 @@ function useOPMLImport({ feeds, setFeeds, replaceFeed, onDataChanged }) {
     setFeeds(await api.fetchFeeds().catch(() => [...feeds, ...imported]));
     onDataChanged?.();
     const byId = new Map(imported.map((f) => [f.id, f]));
-    refreshInChunks(imported, async (id) => {
-      const { inserted, updated } = await refreshOne(byId.get(id));
-      replaceFeed(updated);
-      return inserted;
-    }).then((totalNew) => { if (totalNew > 0) onDataChanged?.(); });
+    refreshInChunks(imported, (id) => refreshAndRecord(byId.get(id), replaceFeed))
+      .then(({ inserted }) => { if (inserted > 0) onDataChanged?.(); });
     return imported.length;
   }, [feeds, setFeeds, replaceFeed, onDataChanged]);
 }

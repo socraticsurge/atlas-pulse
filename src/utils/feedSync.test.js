@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chunkBySize, firstOf, fulfilledTotal, importNewFeeds, inBatchScope, toArticle } from './feedSync.js';
+import { chunkBySize, firstOf, importNewFeeds, inBatchScope, refreshSummary, tallyRefreshes, toArticle } from './feedSync.js';
 
 test('firstOf matches a || b || c, including the last-value fallback', () => {
   assert.equal(firstOf('', 'b', 'c'), 'b');
@@ -21,13 +21,15 @@ test('toArticle fills defaults and canonicalizes the link', () => {
   assert.ok(!Number.isNaN(Date.parse(bare.publishedAt)));
 });
 
-test('fulfilledTotal sums fulfilled values and ignores rejections and empties', () => {
-  assert.equal(fulfilledTotal([
-    { status: 'fulfilled', value: 3 },
+test('tallyRefreshes adds new articles and names the feeds that failed', () => {
+  const chunk = [{ title: 'A' }, { title: 'B' }, { title: 'C' }, { title: 'D' }];
+  const tally = tallyRefreshes({ inserted: 1, failed: [] }, [
+    { status: 'fulfilled', value: { inserted: 3, failed: false } },
     { status: 'rejected', reason: new Error('x') },
-    { status: 'fulfilled', value: undefined },
-    { status: 'fulfilled', value: 2 },
-  ]), 5);
+    { status: 'fulfilled', value: { inserted: 0, failed: true } },
+    { status: 'fulfilled', value: { inserted: 2, failed: false } },
+  ], chunk);
+  assert.deepEqual(tally, { inserted: 6, failed: ['B', 'C'] });
 });
 
 test('inBatchScope handles all, feed, and unknown scopes without network', async () => {
@@ -58,4 +60,10 @@ test('chunkBySize keeps order, respects the limit, and isolates oversized items'
   assert.deepEqual(sizes(chunkBySize([item(30), item(30), item(30)], 100)), [[30, 30], [30]]);
   assert.deepEqual(sizes(chunkBySize([item(10), item(500), item(10)], 100)), [[10], [500], [10]]);
   assert.deepEqual(chunkBySize([], 100), []);
+});
+
+test('refreshSummary names up to two failed feeds, then counts them', () => {
+  assert.deepEqual(refreshSummary({ inserted: 1, failed: [] }), { message: 'Refreshed: 1 new article', type: 'success' });
+  assert.equal(refreshSummary({ inserted: 0, failed: ['AI News'] }).message, "Refreshed: 0 new articles. AI News couldn't be refreshed; the sidebar shows why.");
+  assert.match(refreshSummary({ inserted: 3, failed: ['A', 'B', 'C'] }).message, /3 feeds couldn't/);
 });

@@ -1,23 +1,12 @@
-import RSSParser from 'rss-parser';
 import { fetchText } from './fetchText.js';
+import { parseFeedText } from './feedText.js';
+
+export { escapeBareAmpersands, NOT_A_FEED, parseFeedText } from './feedText.js';
 
 const FEED_HEADERS = {
   'User-Agent': 'RSS-Feed-Reader/1.0',
   'Accept': 'application/rss+xml, application/xml, application/atom+xml, text/xml, */*',
 };
-
-// Parses text only: the feed is fetched by fetchText, so redirects are checked
-// by the SSRF guard (rss-parser's own parseURL follows them unchecked).
-const parser = new RSSParser({
-  customFields: {
-    item: [
-      ['media:content', 'mediaContent'],
-      ['media:thumbnail', 'mediaThumbnail'],
-      ['content:encoded', 'contentEncoded'],
-      ['dc:creator', 'dcCreator'],
-    ],
-  },
-});
 
 // First truthy value, or '' when none is.
 const firstOf = (...values) => values.find(Boolean) || '';
@@ -56,12 +45,9 @@ export function normalizeFeed(feed, feedUrl) {
  * Parse an RSS/Atom feed URL and return structured data.
  */
 export async function parseFeed(feedUrl) {
-  try {
-    const { text } = await fetchText(feedUrl, { headers: FEED_HEADERS });
-    return normalizeFeed(await parser.parseString(text), feedUrl);
-  } catch (error) {
-    throw new Error(`Failed to parse feed: ${error.message}`, { cause: error });
-  }
+  const { text } = await fetchText(feedUrl, { headers: FEED_HEADERS })
+    .catch((error) => { throw new Error(`Failed to parse feed: ${error.message}`, { cause: error }); });
+  return normalizeFeed(await parseFeedText(text), feedUrl);
 }
 
 function enclosureImage(enclosure) {

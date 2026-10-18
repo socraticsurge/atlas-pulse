@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractImageUrl, normalizeFeed, normalizeItem } from './feedParser.js';
+import { escapeBareAmpersands, extractImageUrl, normalizeFeed, normalizeItem, NOT_A_FEED, parseFeedText } from './feedParser.js';
 import { toExtracted } from './articleExtractor.js';
 
 test('extractImageUrl prefers media tags, then image enclosures, then the first <img>', () => {
@@ -63,4 +63,21 @@ test('feedsInHtml finds alternate links, then feed-like anchors, without duplica
     { url: 'https://e.com/atom', title: '', type: 'discovered' },
     { url: 'https://e.com/category/rss', title: 'Category RSS', type: 'link' },
   ]);
+});
+
+test('a bare & is escaped; real entities are left alone', () => {
+  assert.equal(escapeBareAmpersands('<t>R&D &amp; Q&A &#38; &#x26; &copy;</t>'), '<t>R&amp;D &amp; Q&amp;A &#38; &#x26; &copy;</t>');
+});
+
+test('a feed broken only by a bare & still parses', async () => {
+  const xml = '<?xml version="1.0"?><rss version="2.0"><channel><title>AI & ML News</title><link>https://x.example</link>'
+    + '<item><title>Q&A with a researcher</title><link>https://x.example/1</link></item></channel></rss>';
+  const feed = await parseFeedText(xml);
+  assert.equal(feed.title, 'AI & ML News');
+  assert.equal(feed.items[0].title, 'Q&A with a researcher');
+  await assert.rejects(parseFeedText('<rss><channel><title>unclosed'));
+});
+
+test('a web page where the feed should be gets a plain explanation', async () => {
+  await assert.rejects(parseFeedText('<!doctype html><html><head><script>a && b</script></head></html>'), { message: NOT_A_FEED });
 });

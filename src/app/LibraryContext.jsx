@@ -3,11 +3,13 @@ import { useFeeds } from '../hooks/useFeeds.js';
 import { useFolders } from '../hooks/useFolders.js';
 import * as api from '../utils/api.js';
 import { getAutoRefreshMinutes } from '../utils/constants.js';
+import { refreshSummary } from '../utils/feedSync.js';
 import { useToast } from './ToastContext.jsx';
 
 const LibraryContext = createContext(null);
 
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
+
 
 // Keys bumped after mutations so lists and counts re-fetch.
 function useRefreshKeys() {
@@ -79,7 +81,7 @@ function useDestructiveActions({
 function useLibraryState(onViewRemoved) {
   const showToast = useToast();
   const { articlesKey, countsKey, bumpArticles, bumpCounts } = useRefreshKeys();
-  const { feeds, reloadFeeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
+  const { feeds, reloadFeeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshFeed, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
   const { folders, reloadFolders, addFolder, renameFolder, deleteFolder: deleteFolderRaw, deleteFolderAndFeeds: deleteFolderAndFeedsRaw } = useFolders();
   const [refreshing, setRefreshing] = useState(false);
   const setAutoRefreshMinutes = useAutoRefresh(feeds.length, refreshAllFeeds);
@@ -119,14 +121,21 @@ function useLibraryState(onViewRemoved) {
   const refreshAll = useCallback(async () => {
     setRefreshing(true);
     try {
-      const count = await refreshAllFeeds();
-      showToast(`Refreshed! ${plural(count, 'new article')} found.`);
+      const { message, type } = refreshSummary(await refreshAllFeeds());
+      showToast(message, type);
     } catch {
-      showToast('Failed to refresh some feeds', 'error');
+      showToast('Refreshing failed', 'error');
     } finally {
       setRefreshing(false);
     }
   }, [refreshAllFeeds, showToast]);
+
+  const refreshOneFeed = useCallback(async (feedId) => {
+    const title = feeds.find((f) => f.id === feedId)?.title || 'Feed';
+    const { inserted, failed } = await refreshFeed(feedId);
+    if (failed) showToast(`${title} couldn't be refreshed; the sidebar shows why`, 'error');
+    else showToast(`${title}: ${plural(inserted, 'new article')}`);
+  }, [feeds, refreshFeed, showToast]);
 
   const { deleteFolder, deleteFolderAndFeeds, clearAll } = useDestructiveActions({
     feeds, folders, reloadFeeds, reloadFolders, deleteFolderRaw, deleteFolderAndFeedsRaw,
@@ -139,11 +148,11 @@ function useLibraryState(onViewRemoved) {
     feeds, folders, existingFeedUrls, refreshing,
     articlesRefreshKey: articlesKey, countsRefreshKey: countsKey, bumpCounts,
     setAutoRefreshMinutes, importFeedsFromOPML,
-    onAddFeed: addFeed, onRemoveFeed: removeFeed, onMoveFeed: moveFeed, onRefreshAll: refreshAll,
+    onAddFeed: addFeed, onRemoveFeed: removeFeed, onMoveFeed: moveFeed, onRefreshAll: refreshAll, onRefreshFeed: refreshOneFeed,
     onAddFolder: addFolder, onRenameFolder: renameFolder,
     onDeleteFolder: deleteFolder, onDeleteFolderAndFeeds: deleteFolderAndFeeds, onClearAll: clearAll,
   }), [feeds, folders, existingFeedUrls, refreshing, articlesKey, countsKey, bumpCounts, setAutoRefreshMinutes,
-    importFeedsFromOPML, addFeed, removeFeed, moveFeed, refreshAll, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds, clearAll]);
+    importFeedsFromOPML, addFeed, removeFeed, moveFeed, refreshAll, refreshOneFeed, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds, clearAll]);
 }
 
 /** Feeds and folders with their actions, shared by Sidebar, Add Feed, and Settings. */
