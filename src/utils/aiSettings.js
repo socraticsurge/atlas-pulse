@@ -1,3 +1,5 @@
+import { readStored, writeStored } from './storage.js';
+
 const STORAGE_KEY = 'atlas-pulse-ai-settings';
 
 export const PERSONAS = [
@@ -109,7 +111,7 @@ export const DEFAULT_AI_SETTINGS = {
 
 export function getAISettings() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readStored(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       // Backward compat: old format stored tone as a plain string
@@ -125,7 +127,7 @@ export function getAISettings() {
 }
 
 export function saveAISettings(settings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  writeStored(STORAGE_KEY, JSON.stringify(settings));
 }
 
 /**

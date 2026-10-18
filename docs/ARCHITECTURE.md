@@ -53,7 +53,7 @@ Server ─┼──────────────────────�
 - **AI features must work with both engines.** Call `streamChat(model, messages)`. Never call Gemini Nano or Ollama directly.
 - **Feature folders own their pieces.** A top-level component such as `ArticleList.jsx` composes the hooks and subcomponents in its folder (`article-list/`). Pure logic lives in a `*Model.js` or `listLogic.js` file and has tests.
 - **App-wide state lives in a context.** Use `src/app/`. Don't thread props through `App.jsx`.
-- **The server owns persistent data.** Browser `localStorage` holds preferences only.
+- **The server owns persistent data.** Settings live in `data/settings.json`; browser `localStorage` is their working copy plus per-device layout state.
 
 ## Data
 
@@ -66,6 +66,8 @@ There are three SQLite databases in `data/` (or in `ATLAS_DATA_DIR` if set):
 | `highlights.db` | highlights | 1 |
 
 Each schema change is a numbered migration in `server/db/migrations/<db>.js`. `server/db/migrate.js` applies pending migrations in order and records progress in `PRAGMA user_version`. Databases from before the migration runner are adopted as version 1. Never edit a released migration; add a new one.
+
+Settings are in `data/settings.json`, a flat `{ "atlas-pulse-…": "<string>" }` file you can read, edit or back up. `shared/settingsKeys.js` lists the keys it accepts. Per-device layout state (sidebar and pane widths, list and rail visibility, scroll positions) stays in the browser. At startup `src/settings/sync.js` copies the file into `localStorage`, which the app reads synchronously; if the file is still empty, it seeds the file from the browser instead. After that, every `writeStored()` of a synced key is sent back through `PUT /api/settings` (batched).
 
 List endpoints return `LIST_COLUMNS`, which leaves out the article body. The reader fetches a single article in full. Article bodies are indexed in the FTS5 table `articles_fts` (contentless, porter tokenizer), and `searchArticleBodies` serves body search.
 
