@@ -43,6 +43,10 @@
   user-select: none;
 }
 
+.ai-filter-pill svg {
+  font-size: 12px;
+}
+
 .ai-filter-pill:hover {
   border-color: var(--accent-border);
   color: var(--text-primary);

@@ -10,6 +10,10 @@
   --bg-modal: #1a1b1e;
   --bg-modal-overlay: rgba(0, 0, 0, 0.6);
 
+  /* Every pane's top bar (sidebar, list, reader, AI rail, library, panels)
+     has this height, so their bottom borders line up across the window. */
+  --pane-header-height: 48px;
+
   /* The app rail (far left) stays dark in both themes. */
   --rail-bg: #0d0e10;
   --rail-border: #202226;

@@ -20,7 +20,7 @@
   align-items: center;
   gap: 4px;
   border-bottom: 1px solid var(--border);
-  height: 52px;
+  height: var(--pane-header-height);
   flex-shrink: 0;
 }
 

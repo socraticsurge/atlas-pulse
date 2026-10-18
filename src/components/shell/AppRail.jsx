@@ -34,9 +34,9 @@ const DOT_FOR = { all: (c) => c.total > 0, today: (c) => c.today > 0 };
  */
 export default function AppRail({ activeView, onViewChange, counts, actions }) {
   return (
-    <nav aria-label="Main" className="flex h-screen w-[52px] shrink-0 flex-col items-center justify-between border-r border-[var(--rail-border)] bg-[var(--rail-bg)] py-3">
+    <nav aria-label="Main" className="flex h-screen w-[52px] shrink-0 flex-col items-center justify-between border-r border-[var(--rail-border)] bg-[var(--rail-bg)] pb-3">
       <div className="flex flex-col items-center gap-1.5">
-        <button type="button" onClick={actions.onToggleSidebar} title="Show or hide the sidebar ([)" aria-label="Show or hide the sidebar" className="mb-2 cursor-pointer rounded-lg border-0 bg-transparent p-0">
+        <button type="button" onClick={actions.onToggleSidebar} title="Show or hide the sidebar ([)" aria-label="Show or hide the sidebar" className="mb-2 flex h-[var(--pane-header-height)] cursor-pointer items-center border-0 bg-transparent p-0">
           <img src="/atlas-pulse-icon.svg" alt="" className="size-8 rounded-lg" />
         </button>
         {NAV_ITEMS.map(({ type, label, iconTitle, Icon }) => (

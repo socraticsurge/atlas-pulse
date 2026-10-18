@@ -130,7 +130,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 44px;
+  height: var(--pane-header-height);
   flex-shrink: 0;
   background: transparent;
 }

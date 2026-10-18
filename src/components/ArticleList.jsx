@@ -119,7 +119,7 @@ function ListContent({ loading, articles, empty, ...listProps }) {
 }
 
 export default function ArticleList({
-  activeView, selectedArticleId, onSelectArticle, onArticlesLoaded, sidebarHidden = false, onShowSidebar,
+  activeView, selectedArticleId, onSelectArticle, onArticlesLoaded,
   batch, onOpenAIPanel, refreshKey = 0, onCountChanged, changedArticle,
 }) {
   const library = useLibrary();
@@ -130,6 +130,7 @@ export default function ArticleList({
   const [search, searchInputRef] = useSearchState();
   const [activeFilters, setActiveFilters] = useState({});
   const [aiOnly, setAiOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const selection = useSelection(`${activeView.type}:${activeView.id}`);
   const scrollRef = useRef(null);
 
@@ -143,7 +144,9 @@ export default function ArticleList({
   const actions = useListActions({ data, selection, visible, sourceOf, onCountChanged, onOpenAIPanel });
   const markAllRead = useConfirmAction(actions.markAllRead);
   const unreadCount = data.articles.filter((a) => !a.isRead).length;
-  const hasActiveFilters = Object.values(activeFilters).some(Boolean);
+  const activeCount = Object.values(activeFilters).filter(Boolean).length + (aiOnly ? 1 : 0);
+  const hasActiveFilters = activeCount > 0;
+  const showFilters = filtersOpen || hasActiveFilters; // an active filter stays in view
   const empty = { ...emptyStateText({ hasActiveFilters, searchQuery: search.query, viewType: activeView.type }), searching: Boolean(search.query) };
 
   return (
@@ -151,19 +154,17 @@ export default function ArticleList({
       <ListHeader
         title={title}
         count={visible.length}
-        sidebar={{ hidden: sidebarHidden, onShow: onShowSidebar }}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
-        aiOnly={aiOnly}
-        onToggleAiOnly={() => setAiOnly((v) => !v)}
+        filters={{ open: showFilters, activeCount, toggle: () => setFiltersOpen((o) => !o) }}
         batch={batch}
         search={search}
         unreadCount={unreadCount}
         markAllRead={markAllRead}
       />
       <SearchBar search={search} inputRef={searchInputRef} />
-      {data.articles.some((a) => a.aiAnalysis) && (
-        <FilterBar available={available} active={activeFilters} onChange={setActiveFilters} />
+      {showFilters && (
+        <FilterBar available={available} active={activeFilters} onChange={setActiveFilters} aiOnly={aiOnly} onToggleAiOnly={() => setAiOnly((v) => !v)} />
       )}
       <div ref={scrollRef} className={`article-list-content${CONTENT_MODIFIER[viewMode] ?? ''}`}>
         <ListContent

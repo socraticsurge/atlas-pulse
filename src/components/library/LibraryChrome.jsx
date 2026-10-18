@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 export function LibraryHeader({ Icon, title, collection, exportUrl, exportTitle, placeholder }) {
   const count = collection.rows.length;
   return (
-    <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-border px-5">
+    <header className="flex h-[var(--pane-header-height)] shrink-0 items-center gap-3 border-b border-border px-5">
       <Icon className="size-[18px] shrink-0 text-primary" />
       <h2 className="m-0 mr-auto truncate text-base font-semibold text-foreground">
         {title}
