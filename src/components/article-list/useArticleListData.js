@@ -10,6 +10,15 @@ import { maxArticleId, mergeNewArticles } from './listLogic.js';
  * Only a view change shows the loading state: a refresh swaps the new list in
  * place, so the reader keeps their scroll position.
  */
+// The id to fetch articles after: the list's highest, when the bump only
+// added articles and this view is the one loaded; else 0 (a full reload).
+function deltaAfterId(refreshKey, latest, viewKey) {
+  if (refreshKey.kind !== 'added') return 0;
+  return latest.loadedView === viewKey ? maxArticleId(latest.articles) : 0;
+}
+
+const withNew = (afterId, data) => (prev) => (afterId ? mergeNewArticles(prev, data) : data);
+
 export function useArticleListData(activeView, refreshKey, feeds) {
   const [articles, setArticles] = useState([]);
   const [loadedView, setLoadedView] = useState(null);
@@ -19,9 +28,9 @@ export function useArticleListData(activeView, refreshKey, feeds) {
   const viewKey = `${activeView.type}:${activeView.id}`;
   useEffect(() => {
     let cancelled = false;
-    const afterId = refreshKey.kind === 'added' && latest.current.loadedView === viewKey ? maxArticleId(latest.current.articles) : 0;
+    const afterId = deltaAfterId(refreshKey, latest.current, viewKey);
     fetchArticles(activeView.type, activeView.id, afterId)
-      .then((data) => { if (!cancelled) setArticles((prev) => (afterId ? mergeNewArticles(prev, data) : data)); })
+      .then((data) => { if (!cancelled) setArticles(withNew(afterId, data)); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoadedView(viewKey); });
     return () => { cancelled = true; };
