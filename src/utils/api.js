@@ -203,12 +203,12 @@ export async function fetchAIModels() {
  * @param {{role:string, content:string}[]} messages
  * @returns {AsyncGenerator<string>}
  */
-export function streamChat(model, messages) {
-  return isNanoModel(model) ? streamNanoChat(messages) : streamOllamaChat(model, messages);
+export function streamChat(model, messages, signal) {
+  return isNanoModel(model) ? streamNanoChat(messages, signal) : streamOllamaChat(model, messages, signal);
 }
 
-async function* streamOllamaChat(model, messages) {
-  const res = await send('/ai/chat', 'AI request failed', json({ model, messages, stream: true }));
+async function* streamOllamaChat(model, messages, signal) {
+  const res = await send('/ai/chat', 'AI request failed', { ...json({ model, messages, stream: true }), signal });
   for await (const chunk of readNdjson(res.body)) {
     if (chunk.message?.content) yield chunk.message.content;
     if (chunk.done) return;
@@ -216,17 +216,23 @@ async function* streamOllamaChat(model, messages) {
 }
 
 // Parses a newline-delimited JSON stream, skipping blank or malformed lines.
+// Stopping early (break, return, an error) cancels the body, which closes the
+// connection so the server stops generating.
 async function* readNdjson(body) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) return;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop(); // keep any incomplete trailing line
-    yield* parseLines(lines);
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) return;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // keep any incomplete trailing line
+      yield* parseLines(lines);
+    }
+  } finally {
+    reader.cancel().catch(() => {});
   }
 }
 

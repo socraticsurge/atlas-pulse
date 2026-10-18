@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { saveSummary } from '../../utils/api.js';
 import { getAISettings } from '../../utils/aiSettings.js';
 import { streamTokens, summaryMessages } from '../../ai/tasks.js';
+import { useStreamRun } from '../../hooks/useStreamRun.js';
 import { useArticleFieldSync } from './useArticleFieldSync.js';
 
 const orNull = (fields) => Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v || null]));
@@ -38,10 +39,11 @@ function useSummaryGeneration({ article, extractedContent, model, onArticleChang
   const [text, setText] = useState(() => fromBatch(article?.aiSummary));
   const [summarizing, setSummarizing] = useState(false);
   const [error, setError] = useState(null);
-  const abortRef = useRef(false);
+  const streamRun = useStreamRun();
 
   useArticleFieldSync(article, 'aiSummary', {
     onArticleChange: (batchSummary) => {
+      streamRun.cancel(); // a summary still streaming belongs to the previous article
       setText(fromBatch(batchSummary));
       setError(null);
       setSummarizing(false);
@@ -57,16 +59,17 @@ function useSummaryGeneration({ article, extractedContent, model, onArticleChang
     setSummarizing(true);
     setText(fromBatch(''));
     setError(null);
-    abortRef.current = false;
+    const signal = streamRun.start();
     const messages = summaryMessages(article, extractedContent, getAISettings());
-    await streamTokens(model, messages, appendToken, () => abortRef.current).catch((err) => setError(err.message));
-    setSummarizing(false);
-  }, [article, extractedContent, model, summarizing, appendToken]);
+    const append = (token) => { if (!signal.aborted) appendToken(token); };
+    await streamTokens(model, messages, append, signal).catch((err) => { if (!signal.aborted) setError(err.message); });
+    if (!signal.aborted) setSummarizing(false);
+  }, [article, extractedContent, model, summarizing, appendToken, streamRun]);
 
   const stop = useCallback(() => {
-    abortRef.current = true;
+    streamRun.cancel();
     setSummarizing(false);
-  }, []);
+  }, [streamRun]);
 
   return { ...text, summarizing, error, generate, stop };
 }

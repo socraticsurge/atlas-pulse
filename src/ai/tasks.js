@@ -32,20 +32,32 @@ export function batchMessages(article) {
   ];
 }
 
-/** Streams a task's tokens to onToken until done or shouldStop() turns true. */
-export async function streamTokens(model, messages, onToken, shouldStop = () => false) {
-  for await (const token of streamChat(model, messages)) {
-    if (shouldStop()) return;
-    onToken(token);
+// `stop` is an AbortSignal (preferred: it also cancels the request) or a
+// function returning true once the caller wants to stop.
+const stopCheck = (stop) => (typeof stop === 'function' ? stop : () => Boolean(stop?.aborted));
+const signalOf = (stop) => (typeof stop === 'function' ? undefined : stop);
+
+// Yields the model's tokens until done or stopped; a stop is not an error.
+async function* tokensUntilStopped(model, messages, stop) {
+  const stopped = stopCheck(stop);
+  try {
+    for await (const token of streamChat(model, messages, signalOf(stop))) {
+      if (stopped()) return;
+      yield token;
+    }
+  } catch (err) {
+    if (!stopped()) throw err;
   }
 }
 
-/** Runs a task and returns the full response; stops early if shouldStop() turns true. */
-export async function collectResponse(model, messages, shouldStop = () => false) {
+/** Streams a task's tokens to onToken until done or stopped (see stopCheck). */
+export async function streamTokens(model, messages, onToken, stop) {
+  for await (const token of tokensUntilStopped(model, messages, stop)) onToken(token);
+}
+
+/** Runs a task and returns the full response, or what arrived before a stop. */
+export async function collectResponse(model, messages, stop) {
   let response = '';
-  for await (const token of streamChat(model, messages)) {
-    if (shouldStop()) break;
-    response += token;
-  }
+  for await (const token of tokensUntilStopped(model, messages, stop)) response += token;
   return response;
 }

@@ -8,12 +8,14 @@ export function setStreamHeaders(res) {
 
 /**
  * Copies a fetch response body to `res` as it arrives. Cancels the upstream
- * read if the client disconnects. Resolves when the body ends; does not end `res`.
+ * read (so Ollama stops generating) if the client disconnects. Listens on
+ * `res`: by the time this runs, express.json has consumed the request and
+ * `req` has already emitted 'close'. Resolves when the body ends; does not end `res`.
  */
 export async function pipeBody(body, req, res) {
   const reader = body.getReader();
   const decoder = new TextDecoder();
-  req.on('close', () => reader.cancel());
+  res.on('close', () => { if (!res.writableEnded) reader.cancel().catch(() => {}); });
   while (true) {
     const { done, value } = await reader.read();
     if (done) return;
