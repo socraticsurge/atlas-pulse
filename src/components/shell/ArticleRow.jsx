@@ -41,16 +41,29 @@ const rowClass = ({ read, active, selected }) => cn(
   selected && 'card-selected bg-[var(--accent-muted)]',
 );
 
-// Second line: source, an AI mark when there is an AI summary, and the preview.
+// Second line: source, the preview (the AI summary when there is one), and the AI mark.
 function MetaLine({ article, feed, unread }) {
   const preview = previewOf(article);
   return (
     <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-[var(--text-tertiary)]">
       <span className={cn('shrink-0', unread && 'text-[var(--text-secondary)]')}>{feed?.title || 'Unknown'}</span>
-      {article.aiSummary && <HiOutlineSparkles className="size-3 shrink-0 text-primary" title="AI summary" aria-label="AI summary" />}
       {preview && <span className="truncate">· {preview}</span>}
+      <span className="ml-auto shrink-0 pl-2"><AIMark article={article} /></span>
     </div>
   );
+}
+
+// Marker of AI work on the article: summarized, or being processed.
+function AIMark({ article }) {
+  if (article.aiSummary) {
+    return (
+      <span className="flex items-center gap-1 font-mono text-[10.5px] tracking-wide text-primary" title="AI summary ready: it's the preview line">
+        <HiOutlineSparkles className="size-3" /> AI
+      </span>
+    );
+  }
+  if (article.aiStatus === 'processing') return <span className="animate-pulse font-mono text-[10.5px] text-[var(--text-tertiary)]" title="AI summary in progress">AI…</span>;
+  return null;
 }
 
 export default function ArticleRow({ article, feed, active, selected, onOpen, onToggle }) {

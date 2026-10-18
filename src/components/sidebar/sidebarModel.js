@@ -13,8 +13,6 @@ export const NAV_ITEMS = [
   { type: 'library', label: 'AI Summaries', iconTitle: 'AI Summaries Library', Icon: HiOutlineSparkles, count: (c) => c.library },
 ];
 
-export const capBadge = (n) => (n > 99 ? '99+' : n);
-
 export const isActive = (activeView, type, id) => activeView.type === type && (id === undefined || activeView.id === id);
 
 /** Feeds grouped by folder id, plus the uncategorized ones. */

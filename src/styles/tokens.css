@@ -10,6 +10,13 @@
   --bg-modal: #1a1b1e;
   --bg-modal-overlay: rgba(0, 0, 0, 0.6);
 
+  /* The app rail (far left) stays dark in both themes. */
+  --rail-bg: #0d0e10;
+  --rail-border: #202226;
+  --rail-icon: #8e8b85;
+  --rail-icon-hover: #e8e6e1;
+  --rail-active: #24262a;
+
   --text-primary: #e8e6e1;
   --text-secondary: #b4b1aa;
   --text-tertiary: #8e8b85;
