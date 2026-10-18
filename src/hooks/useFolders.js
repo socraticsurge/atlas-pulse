@@ -4,9 +4,8 @@ import * as api from '../utils/api.js';
 export function useFolders() {
   const [folders, setFolders] = useState([]);
 
-  useEffect(() => {
-    api.fetchFolders().then(setFolders).catch(() => {});
-  }, []);
+  const reloadFolders = useCallback(() => api.fetchFolders().then(setFolders).catch(() => {}), []);
+  useEffect(() => { reloadFolders(); }, [reloadFolders]);
 
   const addFolder = useCallback(async (name) => {
     const maxOrder = folders.length > 0 ? Math.max(...folders.map(f => f.order || 0)) : 0;
@@ -30,5 +29,5 @@ export function useFolders() {
     setFolders(prev => prev.filter(f => f.id !== folderId));
   }, []);
 
-  return { folders, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds };
+  return { folders, reloadFolders, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds };
 }

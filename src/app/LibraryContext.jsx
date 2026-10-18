@@ -40,10 +40,17 @@ function useAutoRefresh(feedCount, refreshAllFeeds) {
 function useLibraryState(onViewRemoved) {
   const showToast = useToast();
   const { articlesKey, countsKey, bumpArticles, bumpCounts } = useRefreshKeys();
-  const { feeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML } = useFeeds(bumpArticles);
-  const { folders, addFolder, renameFolder, deleteFolder: deleteFolderRaw, deleteFolderAndFeeds: deleteFolderAndFeedsRaw } = useFolders();
+  const { feeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
+  const { folders, reloadFolders, addFolder, renameFolder, deleteFolder: deleteFolderRaw, deleteFolderAndFeeds: deleteFolderAndFeedsRaw } = useFolders();
   const [refreshing, setRefreshing] = useState(false);
   const setAutoRefreshMinutes = useAutoRefresh(feeds.length, refreshAllFeeds);
+
+  // An OPML import can create folders, so reload them along with the feeds.
+  const importFeedsFromOPML = useCallback(async (parsedFeeds) => {
+    const count = await importRaw(parsedFeeds);
+    if (count > 0) await reloadFolders();
+    return count;
+  }, [importRaw, reloadFolders]);
 
   const addFeed = useCallback(async (feedUrl, folderId) => {
     try {

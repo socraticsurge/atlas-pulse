@@ -18,10 +18,9 @@ function downloadOPML(feeds, folders) {
 }
 
 // Imports the feeds in an OPML file and reports the result as a toast.
-async function importOPMLFile(file, { onImportOPML, onRefreshAll, onShowToast, onDone }) {
+async function importOPMLFile(file, { onImportOPML, onShowToast, onDone }) {
   try {
     const count = await onImportOPML(parseOPML(await file.text()));
-    if (count > 0) onRefreshAll();
     const { text, type } = importResultMessage(count);
     onShowToast?.(text, type === 'success' ? undefined : type);
     onDone();
@@ -55,7 +54,7 @@ function ImportButton(handlers) {
 }
 
 /** OPML export/import. */
-export function DataSection({ feeds, folders, onImportOPML, onRefreshAll, onShowToast, onClose }) {
+export function DataSection({ feeds, folders, onImportOPML, onShowToast, onClose }) {
   return (
     <SettingsGroup title="Data Management">
       <div className="settings-row">
@@ -66,7 +65,7 @@ export function DataSection({ feeds, folders, onImportOPML, onRefreshAll, onShow
       </div>
       <div className="settings-row" style={{ borderBottom: 'none' }}>
         <label>Import feeds from another reader</label>
-        <ImportButton onImportOPML={onImportOPML} onRefreshAll={onRefreshAll} onShowToast={onShowToast} onDone={onClose} />
+        <ImportButton onImportOPML={onImportOPML} onShowToast={onShowToast} onDone={onClose} />
       </div>
     </SettingsGroup>
   );

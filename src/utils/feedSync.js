@@ -102,9 +102,9 @@ async function folderIdFor(folderName) {
   return folder?.id ?? null;
 }
 
-// Stores one OPML entry (creating its folder if needed); resolves to whether it was saved.
+// Stores one OPML entry (creating its folder if needed); resolves to the saved feed, or null.
 async function importFeed(feed) {
-  const saved = await api.storeFeed({
+  return api.storeFeed({
     title: feed.title,
     url: feed.url,
     siteUrl: orEmpty(feed.siteUrl),
@@ -113,19 +113,20 @@ async function importFeed(feed) {
     folderId: await folderIdFor(feed.folderName),
     lastRefreshed: null,
   }).catch(() => null);
-  return Boolean(saved);
 }
 
-/** Imports the OPML entries not already subscribed; resolves to how many were saved. */
-export async function importNewFeeds(parsedFeeds, feeds) {
+/** Imports the OPML entries not already subscribed; resolves to the saved feeds. */
+export async function importNewFeeds(parsedFeeds, feeds, store = importFeed) {
   const existingUrls = new Set(feeds.map((f) => f.url));
-  let importedCount = 0;
+  const saved = [];
   for (const feed of parsedFeeds) {
-    if (existingUrls.has(feed.url) || !(await importFeed(feed))) continue;
+    if (existingUrls.has(feed.url)) continue;
+    const stored = await store(feed);
+    if (!stored) continue;
     existingUrls.add(feed.url);
-    importedCount++;
+    saved.push(stored);
   }
-  return importedCount;
+  return saved;
 }
 
 /** Sum of the fulfilled values in Promise.allSettled results. */

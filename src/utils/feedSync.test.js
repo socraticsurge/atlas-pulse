@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { firstOf, fulfilledTotal, inBatchScope, toArticle } from './feedSync.js';
+import { firstOf, fulfilledTotal, importNewFeeds, inBatchScope, toArticle } from './feedSync.js';
 
 test('firstOf matches a || b || c, including the last-value fallback', () => {
   assert.equal(firstOf('', 'b', 'c'), 'b');
@@ -36,4 +36,18 @@ test('inBatchScope handles all, feed, and unknown scopes without network', async
   assert.equal(await inBatchScope('feed:4', 4), true);
   assert.equal(await inBatchScope('feed:5', 4), false);
   assert.equal(await inBatchScope('bogus:1', 4), false);
+});
+
+test('importNewFeeds skips known and duplicate URLs and returns the saved feeds', async () => {
+  const parsed = [
+    { title: 'Known', url: 'https://a.example/rss' },
+    { title: 'New', url: 'https://b.example/rss' },
+    { title: 'New again', url: 'https://b.example/rss' },
+    { title: 'Rejected', url: 'https://c.example/rss' },
+    { title: 'Other', url: 'https://d.example/rss' },
+  ];
+  let nextId = 10;
+  const store = async (feed) => (feed.title === 'Rejected' ? null : { id: nextId++, url: feed.url });
+  const saved = await importNewFeeds(parsed, [{ id: 1, url: 'https://a.example/rss' }], store);
+  assert.deepEqual(saved, [{ id: 10, url: 'https://b.example/rss' }, { id: 11, url: 'https://d.example/rss' }]);
 });
