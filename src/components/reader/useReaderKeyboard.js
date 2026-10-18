@@ -1,4 +1,7 @@
 import { useEffect } from 'react';
+import { safeHttpUrl } from '../../utils/opml.js';
+
+const isTyping = (target) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
 
 const NAV_PREV = new Set(['ArrowUp', 'ArrowLeft', 'k']);
 const NAV_NEXT = new Set(['ArrowDown', 'ArrowRight', 'j']);
@@ -9,7 +12,7 @@ function actionFor(key, a) {
   if (NAV_NEXT.has(key)) return () => a.hasNext && a.onNavigate(1);
   const actions = {
     b: a.toggleBookmark,
-    o: () => a.link && window.open(a.link, '_blank', 'noopener,noreferrer'),
+    o: () => safeHttpUrl(a.link) && window.open(safeHttpUrl(a.link), '_blank', 'noopener,noreferrer'),
     f: a.toggleZen,
     Escape: a.escape,
   };
@@ -25,7 +28,8 @@ export function useReaderKeyboard(enabled, actions) {
   useEffect(() => {
     if (!enabled) return undefined;
     const onKeyDown = (e) => {
-      if (['INPUT', 'TEXTAREA'].includes(e.target.tagName) || actions.isModalOpen) return;
+      if (isTyping(e.target) || actions.isModalOpen) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return; // ⌘F, Ctrl+K… belong to the browser
       const action = actionFor(e.key, actions);
       if (!action) return;
       e.preventDefault();

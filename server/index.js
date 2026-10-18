@@ -44,6 +44,9 @@ app.use(cors({
 // and this route allows more so a single very long article still fits.
 app.use('/api/reader/articles/bulk-insert', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '2mb' }));
+// Express 5 leaves req.body undefined when a request has no JSON body; routes
+// destructure it, so give them an empty object instead of a TypeError.
+app.use((req, res, next) => { req.body ??= {}; next(); });
 
 // Routes
 app.use('/api/feeds', feedsRouter);
@@ -75,6 +78,14 @@ if (existsSync(join(DIST_DIR, 'index.html'))) {
   app.use(staticLimiter, express.static(DIST_DIR));
   app.get(/^(?!\/api\/).*/, staticLimiter, (req, res) => res.sendFile(join(DIST_DIR, 'index.html')));
 }
+
+// Errors that escape a route (bad JSON, a body over the limit, anything
+// thrown) come back as JSON with the right status, never an HTML stack trace.
+// eslint-disable-next-line no-unused-vars -- Express needs all four arguments
+app.use((err, req, res, next) => {
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({ error: status === 500 ? 'Internal server error' : err.message });
+});
 
 // Workaround for Node event loop exit issue
 setInterval(() => {}, 1000000);

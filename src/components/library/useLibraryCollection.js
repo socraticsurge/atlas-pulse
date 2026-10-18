@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { safeHttpUrl } from '../../utils/opml.js';
 import { fetchArticleByLink } from '../../utils/api.js';
 import { filterRows } from './libraryModel.js';
 
@@ -42,6 +43,6 @@ export function useOpenInReader(onOpenArticle) {
     if (!articleUrl) return;
     const article = await fetchArticleByLink(articleUrl).catch(() => null);
     if (article && onOpenArticle) onOpenArticle(article);
-    else window.open(articleUrl, '_blank', 'noopener,noreferrer');
+    else if (safeHttpUrl(articleUrl)) window.open(safeHttpUrl(articleUrl), '_blank', 'noopener,noreferrer');
   }, [onOpenArticle]);
 }
