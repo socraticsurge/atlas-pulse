@@ -8,6 +8,7 @@ import ResizableHandle from './ResizableHandle.jsx';
 import ReaderBody from './reader/ReaderBody.jsx';
 import ReaderToolbar from './reader/ReaderToolbar.jsx';
 import { sanitizeArticleHtml, sanitizeFeedHtml } from './reader/sanitize.js';
+import { briefOf, panelLayout } from './reader/panelLayout.js';
 import { useAIRail } from './reader/useAIRail.js';
 import { useArticleExtraction } from './reader/useArticleExtraction.js';
 import { applyHighlights, useArticleHighlights } from './reader/useArticleHighlights.js';
@@ -57,20 +58,6 @@ function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, 
   useReaderKeyboard(isOpen, keyboardActions);
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
 }
-
-// Panel classes and width: the reader column plus the rail when it's open;
-// focus mode sizes itself.
-function panelLayout({ visible, zen, rail, width }) {
-  const stateClasses = [visible && 'visible', zen.on && 'zen'].filter(Boolean).join(' ');
-  return {
-    stateClasses,
-    className: ['article-reader-panel', stateClasses, rail.open && 'has-rail'].filter(Boolean).join(' '),
-    style: zen.on ? undefined : { width: `${width + (rail.open ? rail.width : 0)}px` },
-  };
-}
-
-// The saved AI summary, from the live copy once it belongs to this article.
-const briefOf = (current, article) => (current?.id === article.id ? current : article).aiSummary;
 
 export default function ArticleReader({
   article, isOpen, isModalOpen, onClose, onNavigate, hasNext, hasPrev, currentIndex, totalCount,
