@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import * as api from '../../utils/api.js';
 import { useOnKeyChange } from '../../hooks/useOnKeyChange.js';
 import { HIGHLIGHT_COLORS } from '../../utils/constants.js';
+import { locateAcrossSegments } from '../highlights/textLocator.js';
 
 function clearMarks(container) {
   container.querySelectorAll('mark[data-highlight-id]').forEach((mark) => {
@@ -12,31 +13,39 @@ function clearMarks(container) {
   });
 }
 
-function createMark(h) {
+function createMark(h, text) {
   const mark = document.createElement('mark');
   mark.setAttribute('data-highlight-id', String(h.id));
   mark.style.background = HIGHLIGHT_COLORS[h.color] || HIGHLIGHT_COLORS.yellow;
   mark.style.borderRadius = '2px';
   if (h.note) mark.title = h.note;
-  mark.textContent = h.highlighted_text;
+  mark.textContent = text;
   return mark;
 }
 
-// Wraps the first occurrence of the highlight's text in a <mark>.
-function markFirstOccurrence(container, h) {
+function textNodes(container) {
+  const nodes = [];
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const idx = node.nodeValue.indexOf(h.highlighted_text);
-    if (idx === -1) continue;
-    const before = node.nodeValue.slice(0, idx);
-    const after = node.nodeValue.slice(idx + h.highlighted_text.length);
-    const frag = document.createDocumentFragment();
-    if (before) frag.appendChild(document.createTextNode(before));
-    frag.appendChild(createMark(h));
-    if (after) frag.appendChild(document.createTextNode(after));
-    node.parentNode.replaceChild(frag, node);
-    return;
-  }
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node);
+  return nodes;
+}
+
+// Replaces node's text between start and end with a <mark>.
+function wrapRange(node, start, end, h) {
+  const value = node.nodeValue;
+  const frag = document.createDocumentFragment();
+  if (start > 0) frag.appendChild(document.createTextNode(value.slice(0, start)));
+  frag.appendChild(createMark(h, value.slice(start, end)));
+  if (end < value.length) frag.appendChild(document.createTextNode(value.slice(end)));
+  node.parentNode.replaceChild(frag, node);
+}
+
+// Marks the first occurrence of the highlight's text, which may span several
+// text nodes (across links, emphasis or paragraphs): one <mark> per node.
+function markFirstOccurrence(container, h) {
+  const nodes = textNodes(container);
+  const ranges = locateAcrossSegments(nodes.map((n) => n.nodeValue), h.highlighted_text);
+  for (const { segment, start, end } of ranges) wrapRange(nodes[segment], start, end, h);
 }
 
 /** Draws saved highlights onto the rendered article DOM. */
