@@ -1,5 +1,6 @@
 /* ===== Article List ===== */
 .article-list-panel {
+  container: list-panel / inline-size;
   flex: 1;
   min-width: 320px;
   background: var(--bg-primary);
@@ -22,6 +23,13 @@
   flex-shrink: 0;
 }
 
+.article-list-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .article-list-header h2 {
   font-size: 16px;
   font-weight: 700;
@@ -39,6 +47,19 @@
 }
 @container (max-width: 480px) {
   .article-list-header .article-count { display: none; }
+}
+
+/* At its 320px minimum the controls don't fit beside the title: they move
+   to a second row under it. */
+@container list-panel (max-width: 420px) {
+  .article-list-header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 10px;
+    row-gap: 4px;
+  }
+  .article-list-title { flex-basis: 100%; padding-left: 6px; }
+  .article-list-actions { gap: 0; }
 }
 
 .article-list-header .article-count {

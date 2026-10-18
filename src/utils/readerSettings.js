@@ -7,16 +7,16 @@ export const LINE_HEIGHTS = [
 ];
 
 export const CONTENT_WIDTHS = [
-  { id: 'narrow', label: 'Narrow', value: 640 },
-  { id: 'normal', label: 'Normal', value: 780 },
-  { id: 'wide', label: 'Wide', value: 960 },
+  { id: 'narrow', label: 'Narrow', value: 600 },
+  { id: 'normal', label: 'Normal', value: 700 },
+  { id: 'wide', label: 'Wide', value: 880 },
 ];
 
 export const READER_SETTINGS_STORAGE_KEY = 'atlas-pulse-reader-settings';
 
 export const DEFAULT_READER_SETTINGS = {
   fontFamily: 'newsreader',
-  fontSize: 16,
+  fontSize: 18,
   lineHeight: 'normal',
   contentWidth: 'normal',
 };

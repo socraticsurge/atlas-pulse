@@ -14,6 +14,7 @@ import { AppearanceProvider } from './app/AppearanceContext.jsx';
 import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
 import { ToastProvider, useToast } from './app/ToastContext.jsx';
 import { useLayout } from './app/useLayout.js';
+import { usePaneKeyboard } from './app/usePaneKeyboard.js';
 import { useArticleNavigation, useSummaryCount } from './app/useWorkspace.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 
@@ -62,13 +63,14 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const onArticleChanged = useCallback((updated) => { library.bumpCounts(); setChangedArticle(updated); }, [library]);
   const onLibraryChanged = useCallback(() => { refreshSummaryCount(); library.bumpCounts(); }, [refreshSummaryCount, library]);
   const nav = useArticleNavigation(selectedArticle, setSelectedArticle, visibleArticles);
+  usePaneKeyboard({ isModalOpen: modal !== null, toggleSidebar: layout.toggleSidebarMode, toggleList: layout.toggleList });
 
   const closeReader = useCallback(() => setSelectedArticle(null), [setSelectedArticle]);
   const openFromLibrary = useCallback((article) => { setActiveView({ type: 'all' }); setSelectedArticle(article); }, [setActiveView, setSelectedArticle]);
   const LibraryScreen = LIBRARY_VIEWS[activeView.type];
 
   return (
-    <div className="app-layout">
+    <div className={layout.listHidden ? 'app-layout list-hidden' : 'app-layout'}>
       <Sidebar
         mode={layout.sidebarMode}
         activeView={activeView}

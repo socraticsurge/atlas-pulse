@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { HiOutlineSparkles, HiOutlineXMark } from 'react-icons/hi2';
 import { NoAIEngine } from './AIEngines.jsx';
+import ResizableHandle from './ResizableHandle.jsx';
 import AIConfigStrip from './ai-drawer/AIConfigStrip.jsx';
 import AnalysisPanel from './ai-drawer/AnalysisPanel.jsx';
 import ChatTab from './ai-drawer/ChatTab.jsx';
@@ -46,7 +47,7 @@ function DrawerHeader({ ai, onClose }) {
           </span>
         )}
         {ai.ready && <ModelPicker models={ai.models} selectedModel={ai.selectedModel} onSelect={ai.setSelectedModel} />}
-        <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} title="Close AI panel">
+        <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose} title="Close AI rail (a)">
           <HiOutlineXMark />
         </button>
       </div>
@@ -82,10 +83,11 @@ function DrawerBody({ ai, tab, setTab, article, summary, analysis, chat, highlig
 }
 
 /**
- * AI side panel for the open article: Summary, Analysis, Chat, Highlights.
- * Tab state lives in hooks here (not in the tabs) so it survives tab switches.
+ * AI side rail beside the open article: Summary, Analysis, Chat, Highlights.
+ * Resizable from its left edge. Tab state lives in hooks here (not in the
+ * tabs) so it survives tab switches.
  */
-export default function AIDrawer({ isOpen, onClose, article, extractedContent, feedTitle, onSummarySaved, highlights = [], onHighlightDeleted }) {
+export default function AIDrawer({ isOpen, onClose, width, onResize, article, extractedContent, feedTitle, onSummarySaved, highlights = [], onHighlightDeleted }) {
   const [tab, setTab] = useState('summary');
   const ai = useAIModels();
   const model = ai.selectedModel;
@@ -97,7 +99,8 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
   const showSetup = ai.checked && !ai.ready;
 
   return (
-    <div className="ai-drawer">
+    <aside className="ai-drawer" aria-label="AI assistant" style={{ width: `${width}px` }}>
+      <ResizableHandle className="overlay-resize-handle" onResize={onResize} />
       <DrawerHeader ai={ai} onClose={onClose} />
       {showSetup && (
         <div className="ai-drawer-setup">
@@ -111,6 +114,6 @@ export default function AIDrawer({ isOpen, onClose, article, extractedContent, f
           highlights={highlights} onHighlightDeleted={onHighlightDeleted}
         />
       )}
-    </div>
+    </aside>
   );
 }

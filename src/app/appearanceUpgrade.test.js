@@ -43,5 +43,23 @@ test('a fresh install has nothing to upgrade', () => {
   const s = memory();
   upgradeAppearanceDefaults(s);
   assert.equal(s.data.get('atlas-pulse-font'), undefined);
-  assert.equal(s.data.get('atlas-pulse-appearance-version'), '2');
+  assert.equal(s.data.get('atlas-pulse-appearance-version'), '3');
+});
+
+test('v3 enlarges reader text still at the old 16px default', () => {
+  const s = memory({ 'atlas-pulse-reader-settings': JSON.stringify({ fontFamily: 'garamond', fontSize: 16 }) });
+  upgradeAppearanceDefaults(s);
+  assert.deepEqual(JSON.parse(s.data.get('atlas-pulse-reader-settings')), { fontFamily: 'garamond', fontSize: 18 });
+});
+
+test('from v2, only the v3 step runs, so a chosen Inter stays', () => {
+  const s = memory({
+    'atlas-pulse-appearance-version': '2',
+    'atlas-pulse-font': 'sans',
+    'atlas-pulse-reader-settings': JSON.stringify({ fontFamily: 'sans', fontSize: 20 }),
+  });
+  upgradeAppearanceDefaults(s);
+  assert.equal(s.data.get('atlas-pulse-font'), 'sans');
+  assert.deepEqual(JSON.parse(s.data.get('atlas-pulse-reader-settings')), { fontFamily: 'sans', fontSize: 20 });
+  assert.equal(s.data.get('atlas-pulse-appearance-version'), '3');
 });

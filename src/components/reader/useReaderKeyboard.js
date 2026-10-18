@@ -13,6 +13,7 @@ function actionFor(key, a) {
     b: a.toggleBookmark,
     o: () => safeHttpUrl(a.link) && window.open(safeHttpUrl(a.link), '_blank', 'noopener,noreferrer'),
     f: a.toggleZen,
+    a: a.toggleAI,
     Escape: a.escape,
   };
   return actions[key] || null;
@@ -20,7 +21,7 @@ function actionFor(key, a) {
 
 /**
  * Reader shortcuts: j/k/arrows navigate, b bookmark, o open original,
- * f focus mode, Esc exit focus mode or close. Ignored while typing or when a
+ * f focus mode, a AI rail, Esc exit focus mode or close. Ignored while typing or when a
  * modal is open.
  */
 export function useReaderKeyboard(enabled, actions) {
