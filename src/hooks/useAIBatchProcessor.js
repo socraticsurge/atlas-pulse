@@ -78,6 +78,18 @@ function useMountedRef() {
   return mounted;
 }
 
+// The model to process with, or '' when nothing should run: background
+// processing is off and no manual run is active, or no model is available.
+function runnableModel(settings, manualRun, availableModels) {
+  const allowed = settings.enabled || manualRun;
+  return allowed ? pickBatchModel(settings.model, availableModels) : '';
+}
+
+// Continues the chain after an outcome, unless the hook has unmounted.
+function scheduleNext(runRef, mountedRef, outcome) {
+  if (mountedRef.current) setTimeout(() => runRef.current?.(), NEXT_DELAY_MS[outcome]);
+}
+
 // Processes queued articles one after another until the queue drains. It runs
 // while background processing is enabled, or during a manual run (manualRef),
 // which ends when the queue is empty.
@@ -90,9 +102,8 @@ function useBatchRunner(availableModels, manualRef, endManualRun) {
 
   const run = useCallback(async () => {
     const settings = getBatchSettings();
-    const model = pickBatchModel(settings.model, availableModels);
-    if (busyRef.current || !mountedRef.current) return;
-    if (!(settings.enabled || manualRef.current) || !model) return;
+    const model = runnableModel(settings, manualRef.current, availableModels);
+    if (busyRef.current || !mountedRef.current || !model) return;
     busyRef.current = true;
     const outcome = await processNext({
       model,
@@ -103,7 +114,7 @@ function useBatchRunner(availableModels, manualRef, endManualRun) {
     busyRef.current = false;
     setProgress((p) => progressAfter(p, outcome));
     if (outcome === 'empty') endManualRun();
-    else if (mountedRef.current) setTimeout(() => runRef.current?.(), NEXT_DELAY_MS[outcome]);
+    else scheduleNext(runRef, mountedRef, outcome);
   }, [availableModels, mountedRef, manualRef, endManualRun]);
 
   useEffect(() => { runRef.current = run; }, [run]);
