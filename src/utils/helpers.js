@@ -116,14 +116,16 @@ const TRACKING_PARAMS = new Set([
 
 /**
  * Produce a canonical URL for cross-feed deduplication.
- * Strips tracking params, removes www prefix, removes fragment, sorts params.
+ * Strips tracking params and the www prefix, sorts params, and drops a
+ * trailing slash. The #fragment is kept: feeds such as changelogs give each
+ * item the same page with a different anchor (/changelog#v1.3, #v1.4), and
+ * dropping it made every item after the first look like a duplicate.
  */
 export function canonicalizeUrl(url) {
   if (!url) return '';
   try {
     const u = new URL(url);
     u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
-    u.hash = '';
     for (const key of [...u.searchParams.keys()]) {
       if (TRACKING_PARAMS.has(key.toLowerCase())) u.searchParams.delete(key);
     }
