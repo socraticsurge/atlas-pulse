@@ -8,12 +8,9 @@
 @import './styles/controls.css';
 @import './styles/menus.css';
 @import './styles/shared-ui.css';
-@import './styles/article-views.css';
 @import './styles/reader-settings.css';
 @import './styles/ai-drawer.css';
-@import './styles/filter-chips.css';
 @import './styles/ollama.css';
 @import './styles/ai-badges.css';
-@import './styles/selection.css';
 @import './styles/multi-article.css';
 @import './styles/highlights.css';
