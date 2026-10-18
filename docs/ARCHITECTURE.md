@@ -83,7 +83,7 @@ List endpoints return `LIST_COLUMNS`, which leaves out the article body. The rea
 - **A new feed source:** add it to Ingestion behind the URL guard, and return the same normalized item shape as `normalizeItem`.
 - **A new settings section:** add a component under `src/components/settings/`.
 - **New styles:** build new UI with Tailwind classes and shadcn/ui components (`npx shadcn@latest add <name>` writes JSX into `src/components/ui/`). Use `cn()` from `@/lib/utils` to combine classes.
-- **Styling migration (in progress):** the legacy CSS in `src/styles/` still owns most screens, so Tailwind runs without its preflight reset, and its layered output loses to the unlayered legacy CSS. Tailwind only scans the folders listed with `@source` in `src/styles/tailwind.css`. Add a folder there when its screens move to Tailwind, and delete the legacy CSS they replace. shadcn's semantic colors (`bg-primary`, `text-muted-foreground`…) map to the tokens in `src/styles/tokens.css`.
+- **Styling migration (in progress):** the legacy CSS in `src/styles/` still owns most screens, so Tailwind runs without its preflight reset. `src/styles/tailwind.css` is the stylesheet entry: it imports the legacy CSS into a `legacy` cascade layer that sits below Tailwind's utilities, so legacy screens look the same and utility classes win where they are used. Tailwind only scans the folders listed with `@source` in that file (currently `src/components/shell`, `src/components/ui`, `src/lib`); classes written anywhere else are not generated. Add a folder there when its screens move to Tailwind, and delete the legacy CSS they replace. shadcn's semantic colors (`bg-primary`, `text-muted-foreground`…) map to the tokens in `src/styles/tokens.css`.
 
 ## Guardrails
 

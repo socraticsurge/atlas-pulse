@@ -1,21 +1,26 @@
-/* Tailwind v4 and the shadcn/ui theme.
+/* The app's stylesheet entry: Tailwind v4, the shadcn/ui theme, and the
+ * legacy hand-written CSS.
  *
- * Migration mode: the hand-written styles in src/styles/ still own the page,
- * so Tailwind's preflight (its CSS reset) is NOT loaded yet. It is switched on
+ * Migration mode: the legacy styles in src/styles/ still own most screens, so
+ * Tailwind's preflight (its CSS reset) is NOT loaded yet. It is switched on
  * once the redesign has replaced the old base styles.
  *
- * Tailwind's layers lose to the unlayered legacy CSS, so nothing here changes
- * how existing screens look.
+ * Cascade layers, lowest first: Tailwind's theme, then the legacy CSS, then
+ * Tailwind's utilities. Legacy screens use no utilities, so they look the
+ * same; components built with utilities win over legacy rules such as the
+ * universal `* { margin: 0; padding: 0 }` reset.
  */
-@layer theme, base, components, utilities;
+@layer theme, legacy, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
+@import "../index.css" layer(legacy);
 @import "tailwindcss/utilities.css" layer(utilities) source(none);
 @import "tw-animate-css";
 
-/* Only migrated code is scanned for class names. Scanning everything would
- * turn ordinary words in legacy class names and comments ("hidden",
- * "contents", "container"…) into real utilities on live elements. Add each
- * folder here as its screens move to Tailwind. */
+/* Only migrated code is scanned for class names, so Tailwind classes must
+ * live in these folders: a class written elsewhere is silently not generated.
+ * Scanning everything would turn ordinary words in legacy class names and
+ * comments ("hidden", "contents", "container"…) into real utilities on live
+ * elements. Add each folder here as its screens move to Tailwind. */
 @source "../components/ui";
 @source "../components/shell";
 @source "../lib";
