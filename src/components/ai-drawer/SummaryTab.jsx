@@ -77,7 +77,7 @@ function SummaryResult({ article, s }) {
   return (
     <div className="ai-summary-result">
       {s.isBatchSummary && (
-        <div className="ai-batch-label">Batch summary · <span onClick={s.generate}>regenerate for custom persona</span></div>
+        <div className="ai-batch-label">Background summary · <span onClick={s.generate}>regenerate</span></div>
       )}
       <div className="ai-summary-text">
         {s.summary || <span className="ai-typing-cursor" />}

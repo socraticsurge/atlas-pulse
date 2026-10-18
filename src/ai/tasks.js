@@ -2,7 +2,7 @@
 // a task to completion. Components stream tokens themselves when they need
 // live output.
 import { streamChat } from '../utils/api.js';
-import { buildSystemPrompt } from '../utils/aiSettings.js';
+import { buildSystemPrompt, voiceInstructions } from '../utils/aiSettings.js';
 import { articleContext, titledText } from './context.js';
 import { ANALYSIS_PROMPT, BASE_CHAT, BASE_SUMMARY, BATCH_PROMPT } from './prompts.js';
 
@@ -25,9 +25,14 @@ export function analysisMessages(article, extractedContent) {
   ];
 }
 
-export function batchMessages(article) {
+// Background processing: the summary follows the reader's persona, tone and
+// custom instructions, like an on-demand summary; the classification fields
+// stay neutral.
+const BATCH_VOICE = 'Write the "summary" value in the voice described below. Keep the other fields plain, neutral classifications.';
+
+export function batchMessages(article, settings) {
   return [
-    { role: 'system', content: BATCH_PROMPT },
+    { role: 'system', content: `${BATCH_PROMPT}\n\n${BATCH_VOICE}${voiceInstructions(settings)}` },
     { role: 'user', content: titledText(article) },
   ];
 }

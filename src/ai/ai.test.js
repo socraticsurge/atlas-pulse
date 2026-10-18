@@ -115,7 +115,17 @@ test('single-article messages match v1.4.0', () => {
   const legacyText = `Title: ${article.title}\n\n${raw.length > 4000 ? raw.slice(0, 4000) + '…' : raw}`;
   assert.equal(titledText(article), legacyText);
   assert.deepEqual(analysisMessages(article), [{ role: 'system', content: LEGACY.ANALYSIS_PROMPT }, { role: 'user', content: legacyText }]);
-  assert.deepEqual(batchMessages(article), [{ role: 'system', content: LEGACY.BATCH_SYSTEM_PROMPT }, { role: 'user', content: legacyText }]);
+  const [batchSystem, batchUser] = batchMessages(article, settings);
+  assert.deepEqual(batchUser, { role: 'user', content: legacyText });
+  assert.ok(batchSystem.content.startsWith(LEGACY.BATCH_SYSTEM_PROMPT), 'batch keeps the v1.4.0 JSON spec');
+});
+
+test('batch summaries follow the reader persona, tone and custom instructions', () => {
+  const custom = { personas: ['skeptic'], tone: settings.tone, customInstructions: 'Mention the price.' };
+  const [{ content }] = batchMessages(article, custom);
+  assert.ok(content.endsWith(buildSystemPrompt('', custom)), 'same voice text as an on-demand summary');
+  assert.match(content, /Additional instructions from the reader: Mention the price\./);
+  assert.match(content, /Keep the other fields plain, neutral classifications/);
 });
 
 test('multi-article messages match v1.4.0 for every operation and template', () => {
