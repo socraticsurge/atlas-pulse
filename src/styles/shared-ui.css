@@ -143,11 +143,6 @@
   background: rgba(255, 179, 71, 0.12);
 }
 
-/* ===== Spinning Animation ===== */
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
 /* ===== Tabs improvements ===== */
 .tab {
   display: inline-flex;
