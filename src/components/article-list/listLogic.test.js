@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, articlesToCSV, availableFilters, chunkRows, dayGroup, emptyStateText, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
+import { applyFilters, articlesToCSV, availableFilters, chunkRows, dayGroup, emptyStateText, maxArticleId, mergeNewArticles, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
 
 const analyzed = (id, analysis, extra = {}) => ({ id, aiStatus: 'done', aiAnalysis: JSON.stringify(analysis), ...extra });
 const articles = [
@@ -78,4 +78,13 @@ test('shortTime is a clock time today, a weekday this week, a date before', () =
   assert.match(shortTime(new Date(2026, 8, 3).toISOString(), now), /3/);
   assert.match(shortTime(new Date(2025, 8, 3).toISOString(), now), /2025/);
   assert.equal(shortTime('', now), '');
+});
+
+test('new articles merge in newest first, without duplicates', () => {
+  const list = [{ id: 5, publishedAt: '2026-10-18T10:00:00Z' }, { id: 3, publishedAt: '2026-10-17T10:00:00Z' }];
+  const merged = mergeNewArticles(list, [{ id: 9, publishedAt: '2026-10-17T12:00:00Z' }, { id: 5, publishedAt: '2026-10-18T10:00:00Z' }]);
+  assert.deepEqual(merged.map((a) => a.id), [5, 9, 3]);
+  assert.equal(mergeNewArticles(list, []), list);
+  assert.equal(maxArticleId(merged), 9);
+  assert.equal(maxArticleId([]), 0);
 });

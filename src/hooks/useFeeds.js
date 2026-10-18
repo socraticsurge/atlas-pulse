@@ -33,14 +33,14 @@ function useFeedRefresh({ feeds, replaceFeed, onDataChanged }) {
     const feed = feeds.find((f) => f.id === feedId);
     if (!feed) return { inserted: 0, failed: false };
     const result = await refreshAndRecord(feed, replaceFeed);
-    if (result.inserted > 0) onDataChanged?.();
+    if (result.inserted > 0) onDataChanged?.('added');
     return result;
   }, [feeds, replaceFeed, onDataChanged]);
 
   // Every feed; resolves to { inserted, failed: [feed titles] }.
   const refreshAllFeeds = useCallback(async () => {
     const tally = await refreshInChunks(feeds, (id) => refreshAndRecord(feeds.find((f) => f.id === id), replaceFeed));
-    if (tally.inserted > 0) onDataChanged?.();
+    if (tally.inserted > 0) onDataChanged?.('added');
     return tally;
   }, [feeds, replaceFeed, onDataChanged]);
 
@@ -58,7 +58,7 @@ function useOPMLImport({ feeds, setFeeds, replaceFeed, onDataChanged }) {
     onDataChanged?.();
     const byId = new Map(imported.map((f) => [f.id, f]));
     refreshInChunks(imported, (id) => refreshAndRecord(byId.get(id), replaceFeed))
-      .then(({ inserted }) => { if (inserted > 0) onDataChanged?.(); });
+      .then(({ inserted }) => { if (inserted > 0) onDataChanged?.('added'); });
     return imported.length;
   }, [feeds, setFeeds, replaceFeed, onDataChanged]);
 }
@@ -72,7 +72,7 @@ export function useFeeds(onDataChanged) {
     if (feeds.some((f) => f.url === feedUrl)) throw new Error('This feed is already added');
     const saved = await createFeed(feedUrl, folderId);
     setFeeds((prev) => [...prev, saved]);
-    onDataChanged?.();
+    onDataChanged?.('added');
     return saved.id;
   }, [feeds, setFeeds, onDataChanged]);
 

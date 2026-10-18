@@ -137,3 +137,17 @@ export function shortTime(dateStr, now = new Date()) {
   const sameYear = date.getFullYear() === now.getFullYear();
   return date.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
+
+/** The highest article id in a list (ids increase as articles are added), or 0. */
+export function maxArticleId(articles) {
+  return articles.reduce((max, a) => (a.id > max ? a.id : max), 0);
+}
+
+/** A list with newly fetched articles merged in: no duplicates, newest first. */
+export function mergeNewArticles(articles, added) {
+  if (added.length === 0) return articles;
+  const known = new Set(articles.map((a) => a.id));
+  const fresh = added.filter((a) => !known.has(a.id));
+  if (fresh.length === 0) return articles;
+  return [...fresh, ...articles].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+}
