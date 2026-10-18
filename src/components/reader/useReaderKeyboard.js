@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { safeHttpUrl } from '../../utils/opml.js';
-
-const isTyping = (target) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) || target.isContentEditable;
+import { isShortcut } from '../../hooks/keys.js';
 
 const NAV_PREV = new Set(['ArrowUp', 'ArrowLeft', 'k']);
 const NAV_NEXT = new Set(['ArrowDown', 'ArrowRight', 'j']);
@@ -28,8 +27,7 @@ export function useReaderKeyboard(enabled, actions) {
   useEffect(() => {
     if (!enabled) return undefined;
     const onKeyDown = (e) => {
-      if (isTyping(e.target) || actions.isModalOpen) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return; // ⌘F, Ctrl+K… belong to the browser
+      if (actions.isModalOpen || !isShortcut(e)) return;
       const action = actionFor(e.key, actions);
       if (!action) return;
       e.preventDefault();
