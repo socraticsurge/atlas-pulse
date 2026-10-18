@@ -125,8 +125,18 @@ export async function refreshOne(feed) {
   const updated = await api.patchFeed(feed.id, {
     lastRefreshed: new Date().toISOString(),
     title: firstOf(feedData.title, feed.title),
+    lastError: null, // a success clears an earlier failure
+    lastErrorAt: null,
   });
   return { inserted, updated };
+}
+
+const ERROR_MAX = 300;
+
+/** Remembers why a feed failed to refresh (shown in the sidebar); resolves to the updated feed. */
+export async function recordRefreshError(feed, error) {
+  const message = String(error?.message || error).slice(0, ERROR_MAX);
+  return api.patchFeed(feed.id, { lastError: message, lastErrorAt: new Date().toISOString() });
 }
 
 async function folderIdFor(folderName) {
@@ -162,17 +172,36 @@ export async function importNewFeeds(parsedFeeds, feeds, store = importFeed) {
   return saved;
 }
 
-/** Sum of the fulfilled values in Promise.allSettled results. */
-export function fulfilledTotal(results) {
-  return results.reduce((sum, r) => sum + (r.status === 'fulfilled' ? r.value || 0 : 0), 0);
+/**
+ * Adds Promise.allSettled results of refreshFeed ({ inserted, failed }) to a
+ * running tally { inserted, failed: [feed titles] }. A rejection counts as a
+ * failure of that feed.
+ */
+export function tallyRefreshes(tally, results, chunk) {
+  results.forEach((r, i) => {
+    const value = r.status === 'fulfilled' ? r.value : { inserted: 0, failed: true };
+    tally.inserted += value?.inserted || 0;
+    if (value?.failed) tally.failed.push(chunk[i].title);
+  });
+  return tally;
 }
 
-/** Refreshes feeds a few at a time; resolves to the total number of new articles. */
+/** Refreshes feeds a few at a time; resolves to { inserted, failed: [feed titles] }. */
 export async function refreshInChunks(feeds, refreshFeed) {
-  let totalNew = 0;
+  const tally = { inserted: 0, failed: [] };
   for (let i = 0; i < feeds.length; i += REFRESH_CONCURRENCY) {
     const chunk = feeds.slice(i, i + REFRESH_CONCURRENCY);
-    totalNew += fulfilledTotal(await Promise.allSettled(chunk.map((f) => refreshFeed(f.id))));
+    tallyRefreshes(tally, await Promise.allSettled(chunk.map((f) => refreshFeed(f.id))), chunk);
   }
-  return totalNew;
+  return tally;
+}
+
+const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
+
+/** The toast after refreshing every feed: new articles, and which feeds failed. */
+export function refreshSummary({ inserted, failed }) {
+  const found = `Refreshed: ${plural(inserted, 'new article')}`;
+  if (failed.length === 0) return { message: found, type: 'success' };
+  const which = failed.length <= 2 ? failed.join(' and ') : `${failed.length} feeds`;
+  return { message: `${found}. ${which} couldn't be refreshed; the sidebar shows why.`, type: 'error' };
 }

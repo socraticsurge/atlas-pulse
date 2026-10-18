@@ -1,4 +1,6 @@
-import { HiOutlineArrowRightCircle, HiOutlineCheck, HiOutlineFolderOpen, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi2';
+import {
+  HiOutlineArrowPath, HiOutlineArrowRightCircle, HiOutlineCheck, HiOutlineExclamationTriangle, HiOutlineFolderOpen, HiOutlinePencil, HiOutlineTrash,
+} from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 
 function Item({ onClick, danger, active, children }) {
@@ -27,10 +29,25 @@ function FolderMenu({ id, actions, done }) {
   );
 }
 
+// Why the feed's last refresh failed, at the top of its menu.
+function RefreshError({ feed }) {
+  if (!feed?.lastError) return null;
+  return (
+    <div className="mb-1 flex max-w-72 gap-2 border-b border-border px-2.5 pt-1 pb-2 text-[11.5px] leading-snug text-muted-foreground">
+      <HiOutlineExclamationTriangle className="mt-px size-3.5 shrink-0 text-primary" />
+      <span><span className="text-foreground">Last refresh failed.</span> {feed.lastError}</span>
+    </div>
+  );
+}
+
 function FeedMenu({ id, feeds, folders, actions, done }) {
-  const currentFolder = feeds.find((f) => f.id === id)?.folderId;
+  const feed = feeds.find((f) => f.id === id);
+  const currentFolder = feed?.folderId;
   return (
     <>
+      <RefreshError feed={feed} />
+      <Item onClick={() => done(() => actions.onRefreshFeed(id))}><HiOutlineArrowPath /> Refresh feed</Item>
+      <Divider />
       <div className="flex items-center gap-2 px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider text-[var(--text-tertiary)]"><HiOutlineArrowRightCircle className="size-3.5" /> Move to</div>
       <Item active={!currentFolder} onClick={() => done(() => actions.onMoveFeed(id, null))}>No folder</Item>
       {folders.map((folder) => (

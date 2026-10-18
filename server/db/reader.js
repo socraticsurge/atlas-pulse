@@ -25,6 +25,8 @@ function toFeed(row) {
     favicon: row.favicon,
     description: row.description,
     lastRefreshed: row.last_refreshed,
+    lastError: row.last_error ?? null,
+    lastErrorAt: row.last_error_at ?? null,
     createdAt: row.created_at,
   };
 }
@@ -88,7 +90,8 @@ const stmts = {
   ),
   updateFeed: db.prepare(
     `UPDATE feeds SET folder_id = @folder_id, title = @title, site_url = @site_url,
-     favicon = @favicon, description = @description, last_refreshed = @last_refreshed WHERE id = @id`
+     favicon = @favicon, description = @description, last_refreshed = @last_refreshed,
+     last_error = @last_error, last_error_at = @last_error_at WHERE id = @id`
   ),
   deleteFeed: db.prepare(`DELETE FROM feeds WHERE id = ?`),
   getAllFeeds: db.prepare(`SELECT * FROM feeds ORDER BY id`),
@@ -197,17 +200,24 @@ export function getFeedByUrl(url) {
   return row ? toFeed(row) : null;
 }
 
+// A field's new value: the given one, or the current one when not given.
+// orKeep treats null as "not given"; setOrKeep lets null clear the field.
+const orKeep = (value, current) => value ?? current;
+const setOrKeep = (value, current) => (value !== undefined ? value : current);
+
 export function updateFeed(id, data) {
   const row = stmts.getFeedById.get(id);
   if (!row) return null;
   stmts.updateFeed.run({
     id,
-    folder_id: data.folderId !== undefined ? (data.folderId ?? null) : row.folder_id,
-    title: data.title ?? row.title,
-    site_url: data.siteUrl ?? row.site_url,
-    favicon: data.favicon ?? row.favicon,
-    description: data.description ?? row.description,
-    last_refreshed: data.lastRefreshed ?? row.last_refreshed,
+    folder_id: setOrKeep(data.folderId, row.folder_id) ?? null,
+    title: orKeep(data.title, row.title),
+    site_url: orKeep(data.siteUrl, row.site_url),
+    favicon: orKeep(data.favicon, row.favicon),
+    description: orKeep(data.description, row.description),
+    last_refreshed: orKeep(data.lastRefreshed, row.last_refreshed),
+    last_error: setOrKeep(data.lastError, row.last_error),
+    last_error_at: setOrKeep(data.lastErrorAt, row.last_error_at),
   });
   return toFeed(stmts.getFeedById.get(id));
 }

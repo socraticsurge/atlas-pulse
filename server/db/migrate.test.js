@@ -85,3 +85,11 @@ test('reader migration 4 adds the favicon cache and points Google favicon URLs a
   assert.deepEqual(icons, ['/api/favicon/www.theverge.com', 'https://cdn.example.com/icon.png', null]);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM favicons').get().n, 0);
 });
+
+test('reader migration 5 adds the last refresh error to feeds', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER);
+  db.prepare("INSERT INTO feeds (title, url, created_at, last_error, last_error_at) VALUES ('F', 'https://f.example/rss', 'now', 'Bad XML', '2026-10-19')").run();
+  assert.deepEqual(db.prepare('SELECT last_error, last_error_at FROM feeds').get(), { last_error: 'Bad XML', last_error_at: '2026-10-19' });
+  assert.equal(db.pragma('user_version', { simple: true }), 5);
+});

@@ -12,6 +12,9 @@ const menuOpener = (openMenu, type, id) => (e) => {
   openMenu({ type, id, x: e.clientX, y: e.clientY });
 };
 
+// Tooltip for a feed whose last refresh failed, or undefined.
+const refreshAlert = (feed) => (feed.lastError ? `Last refresh failed: ${feed.lastError}` : undefined);
+
 const feedIcon = (feed) => <FeedFavicon src={feed.favicon} imgClass="size-4 rounded-sm object-contain" iconClass="flex size-4 [&_svg]:size-4" />;
 
 function FeedRow({ feed, unread, active, onViewChange, openMenu, nested }) {
@@ -24,6 +27,7 @@ function FeedRow({ feed, unread, active, onViewChange, openMenu, nested }) {
       icon={feedIcon(feed)}
       label={feed.title}
       count={unread}
+      alert={refreshAlert(feed)}
       className={cn(nested && 'pl-8 text-[12.5px]')}
     />
   );
