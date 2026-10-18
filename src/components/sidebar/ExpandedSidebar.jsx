@@ -1,5 +1,8 @@
 import { useState } from 'react';
-import { HiOutlineArrowPath, HiOutlineBars3, HiOutlineCog6Tooth, HiOutlineFolderPlus, HiOutlinePlus } from 'react-icons/hi2';
+import {
+  HiOutlineArrowPath, HiOutlineBars3, HiOutlineCog6Tooth, HiOutlineFolderPlus, HiOutlineMagnifyingGlass, HiOutlinePlus,
+} from 'react-icons/hi2';
+import { emit } from '../../lib/appEvents.js';
 import { ContextMenu } from './ContextMenu.jsx';
 import { FolderTree } from './FolderTree.jsx';
 import { ThemeButton } from './IconSidebar.jsx';
@@ -79,7 +82,7 @@ function useFolderTreeState(actions) {
   };
 }
 
-/** Full sidebar: header, Add Feed, navigation, folders and feeds, refresh. */
+/** Full sidebar: header, the ⌘K bar and Add Feed, navigation, folders and feeds, refresh. */
 export function ExpandedSidebar({ style, activeView, onViewChange, counts, folders, feeds, grouped, actions }) {
   const [addingFolder, setAddingFolder] = useState(false);
   const tree = { ...useFolderTreeState(actions), activeView, onViewChange };
@@ -89,7 +92,12 @@ export function ExpandedSidebar({ style, activeView, onViewChange, counts, folde
     <aside className="sidebar" style={style}>
       <SidebarHeader actions={actions} />
       <div className="sidebar-add-wrapper">
-        <button className="btn btn-primary sidebar-add-btn" onClick={actions.onAddFeed}><HiOutlinePlus /> Add Feed</button>
+        <button className="sidebar-command-btn" onClick={() => emit('open-palette')} title="Search, jump to a feed, run a command (⌘K)">
+          <HiOutlineMagnifyingGlass />
+          <span className="sidebar-command-label">Search or jump to…</span>
+          <kbd>⌘K</kbd>
+        </button>
+        <button className="btn btn-ghost btn-icon sidebar-add-btn" onClick={actions.onAddFeed} title="Add feed"><HiOutlinePlus /></button>
       </div>
       <nav className="sidebar-nav">
         <MainNav activeView={activeView} onViewChange={onViewChange} counts={counts} />
