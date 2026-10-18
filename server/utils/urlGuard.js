@@ -1,5 +1,7 @@
 import dns from 'node:dns/promises';
+import dnsCallback from 'node:dns';
 import net from 'node:net';
+import { Agent, fetch as undiciFetch } from 'undici';
 
 /**
  * SSRF guard. Feed/discovery/extraction endpoints fetch user-supplied URLs
@@ -7,14 +9,15 @@ import net from 'node:net';
  * cloud-metadata addresses — otherwise a crafted URL turns the server into a
  * proxy into the host's own network.
  *
- * Validation happens before the fetch: only http(s) is allowed, the hostname
- * is DNS-resolved, and every resolved IP is checked against the blocked ranges
- * (so DNS-rebinding to a public name that resolves to 127.0.0.1 is caught).
- *
- * Caveat: rss-parser and @extractus perform their own fetches, so a redirect
- * to a private host after this initial check is not re-validated for those two
- * paths. This blocks the primary direct-URL vector; a fully redirect-safe
- * fetch would require replacing those libraries' internal fetching.
+ * Three checks, all in safeFetch:
+ * 1. Before the request: only http(s), and every address the host resolves
+ *    to must be public (clear errors for the common cases).
+ * 2. At connect time: the request's own DNS lookup goes through
+ *    guardedLookup, which refuses private addresses. Without this, a hostile
+ *    DNS server could answer "public" for check 1 and "127.0.0.1" a moment
+ *    later for the real connection (DNS rebinding).
+ * 3. Every redirect hop is followed manually and re-checked.
+ * Parsing libraries (rss-parser, @extractus) only receive text fetched here.
  */
 
 function ipv4ToInt(ip) {
@@ -98,22 +101,49 @@ async function resolveHost(rawHost) {
 export async function assertPublicHttpUrl(rawUrl) {
   const url = parseHttpUrl(rawUrl);
   const addresses = await resolveHost(url.hostname);
-  if (addresses.some(isBlockedIp)) throw new Error('Blocked private or loopback address');
+  if (addresses.some(isBlockedIp)) throw new Error(BLOCKED_MESSAGE);
   return url;
 }
+
+const BLOCKED_MESSAGE = 'Blocked private or loopback address';
+
+/**
+ * dns.lookup for outgoing connections that refuses private addresses, so the
+ * address actually connected to is the one that was checked (no rebinding
+ * between the check and the connection).
+ */
+export function guardedLookup(hostname, options, callback) {
+  dnsCallback.lookup(hostname, { ...options, all: true }, (err, addresses) => {
+    if (err) return callback(err);
+    if (addresses.length === 0) return callback(new Error(`Could not resolve host: ${hostname}`));
+    if (addresses.some((a) => isBlockedIp(a.address))) return callback(Object.assign(new Error(BLOCKED_MESSAGE), { code: 'EBLOCKED' }));
+    if (options.all) return callback(null, addresses);
+    return callback(null, addresses[0].address, addresses[0].family);
+  });
+}
+
+// The connection pool for guarded fetches: every connect resolves through
+// guardedLookup. undici's own fetch is used with it (not the global fetch),
+// so the client and the pool always come from the same undici version.
+const guardedAgent = new Agent({ connect: { lookup: guardedLookup } });
+
+/** One HTTP request through the guarded pool (redirects are handled by safeFetch). */
+export const guardedRequest = (url, options) => undiciFetch(url, { ...options, dispatcher: guardedAgent });
 
 const MAX_REDIRECTS = 5;
 
 /**
- * SSRF-safe fetch. Validates the initial URL and re-validates the target of
- * every redirect hop, so a public URL cannot 3xx-redirect the server into a
+ * SSRF-safe fetch. Validates the initial URL, connects only through
+ * guardedLookup (no DNS rebinding), and re-validates the target of every
+ * redirect hop, so a public URL cannot 3xx-redirect the server into a
  * loopback/private/metadata address. Redirects are followed manually
  * (redirect: 'manual') precisely so each Location can be checked first.
+ * `request` is the single-hop HTTP call (tests pass a stub).
  */
-export async function safeFetch(rawUrl, options = {}) {
+export async function safeFetch(rawUrl, options = {}, request = guardedRequest) {
   let current = (await assertPublicHttpUrl(rawUrl)).href;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const res = await fetch(current, { ...options, redirect: 'manual' });
+    const res = await request(current, { ...options, redirect: 'manual' });
     const isRedirect = res.status >= 300 && res.status < 400 && res.headers.has('location');
     if (!isRedirect) return res;
     const next = new URL(res.headers.get('location'), current).href;
