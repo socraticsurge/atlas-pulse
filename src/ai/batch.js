@@ -35,9 +35,26 @@ export function progressStarted(p, queued) {
   return { ...p, running: true, total: Math.max(p.total, p.done + p.failed + queued) };
 }
 
-/** Progress after an item's outcome: 'done' | 'failed' | 'empty' (queue drained). */
+/**
+ * Progress after an item's outcome: 'done' | 'failed' | 'unavailable' (server
+ * unreachable, nothing processed) | 'empty' (queue drained).
+ */
 export function progressAfter(p, outcome) {
   if (outcome === 'done') return { ...p, done: p.done + 1 };
   if (outcome === 'failed') return { ...p, failed: p.failed + 1 };
+  if (outcome === 'unavailable') return p;
   return { ...p, running: false };
+}
+
+/**
+ * What the queue indicator should show. Articles are processed only while
+ * background processing is enabled or a manual run (the ✨ button) is in
+ * progress, and only with a model available; otherwise a non-empty queue is
+ * 'paused', with the reason.
+ */
+export function batchStatus({ queuedCount, enabled, manualRun, models }) {
+  if (queuedCount === 0) return { status: 'idle', reason: null };
+  if (Array.isArray(models) && models.length === 0) return { status: 'paused', reason: 'no-model' };
+  if (!enabled && !manualRun) return { status: 'paused', reason: 'off' };
+  return { status: 'running', reason: null };
 }
