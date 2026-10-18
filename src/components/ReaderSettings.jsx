@@ -5,6 +5,7 @@ import { FONTS } from '../app/fonts.js';
 import {
   CONTENT_WIDTHS, DEFAULT_READER_SETTINGS, LINE_HEIGHTS, READER_SETTINGS_STORAGE_KEY,
 } from '../utils/readerSettings.js';
+import { writeStored } from '../utils/storage.js';
 
 const FONT_SIZE = { min: 12, max: 28 };
 
@@ -51,7 +52,7 @@ export default function ReaderSettings({ settings, onSettingsChange }) {
 
   const apply = (next) => {
     onSettingsChange(next);
-    localStorage.setItem(READER_SETTINGS_STORAGE_KEY, JSON.stringify(next));
+    writeStored(READER_SETTINGS_STORAGE_KEY, JSON.stringify(next));
   };
   const set = (key) => (value) => apply({ ...settings, [key]: value });
 

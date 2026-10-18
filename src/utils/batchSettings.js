@@ -1,3 +1,5 @@
+import { readStored, writeStored } from './storage.js';
+
 const STORAGE_KEY = 'atlas-pulse-batch-ai';
 
 export const DEFAULT_BATCH_SETTINGS = {
@@ -10,12 +12,12 @@ export const DEFAULT_BATCH_SETTINGS = {
 
 export function getBatchSettings() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = readStored(STORAGE_KEY);
     if (raw) return { ...DEFAULT_BATCH_SETTINGS, ...JSON.parse(raw) };
   } catch { /* ignore */ }
   return { ...DEFAULT_BATCH_SETTINGS };
 }
 
 export function saveBatchSettings(settings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  writeStored(STORAGE_KEY, JSON.stringify(settings));
 }

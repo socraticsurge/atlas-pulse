@@ -1,4 +1,5 @@
 import { fontById } from '../app/fonts.js';
+import { readStored } from './storage.js';
 
 export const LINE_HEIGHTS = [
   { id: 'compact', label: 'Compact', value: 1.5 },
@@ -23,7 +24,7 @@ export const DEFAULT_READER_SETTINGS = {
 
 export function getReaderSettings() {
   try {
-    const stored = localStorage.getItem(READER_SETTINGS_STORAGE_KEY);
+    const stored = readStored(READER_SETTINGS_STORAGE_KEY);
     if (stored) return { ...DEFAULT_READER_SETTINGS, ...JSON.parse(stored) };
   } catch { /* ignore */ }
   return DEFAULT_READER_SETTINGS;

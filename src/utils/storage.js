@@ -16,8 +16,17 @@ export function readStoredNumber(key, fallback, storage = globalThis.localStorag
   return Number.isFinite(value) ? value : fallback;
 }
 
+const writeListeners = new Set();
+
+/** Calls fn(key, value) after each writeStored to the browser's localStorage; returns the unsubscribe. */
+export function onStoredWrite(fn) {
+  writeListeners.add(fn);
+  return () => writeListeners.delete(fn);
+}
+
 export function writeStored(key, value, storage = globalThis.localStorage) {
   try {
     storage.setItem(key, String(value));
   } catch { /* storage full or blocked: the preference just isn't remembered */ }
+  if (storage === globalThis.localStorage) writeListeners.forEach((fn) => fn(key, String(value)));
 }

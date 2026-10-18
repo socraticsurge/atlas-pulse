@@ -111,6 +111,18 @@ export async function fetchHighlightsDBPath() {
   return request('/highlights/db-path', 'Failed to get highlights DB path');
 }
 
+// ── Settings (data/settings.json) ─────────────────────────────────────────────
+
+/** { values, path }: the settings saved on the server. */
+export async function fetchSettings(signal) {
+  return request('/settings', 'Failed to load settings', { signal });
+}
+
+/** Saves { key: string | null } changes (null removes); resolves to { values }. */
+export async function saveSettings(values) {
+  return request('/settings', 'Failed to save settings', json({ values }, 'PUT'));
+}
+
 // ── Reader storage (folders, feeds, articles) ─────────────────────────────────
 
 function readerFetch(path, opts) {
