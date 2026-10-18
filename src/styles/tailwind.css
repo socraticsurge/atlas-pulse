@@ -26,6 +26,7 @@
 @source "../components/settings";
 @source "../components/library";
 @source "../components/ai-drawer";
+@source "../components/add-feed";
 @source "../lib";
 
 /* Dark mode follows the app's own theme attribute, not the OS setting. */

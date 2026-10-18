@@ -1,66 +1,36 @@
 import { HiOutlineGlobeAlt, HiOutlineMagnifyingGlass } from 'react-icons/hi2';
-import { getFaviconUrl } from '../../utils/helpers.js';
-import { DiscoveredAddButton, PreviewAddButton } from './FeedAddButton.jsx';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { FeedAddButton } from './FeedAddButton.jsx';
+import { Card, FeedRow, SiteIcon } from './parts.jsx';
 
 function FeedPreview({ preview, adder, onAdd }) {
   return (
-    <div className="discovery-results">
-      <div className="feed-preview-card">
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-          {preview.link && <img src={getFaviconUrl(preview.link)} alt="" style={{ width: 32, height: 32, borderRadius: 6 }} />}
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)', marginBottom: 4 }}>{preview.title}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 2 }}>{preview.description}</div>
-            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{preview.items?.length || 0} articles available</div>
-          </div>
+    <Card>
+      <div className="mb-4 flex items-start gap-3">
+        {preview.link && <SiteIcon siteUrl={preview.link} size="size-8" />}
+        <div className="min-w-0">
+          <div className="text-[15px] font-semibold text-foreground">{preview.title}</div>
+          {preview.description && <div className="mt-0.5 text-[13px] text-muted-foreground">{preview.description}</div>}
+          <div className="mt-1 font-mono text-[11px] text-[var(--text-tertiary)]">{preview.items?.length || 0} articles available</div>
         </div>
-        <PreviewAddButton url={preview.feedUrl} adder={adder} onAdd={onAdd} />
       </div>
-    </div>
+      <FeedAddButton url={preview.feedUrl} adder={adder} label="Add this feed" wide onAdd={onAdd} />
+    </Card>
   );
 }
 
 function DiscoveredFeeds({ feeds, adder, onPreview }) {
   return (
-    <div className="discovery-results">
-      <h4 style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 8 }}>
-        Found {feeds.length} feed{feeds.length > 1 ? 's' : ''}
-      </h4>
-      {feeds.map((feed, i) => (
-        <div key={i} className="discovery-result">
-          <div className="discovery-result-info">
-            <div className="feed-title">{feed.title || 'RSS Feed'}</div>
-            <div className="feed-url">{feed.url}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn btn-secondary btn-sm" onClick={() => onPreview(feed.url)}>Preview</button>
-            <DiscoveredAddButton url={feed.url} adder={adder} />
-          </div>
-        </div>
+    <div>
+      <div className="mb-1 font-mono text-[11px] uppercase tracking-wider text-[var(--text-tertiary)]">Found {feeds.length} feed{feeds.length > 1 ? 's' : ''}</div>
+      {feeds.map((feed) => (
+        <FeedRow key={feed.url} title={feed.title || 'RSS feed'} meta={feed.url}>
+          <Button variant="outline" size="sm" onClick={() => onPreview(feed.url)}>Preview</Button>
+          <FeedAddButton url={feed.url} adder={adder} />
+        </FeedRow>
       ))}
-    </div>
-  );
-}
-
-function UrlInput({ discovery, loading }) {
-  const { url, setUrl } = discovery;
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-      <div style={{ position: 'relative', flex: 1 }}>
-        <HiOutlineGlobeAlt className="input-icon-left" />
-        <input
-          className="input"
-          style={{ paddingLeft: 36 }}
-          placeholder="Paste website URL or RSS feed URL..."
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && discovery.discover()}
-        />
-      </div>
-      <button className="btn btn-primary" onClick={discovery.discover} disabled={loading || !url.trim()}>
-        {loading ? <span className="spinner" /> : <HiOutlineMagnifyingGlass />}
-        {loading ? 'Searching...' : 'Find Feeds'}
-      </button>
     </div>
   );
 }
@@ -75,24 +45,30 @@ function UrlResults({ discovery, loading, adder }) {
     };
     return <FeedPreview preview={preview} adder={adder} onAdd={addFromPreview} />;
   }
-  return (
-    <>
-      {discovered.length > 0 && <DiscoveredFeeds feeds={discovered} adder={adder} onPreview={discovery.previewFeed} />}
-      {loading && (
-        <div className="loading-overlay">
-          <span className="spinner" />
-          <span>Searching for feeds...</span>
-        </div>
-      )}
-    </>
-  );
+  if (loading) return <div className="flex items-center justify-center gap-2 py-10 text-[13px] text-muted-foreground"><Spinner /> Looking for feeds…</div>;
+  return discovered.length > 0 ? <DiscoveredFeeds feeds={discovered} adder={adder} onPreview={discovery.previewFeed} /> : null;
 }
 
 /** URL tab: paste a site or feed URL; preview a direct feed or pick from discovered ones. */
 export function UrlTab({ discovery, loading, adder }) {
+  const { url, setUrl } = discovery;
   return (
-    <div>
-      <UrlInput discovery={discovery} loading={loading} />
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
+        <Input
+          className="flex-1"
+          icon={HiOutlineGlobeAlt}
+          placeholder="Paste a website or RSS feed URL"
+          aria-label="Website or feed URL"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && discovery.discover()}
+          autoFocus
+        />
+        <Button className="h-9" onClick={discovery.discover} disabled={loading || !url.trim()}>
+          {loading ? <Spinner /> : <HiOutlineMagnifyingGlass />} Find feeds
+        </Button>
+      </div>
       <UrlResults discovery={discovery} loading={loading} adder={adder} />
     </div>
   );

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import AddFeedModal from './components/AddFeedModal.jsx';
+import AddFeedDialog from './components/add-feed/AddFeedDialog.jsx';
 import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
 import HighlightsScreen from './components/library/HighlightsScreen.jsx';
@@ -130,7 +130,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         onOpenArticle={LibraryScreen ? openFromLibrary : setSelectedArticle}
         commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
       />
-      <AddFeedModal isOpen={modal === 'addFeed'} onClose={closeModal} />
+      <AddFeedDialog isOpen={modal === 'addFeed'} onClose={closeModal} />
       <SettingsScreen key={settingsSection ?? 'start'} section={settingsSection} isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />
     </div>
   );
