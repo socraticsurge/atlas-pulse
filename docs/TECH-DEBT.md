@@ -41,6 +41,9 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - The batch processor stops polling when its queue is empty. It used to re-query every 50 ms.
 - ReDoS-safe tag stripping.
 - Rate limiting on static files.
+- Text color presets now work in the light theme, with light shades of their own.
+- The saved theme and colors are applied before first paint, so a light theme no longer flashes dark on load.
+- Removed unused assets (`hero.png`, `vite.svg`, `icons.svg`).
 
 ### Still open
 
@@ -50,6 +53,8 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - **Highlights spanning element boundaries.** `applyHighlights` matches text inside a single text node. A highlight that crosses a link or other inline element is saved but not redrawn when the article is reopened.
 - **Scroll restore.** The reader restores scroll position before full-text extraction finishes. When the extracted text is longer than the feed's version, the restored position can land in the wrong place. Positions are remembered only for the current session.
 - **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
+- **Fonts load from Google.** `src/styles/tokens.css` imports nine families from `fonts.googleapis.com` on every load, which sends the user's IP address to Google and contradicts the README's "your data never leaves your machine". Self-host them (for example with Fontsource). The app font list (`FONTS` in `settingsModel.js`) and the reader font list (`FONT_FAMILIES` in `readerSettings.js`) also disagree on ids and members: Merriweather is `serif` in one and `merriweather` in the other. Merge them into one list.
+- **Reader toolbar overflows.** With the AI panel open, the last toolbar button is cut off ("Ope…" in `docs/screenshots/03-ai-dark.png`).
 - **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 
 ## 1. File-level Code Health (CodeScene)
