@@ -1,16 +1,15 @@
 import { Router } from 'express';
-import { join } from 'node:path';
-import { DATA_DIR } from '../db/connection.js';
+import { getCachedFavicon, saveCachedFavicon } from '../db/reader.js';
 import { createFaviconCache, isValidHostname } from '../utils/favicon.js';
 
 const router = Router();
-const cache = createFaviconCache(join(DATA_DIR, 'favicons'));
+const cache = createFaviconCache({ read: getCachedFavicon, write: saveCachedFavicon });
 const DAY_SECONDS = 24 * 60 * 60;
 const WEEK_SECONDS = 7 * DAY_SECONDS;
 
 /**
  * GET /api/favicon/:host
- * The site's icon, fetched by this server and cached on disk. 404 when the
+ * The site's icon, fetched by this server and cached in reader.db. 404 when the
  * site has none; the UI then shows its generic feed icon.
  */
 router.get('/:host', async (req, res) => {

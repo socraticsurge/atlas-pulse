@@ -46,7 +46,7 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - Removed unused assets (`hero.png`, `vite.svg`, `icons.svg`).
 - Fonts are self-hosted with Fontsource instead of loaded from Google Fonts, and the app and reader share one font list (`src/app/fonts.js`).
 - The reader toolbar fits at every reader width: below 680px the buttons drop their labels (tooltips stay), and below 480px the article counter hides.
-- Favicons are fetched and cached by the local server (`GET /api/favicon/:host`, cached in `data/favicons/`) instead of Google's favicon service. Sites that block automated requests (Ars Technica and OpenAI at the time of writing) show the generic feed icon.
+- Favicons are fetched and cached by the local server (`GET /api/favicon/:host`, cached in `reader.db`) instead of Google's favicon service. Sites that block automated requests (Ars Technica and OpenAI at the time of writing) show the generic feed icon.
 
 ### Still open
 

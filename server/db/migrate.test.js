@@ -72,7 +72,7 @@ test('reader migration 2 backfills plain-text excerpts for existing articles', (
   assert.equal(excerpts[2].excerpt, '');
 });
 
-test('reader migration 4 points Google favicon URLs at the local proxy', () => {
+test('reader migration 4 adds the favicon cache and points Google favicon URLs at the local route', () => {
   const db = new Database(':memory:');
   migrate(db, READER.slice(0, 3));
   const insert = db.prepare("INSERT INTO feeds (title, url, favicon, created_at) VALUES ('F', ?, ?, 'now')");
@@ -83,4 +83,5 @@ test('reader migration 4 points Google favicon URLs at the local proxy', () => {
   migrate(db, READER);
   const icons = db.prepare('SELECT favicon FROM feeds ORDER BY id').all().map((r) => r.favicon);
   assert.deepEqual(icons, ['/api/favicon/www.theverge.com', 'https://cdn.example.com/icon.png', null]);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM favicons').get().n, 0);
 });

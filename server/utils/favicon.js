@@ -1,9 +1,7 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import * as cheerio from 'cheerio';
 import { safeFetch } from './urlGuard.js';
 
-// Site icons are fetched by this server and cached in DATA_DIR/favicons, so
+// Site icons are fetched by this server and cached in reader.db, so
 // the browser never asks a third party (such as Google's favicon service)
 // which sites the user follows.
 
@@ -74,34 +72,19 @@ async function resolveIcon(host) {
 }
 
 /**
- * Disk-backed favicon cache. `get(host)` returns { type, body } or null when
- * the site has no usable icon (that result is cached too, as an empty file).
+ * Favicon cache over a store with read(host) → { type, body, fetchedAt } and
+ * write(host, icon). `get(host)` returns { type, body } or null when the site
+ * has no usable icon; that result is cached too and retried after a day.
  */
-export function createFaviconCache(dir) {
+export function createFaviconCache(store) {
   const pending = new Map();
-  const paths = (host) => ({ meta: join(dir, `${host}.json`), body: join(dir, `${host}.bin`) });
-
-  async function readCached(host) {
-    try {
-      const { type, fetchedAt } = JSON.parse(await readFile(paths(host).meta, 'utf8'));
-      if (!type) return { hit: Date.now() - Date.parse(fetchedAt) < MISS_TTL_MS, icon: null };
-      return { hit: true, icon: { type, body: await readFile(paths(host).body) } };
-    } catch {
-      return { hit: false };
-    }
-  }
-
-  async function store(host, icon) {
-    await mkdir(dir, { recursive: true });
-    if (icon) await writeFile(paths(host).body, icon.body);
-    await writeFile(paths(host).meta, JSON.stringify({ type: icon?.type ?? null, fetchedAt: new Date().toISOString() }));
-  }
 
   async function load(host) {
-    const cached = await readCached(host);
-    if (cached.hit) return cached.icon;
+    const cached = store.read(host);
+    if (cached?.type) return { type: cached.type, body: cached.body };
+    if (cached && Date.now() - Date.parse(cached.fetchedAt) < MISS_TTL_MS) return null;
     const icon = await resolveIcon(host);
-    await store(host, icon);
+    store.write(host, icon);
     return icon;
   }
 

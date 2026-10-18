@@ -97,8 +97,16 @@ export const MIGRATIONS = [
   },
   {
     version: 4,
-    description: "Point stored favicons at the local /api/favicon proxy instead of Google's favicon service",
+    description: "Favicon cache table; point stored favicons at the local /api/favicon route instead of Google's favicon service",
     up: (db) => {
+      db.exec(`
+        CREATE TABLE favicons (
+          host       TEXT PRIMARY KEY,
+          type       TEXT,
+          body       BLOB,
+          fetched_at TEXT NOT NULL
+        )
+      `);
       for (const table of ['feeds', 'articles']) {
         db.exec(`
           UPDATE ${table}
