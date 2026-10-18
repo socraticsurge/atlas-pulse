@@ -1,8 +1,9 @@
 import { useCallback, useState } from 'react';
 import { HiOutlineMinusSmall, HiOutlinePlusSmall } from 'react-icons/hi2';
 import { useClickOutside } from '../hooks/useClickOutside.js';
+import { FONTS } from '../app/fonts.js';
 import {
-  CONTENT_WIDTHS, DEFAULT_READER_SETTINGS, FONT_FAMILIES, LINE_HEIGHTS, READER_SETTINGS_STORAGE_KEY,
+  CONTENT_WIDTHS, DEFAULT_READER_SETTINGS, LINE_HEIGHTS, READER_SETTINGS_STORAGE_KEY,
 } from '../utils/readerSettings.js';
 
 const FONT_SIZE = { min: 12, max: 28 };
@@ -61,7 +62,7 @@ export default function ReaderSettings({ settings, onSettingsChange }) {
       </button>
       {open && (
         <div className="reader-settings-dropdown">
-          <Section label="Font"><Chips options={FONT_FAMILIES} value={settings.fontFamily} onChange={set('fontFamily')} styleFor={(f) => ({ fontFamily: f.value })} /></Section>
+          <Section label="Font"><Chips options={FONTS} value={settings.fontFamily} onChange={set('fontFamily')} styleFor={(f) => ({ fontFamily: f.stack })} /></Section>
           <Section label="Size"><SizeControl value={settings.fontSize} onChange={set('fontSize')} /></Section>
           <Section label="Spacing"><Chips options={LINE_HEIGHTS} value={settings.lineHeight} onChange={set('lineHeight')} /></Section>
           <Section label="Width"><Chips options={CONTENT_WIDTHS} value={settings.contentWidth} onChange={set('contentWidth')} /></Section>
