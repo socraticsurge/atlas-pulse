@@ -53,6 +53,7 @@
 }
 
 .reader-toolbar {
+  container-type: inline-size;
   padding: 0 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -68,6 +69,17 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+/* A narrow reader drops the button labels so every control stays visible;
+   each control keeps its tooltip. */
+@container (max-width: 680px) {
+  .reader-toolbar .toolbar-label { display: none; }
+}
+@container (max-width: 480px) {
+  .reader-toolbar .reader-nav-counter { display: none; }
+  .reader-toolbar-left,
+  .reader-toolbar-right { gap: 0; }
 }
 
 .reader-nav-controls {
