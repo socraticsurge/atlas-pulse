@@ -1,6 +1,8 @@
 import { test, mock, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { assertPublicHttpUrl, safeFetch } from './urlGuard.js';
+import { createServer } from 'node:http';
+import dns from 'node:dns/promises';
+import { assertPublicHttpUrl, guardedLookup, safeFetch } from './urlGuard.js';
 
 afterEach(() => mock.restoreAll());
 
@@ -63,4 +65,24 @@ test('safeFetch follows a redirect to another public address', async () => {
   const res = await safeFetch('http://93.184.216.34/');
   assert.equal(res.status, 200);
   assert.equal(calls, 2);
+});
+
+test('guardedLookup refuses a name that resolves to a private address', async () => {
+  const err = await new Promise((resolve) => guardedLookup('localhost', {}, (e) => resolve(e)));
+  assert.equal(err?.code, 'EBLOCKED');
+});
+
+// DNS rebinding: the pre-check sees a public address, then the real
+// connection's own lookup gets 127.0.0.1. The connect-time guard must refuse.
+test('safeFetch refuses a host that rebinds to loopback after the check', async () => {
+  let hits = 0;
+  const server = createServer((req, res) => { hits += 1; res.end('secret'); });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  mock.method(dns, 'lookup', async () => [{ address: '93.184.216.34', family: 4 }]); // the check's answer
+  try {
+    await assert.rejects(safeFetch(`http://localhost:${server.address().port}/`), (err) => /Blocked private or loopback address|fetch failed/.test(err.message));
+    assert.equal(hits, 0);
+  } finally {
+    server.close();
+  }
 });
