@@ -75,7 +75,7 @@ export function CustomInstructionsControl() {
         value={settings.customInstructions}
         onChange={(e) => update({ customInstructions: e.target.value.slice(0, CUSTOM_INSTRUCTIONS_MAX) })}
         placeholder={'Always respond in French.\nI work in healthcare — focus on clinical implications.'}
-        className="w-full resize-y rounded-md border border-border bg-[var(--bg-primary)] p-2.5 text-[13px] leading-relaxed text-foreground outline-none focus:border-primary"
+        className="w-full resize-y rounded-md border border-border bg-[var(--bg-primary)] p-2.5 font-sans text-[13px] leading-relaxed text-foreground outline-none focus:border-primary"
       />
       <div className="mt-1 text-right font-mono text-[11px] text-[var(--text-tertiary)]">{settings.customInstructions.length} / {CUSTOM_INSTRUCTIONS_MAX}</div>
     </div>

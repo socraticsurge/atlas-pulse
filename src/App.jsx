@@ -15,6 +15,8 @@ import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
 import { ToastProvider, useToast } from './app/ToastContext.jsx';
 import { useLayout } from './app/useLayout.js';
 import { usePaneKeyboard } from './app/usePaneKeyboard.js';
+import { emit } from './lib/appEvents.js';
+import { useSettingsModal } from './app/useSettingsModal.js';
 import { useCommandPalette } from './app/useCommandPalette.js';
 import { usePaletteCommands } from './app/usePaletteCommands.js';
 import CommandPalette from './components/shell/CommandPalette.jsx';
@@ -69,6 +71,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const [visibleArticles, setVisibleArticles] = useState([]);
   const [modal, setModal] = useState(null); // 'addFeed' | 'settings' | null
   const closeModal = useCallback(() => setModal(null), []);
+  const settingsSection = useSettingsModal(setModal);
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
   const [summaryCount, refreshSummaryCount] = useSummaryCount(activeView.type);
   const [changedArticle, setChangedArticle] = useState(null);
@@ -90,7 +93,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         mode={layout.sidebarMode}
         activeView={activeView}
         onViewChange={goToView}
-        onAddFeed={() => setModal('addFeed')} onSettings={() => setModal('settings')} onToggleMode={layout.toggleSidebarMode}
+        onAddFeed={() => setModal('addFeed')} onSettings={() => emit('open-settings')} onToggleMode={layout.toggleSidebarMode}
         librarySummaryCount={summaryCount}
         style={{ width: layout.effectiveSidebarWidth, minWidth: layout.effectiveSidebarWidth }}
       />
@@ -128,7 +131,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
       />
       <AddFeedModal isOpen={modal === 'addFeed'} onClose={closeModal} />
-      <SettingsScreen isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />
+      <SettingsScreen key={settingsSection ?? 'start'} section={settingsSection} isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />
     </div>
   );
 }

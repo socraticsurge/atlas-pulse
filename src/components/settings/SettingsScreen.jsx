@@ -74,10 +74,10 @@ function Header({ mode, onMode, query, onQuery, onClose }) {
  * section's settings on the right, a search across all of them, and the
  * Simple / Power switch that hides or shows the advanced ones.
  */
-export default function SettingsScreen({ isOpen, onClose, availableModels = [] }) {
+export default function SettingsScreen({ isOpen, onClose, availableModels = [], section: startSection }) {
   const showToast = useToast();
   const [mode, setMode] = usePersistedChoice(MODE_KEY, 'power');
-  const [current, setCurrent] = useState('appearance');
+  const [current, setCurrent] = useState(startSection || 'appearance');
   const [query, setQuery] = useState('');
   const visible = useMemo(() => visibleIn(mode), [mode]);
   const sections = sectionsWith(visible);

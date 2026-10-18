@@ -3,7 +3,7 @@ import * as api from '../utils/api.js';
 import { on } from '../lib/appEvents.js';
 import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js';
 import { useOnKeyChange } from '../hooks/useOnKeyChange.js';
-import AIDrawer from './AIDrawer.jsx';
+import AIRail from './ai-drawer/AIRail.jsx';
 import HighlightToolbar from './HighlightToolbar.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
 import ReaderBody from './reader/ReaderBody.jsx';
@@ -129,7 +129,7 @@ export default function ArticleReader({
           </div>
         </div>
 
-        <AIDrawer
+        <AIRail
           isOpen={rail.open}
           onClose={rail.toggle}
           width={rail.width}
