@@ -72,7 +72,7 @@ function MarkAllReadButton({ unreadCount, confirm }) {
 export function ListHeader({ title, count, sidebar, viewMode, onViewModeChange, aiOnly, onToggleAiOnly, batch, search, unreadCount, markAllRead }) {
   return (
     <div className="article-list-header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="article-list-title">
         {sidebar.hidden && (
           <button className="btn btn-ghost btn-icon btn-sm" onClick={sidebar.onShow} title="Show sidebar">
             <HiOutlineBars3 />

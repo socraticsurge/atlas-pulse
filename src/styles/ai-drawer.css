@@ -2,15 +2,21 @@
    AI DRAWER
    ═══════════════════════════════════════════════════════════════ */
 
+/* The AI rail: a full-height column on the right of the reader panel. */
 .ai-drawer {
-  flex-shrink: 0;
+  position: relative;
+  flex: 0 0 auto;
+  height: 100%;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
   background: var(--bg-secondary);
-  max-height: 420px;
-  min-height: 200px;
   overflow: hidden;
+}
+
+/* The rail clips its overflow, so its resize grip sits just inside the edge. */
+.ai-drawer > .overlay-resize-handle {
+  left: 0;
 }
 
 /* ── Header ─────────────────────────────────────────────────── */

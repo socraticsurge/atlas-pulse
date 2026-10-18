@@ -8,6 +8,8 @@ import ResizableHandle from './ResizableHandle.jsx';
 import ReaderBody from './reader/ReaderBody.jsx';
 import ReaderToolbar from './reader/ReaderToolbar.jsx';
 import { sanitizeArticleHtml, sanitizeFeedHtml } from './reader/sanitize.js';
+import { briefOf, panelLayout } from './reader/panelLayout.js';
+import { useAIRail } from './reader/useAIRail.js';
 import { useArticleExtraction } from './reader/useArticleExtraction.js';
 import { applyHighlights, useArticleHighlights } from './reader/useArticleHighlights.js';
 import { useLiveArticle } from './reader/useLiveArticle.js';
@@ -46,13 +48,13 @@ function useArticleContent(current, extractedContent) {
 }
 
 // Focus ("zen") mode plus the reader's keyboard shortcuts, which depend on it.
-function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark }) {
+function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI }) {
   const [on, setOn] = useState(false);
   const keyboardActions = useMemo(() => ({
-    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark,
+    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI,
     toggleZen: () => setOn((z) => !z),
     escape: () => (on ? setOn(false) : onClose()),
-  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, on, onClose]);
+  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, on, onClose]);
   useReaderKeyboard(isOpen, keyboardActions);
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
 }
@@ -62,7 +64,7 @@ export default function ArticleReader({
   width, onResize, onSummarySaved, onArticleChanged,
 }) {
   const [readerSettings, setReaderSettings] = useState(getReaderSettings);
-  const [showAI, setShowAI] = useState(false);
+  const rail = useAIRail();
   const contentRef = useRef(null);
 
   const { id: articleId, link, feedId } = article || {};
@@ -73,7 +75,7 @@ export default function ArticleReader({
   const feedTitle = useFeedTitle(feedId);
   const progress = useReaderScroll(contentRef, articleId, isOpen, extraction.settled);
   const visible = useSlideIn(isOpen);
-  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark });
+  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle });
   const { displayContent, html, previewHtml } = useArticleContent(current, extraction.content);
   const cssVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
 
@@ -85,29 +87,45 @@ export default function ArticleReader({
 
   if (!article) return null;
 
-  const stateClasses = `${visible ? 'visible' : ''} ${zen.on ? 'zen' : ''}`;
+  const panel = panelLayout({ visible, zen, rail, width });
 
   return (
     <>
-      <div className={`reader-overlay-backdrop ${stateClasses}`} onClick={zen.on ? zen.exit : onClose} />
+      <div className={`reader-overlay-backdrop ${panel.stateClasses}`} onClick={zen.on ? zen.exit : onClose} />
 
-      <div className={`article-reader-panel ${stateClasses}`} style={zen.on ? undefined : { width: `${width}px` }}>
+      <div className={panel.className} style={panel.style}>
         <div className="reading-progress-bar" style={{ width: `${progress}%` }} />
         {!zen.on && <ResizableHandle className="overlay-resize-handle" onResize={onResize} />}
 
-        <ReaderToolbar
-          article={article}
-          live={live}
-          extraction={extraction}
-          nav={{ onNavigate, onClose, hasPrev, hasNext, currentIndex, totalCount }}
-          zen={zen}
-          ai={{ open: showAI, toggle: () => setShowAI((s) => !s) }}
-          settings={{ value: readerSettings, onChange: setReaderSettings }}
-        />
+        <div className="reader-main">
+          <ReaderToolbar
+            article={article}
+            live={live}
+            extraction={extraction}
+            nav={{ onNavigate, onClose, hasPrev, hasNext, currentIndex, totalCount }}
+            zen={zen}
+            ai={{ open: rail.open, toggle: rail.toggle }}
+            settings={{ value: readerSettings, onChange: setReaderSettings }}
+          />
+
+          <div className="reader-content" ref={contentRef} style={cssVars}>
+            <ReaderBody
+              article={article}
+              brief={briefOf(current, article)}
+              feedTitle={feedTitle}
+              extracting={extraction.extracting}
+              previewHtml={previewHtml}
+              html={html}
+              displayContent={displayContent}
+            />
+          </div>
+        </div>
 
         <AIDrawer
-          isOpen={showAI}
-          onClose={() => setShowAI(false)}
+          isOpen={rail.open}
+          onClose={rail.toggle}
+          width={rail.width}
+          onResize={rail.resize}
           article={current}
           extractedContent={extraction.content}
           feedTitle={feedTitle}
@@ -115,17 +133,6 @@ export default function ArticleReader({
           highlights={highlights}
           onHighlightDeleted={removeHighlight}
         />
-
-        <div className="reader-content" ref={contentRef} style={cssVars}>
-          <ReaderBody
-            article={article}
-            feedTitle={feedTitle}
-            extracting={extraction.extracting}
-            previewHtml={previewHtml}
-            html={html}
-            displayContent={displayContent}
-          />
-        </div>
       </div>
 
       <HighlightToolbar containerRef={contentRef} article={current} feedTitle={feedTitle || ''} onSaved={reloadHighlights} />

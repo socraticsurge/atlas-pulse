@@ -5,6 +5,8 @@ const SHORTCUTS = [
   ['o', 'open the original'],
   ['b', 'bookmark'],
   ['f', 'focus mode'],
+  ['a', 'AI side rail'],
+  ['[ / ]', 'sidebar / list'],
   ['/', 'search the list'],
   ['Esc', 'close the article'],
 ];
