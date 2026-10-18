@@ -39,6 +39,7 @@ export async function startOllama() {
 export async function streamModelPull(model, onProgress) {
   const res = await send('/ollama/pull', 'Pull request failed', json({ model }));
   for await (const chunk of readNdjson(res.body)) {
+    if (chunk.error) throw new Error(chunk.error);
     onProgress(chunk);
     if (chunk.status === 'success') return;
   }

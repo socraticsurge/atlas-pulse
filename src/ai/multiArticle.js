@@ -2,6 +2,7 @@
 import { fetchAIModels, withFullContent } from '../utils/api.js';
 import { isNanoModel, fitToNanoContext } from '../utils/chromeAI.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
+import { pickBatchModel } from './batch.js';
 import { buildSystemPrompt, getAISettings } from '../utils/aiSettings.js';
 import { htmlToText } from '../utils/helpers.js';
 
@@ -60,13 +61,11 @@ export function multiArticleMessages(request, charsPerArticle = MAX_CHARS_PER_AR
 
 const NO_MODEL_ERROR = 'No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.';
 
-// The batch model from Settings, or for "Auto" the first available model
-// (Gemini Nano when present).
+// The batch model from Settings if it is still available, otherwise (or for
+// "Auto") the first available model, Gemini Nano when present.
 async function resolveModel() {
-  const saved = getBatchSettings().model;
-  if (saved) return saved;
   const { models } = await fetchAIModels().catch(() => ({ models: [] }));
-  return models[0]?.name || '';
+  return pickBatchModel(getBatchSettings().model, models);
 }
 
 /**
