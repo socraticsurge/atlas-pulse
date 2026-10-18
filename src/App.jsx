@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react';
 import AddFeedModal from './components/AddFeedModal.jsx';
 import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
-import HighlightsLibrary from './components/HighlightsLibrary.jsx';
-import LibraryView from './components/LibraryView.jsx';
+import HighlightsScreen from './components/library/HighlightsScreen.jsx';
+import SummariesScreen from './components/library/SummariesScreen.jsx';
 import MultiArticlePanel from './components/MultiArticlePanel.jsx';
 import ReaderErrorBoundary from './components/ReaderErrorBoundary.jsx';
 import ReaderPlaceholder from './components/shell/ReaderPlaceholder.jsx';
@@ -21,7 +21,7 @@ import CommandPalette from './components/shell/CommandPalette.jsx';
 import { useArticleNavigation, useSummaryCount } from './app/useWorkspace.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 
-const LIBRARY_VIEWS = { library: LibraryView, highlights: HighlightsLibrary };
+const LIBRARY_VIEWS = { library: SummariesScreen, highlights: HighlightsScreen };
 
 // Right-hand panel: the multi-article AI panel, the reader, or nothing.
 function DetailPanel({ multiPanel, onCloseMulti, reader, layout }) {

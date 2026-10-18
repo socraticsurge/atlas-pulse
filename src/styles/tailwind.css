@@ -24,6 +24,7 @@
 @source "../components/ui";
 @source "../components/shell";
 @source "../components/settings";
+@source "../components/library";
 @source "../lib";
 
 /* Dark mode follows the app's own theme attribute, not the OS setting. */

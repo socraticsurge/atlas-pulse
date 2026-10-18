@@ -13,7 +13,6 @@ export function useLibraryCollection({ fetchRows, fetchDbPath, deleteRow, search
   const [error, setError] = useState(null);
   const [dbPath, setDbPath] = useState('');
   const [search, setSearch] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
 
   const load = useCallback(() => fetchRows()
     .then((data) => { setRows(data); setError(null); })
@@ -31,10 +30,9 @@ export function useLibraryCollection({ fetchRows, fetchDbPath, deleteRow, search
     setRows((prev) => prev.filter((r) => r.id !== id));
     onChanged?.();
   }, [deleteRow, onChanged]);
-  const toggleSearch = useCallback(() => { setShowSearch((s) => !s); setSearch(''); }, []);
   const filtered = useMemo(() => filterRows(rows, search, searchFields), [rows, search, searchFields]);
 
-  return { rows, filtered, loading, error, dbPath, search, setSearch, showSearch, toggleSearch, retry, remove };
+  return { rows, filtered, loading, error, dbPath, search, setSearch, retry, remove };
 }
 
 /** Opens a saved article's URL in the reader if it's in the library, else in a new tab. */

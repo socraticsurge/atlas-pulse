@@ -470,3 +470,16 @@
   color: var(--text-tertiary);
   padding: 0 4px;
 }
+
+/* ── AI drawer save button divider ──────────────────────────── */
+.ai-summary-actions-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.ai-save-btn {
+  gap: 6px;
+}
