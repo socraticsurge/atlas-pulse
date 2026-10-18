@@ -38,22 +38,29 @@ function useFeedRefresh({ feeds, replaceFeed, onDataChanged }) {
   return { refreshFeed, refreshAllFeeds };
 }
 
-// OPML import; reloads the feed list when anything was added.
-function useOPMLImport({ feeds, setFeeds, onDataChanged }) {
+// OPML import; reloads the feed list, then fetches articles for the new feeds
+// in the background. The imported feeds are refreshed by the records the
+// server returned, not looked up in `feeds`, which predates the import.
+function useOPMLImport({ feeds, setFeeds, replaceFeed, onDataChanged }) {
   return useCallback(async (parsedFeeds) => {
-    const importedCount = await importNewFeeds(parsedFeeds, feeds);
-    if (importedCount > 0) {
-      setFeeds(await api.fetchFeeds().catch(() => feeds));
-      onDataChanged?.();
-    }
-    return importedCount;
-  }, [feeds, setFeeds, onDataChanged]);
+    const imported = await importNewFeeds(parsedFeeds, feeds);
+    if (imported.length === 0) return 0;
+    setFeeds(await api.fetchFeeds().catch(() => [...feeds, ...imported]));
+    onDataChanged?.();
+    const byId = new Map(imported.map((f) => [f.id, f]));
+    refreshInChunks(imported, async (id) => {
+      const { inserted, updated } = await refreshOne(byId.get(id));
+      replaceFeed(updated);
+      return inserted;
+    }).then((totalNew) => { if (totalNew > 0) onDataChanged?.(); });
+    return imported.length;
+  }, [feeds, setFeeds, replaceFeed, onDataChanged]);
 }
 
 export function useFeeds(onDataChanged) {
   const { feeds, setFeeds, replaceFeed } = useFeedList();
   const refresh = useFeedRefresh({ feeds, replaceFeed, onDataChanged });
-  const importFeedsFromOPML = useOPMLImport({ feeds, setFeeds, onDataChanged });
+  const importFeedsFromOPML = useOPMLImport({ feeds, setFeeds, replaceFeed, onDataChanged });
 
   const addFeed = useCallback(async (feedUrl, folderId = null) => {
     if (feeds.some((f) => f.url === feedUrl)) throw new Error('This feed is already added');

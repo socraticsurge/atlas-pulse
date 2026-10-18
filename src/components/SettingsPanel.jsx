@@ -38,7 +38,7 @@ export default function SettingsPanel({ isOpen, onClose, availableModels = [] })
           <ReadingSection onAutoRefreshChange={library.setAutoRefreshMinutes} />
           <AIAssistantSection />
           <AIProcessingSection availableModels={availableModels || []} />
-          <DataSection feeds={library.feeds} folders={library.folders} onImportOPML={library.importFeedsFromOPML} onRefreshAll={library.onRefreshAll} onShowToast={showToast} onClose={onClose} />
+          <DataSection feeds={library.feeds} folders={library.folders} onImportOPML={library.importFeedsFromOPML} onShowToast={showToast} onClose={onClose} />
           <About />
           <DangerZone onClose={onClose} />
         </div>
