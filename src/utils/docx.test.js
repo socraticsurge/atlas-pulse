@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { markdownLineKind } from './docx.js';
+import { markdownLineKind, markdownToDocxBlob } from './docx.js';
 
 test('markdownLineKind classifies lines in the documented order', () => {
   const cases = {
@@ -12,4 +12,11 @@ test('markdownLineKind classifies lines in the documented order', () => {
     'Plain **bold** text': 'text',
   };
   for (const [line, kind] of Object.entries(cases)) assert.equal(markdownLineKind(line), kind, JSON.stringify(line));
+});
+
+test('markdown becomes a real .docx (the library loads on demand)', async () => {
+  const blob = await markdownToDocxBlob('# Title\n\nSome **bold** text.\n\n- one\n1. two\n---');
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  assert.ok(bytes.length > 1000);
+  assert.deepEqual([...bytes.slice(0, 2)], [0x50, 0x4b]); // a zip ("PK"), as .docx files are
 });
