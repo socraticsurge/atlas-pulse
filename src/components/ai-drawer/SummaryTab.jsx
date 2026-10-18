@@ -1,114 +1,62 @@
 import {
-  HiOutlineArrowPath, HiOutlineBookmarkSquare, HiOutlineCheck, HiOutlineClipboardDocument,
-  HiOutlineExclamationCircle, HiOutlineSparkles,
+  HiOutlineArrowPath, HiOutlineBookmarkSquare, HiOutlineCheck, HiOutlineClipboardDocument, HiOutlineSparkles,
 } from 'react-icons/hi2';
 import { FaLinkedinIn } from 'react-icons/fa';
+import { Button } from '@/components/ui/button';
 import { shareOnLinkedIn, shareOnX } from '../../utils/share.js';
+import { RailAction, RailEmpty, RailError, RailLabel, TypingCursor } from './parts.jsx';
 
-function SaveButton({ saving, saved, onSave }) {
-  let icon = <HiOutlineBookmarkSquare />;
-  let label = 'Save';
-  if (saving) {
-    icon = <span className="spinner" style={{ width: 12, height: 12 }} />;
-    label = 'Saving…';
-  } else if (saved) {
-    icon = <HiOutlineCheck style={{ color: 'var(--accent)' }} />;
-    label = 'Saved';
-  }
-  return (
-    <button
-      className={`btn btn-sm ${saved ? 'btn-ghost' : 'btn-primary'} ai-save-btn`}
-      onClick={onSave}
-      disabled={saving || saved}
-      title={saved ? 'Saved to library' : 'Save to Summaries library'}
-    >
-      {icon}
-      {label}
-    </button>
-  );
+function saveState({ saving, saved }) {
+  if (saving) return { label: 'Saving…', Icon: HiOutlineBookmarkSquare };
+  if (saved) return { label: 'Saved', Icon: HiOutlineCheck };
+  return { label: 'Save', Icon: HiOutlineBookmarkSquare };
 }
 
 function SummaryActions({ article, s }) {
-  if (s.summarizing) {
-    return <button className="btn btn-ghost btn-sm" onClick={s.stop}>Stop</button>;
-  }
-  const xText = s.summary ? s.summary.slice(0, 200) + '…' : article?.title || '';
+  if (s.summarizing) return <RailAction onClick={s.stop}>Stop</RailAction>;
+  const xText = `${s.summary.slice(0, 200)}…`;
+  const { label, Icon } = saveState(s);
   return (
-    <>
-      <button className="btn btn-ghost btn-sm" onClick={s.generate} title="Regenerate">
-        <HiOutlineArrowPath /> Regenerate
-      </button>
-      <button className="btn btn-ghost btn-sm" onClick={s.copy} title="Copy summary">
-        {s.copied ? <HiOutlineCheck style={{ color: 'var(--accent)' }} /> : <HiOutlineClipboardDocument />}
-        {s.copied ? 'Copied!' : 'Copy'}
-      </button>
-      <button className="btn btn-ghost btn-sm ai-linkedin-btn" onClick={() => shareOnLinkedIn(article?.link)}>
-        <FaLinkedinIn style={{ color: '#0a66c2' }} /> LinkedIn
-      </button>
-      <button className="btn btn-ghost btn-sm" onClick={() => shareOnX(article?.link, xText)}>
-        Share on X
-      </button>
-      <div className="ai-summary-actions-divider" />
-      <SaveButton saving={s.saving} saved={s.saved} onSave={s.save} />
-    </>
+    <div className="flex flex-wrap items-center gap-0.5">
+      <RailAction onClick={s.generate}><HiOutlineArrowPath /> Regenerate</RailAction>
+      <RailAction onClick={s.copy}>{s.copied ? <HiOutlineCheck /> : <HiOutlineClipboardDocument />} {s.copied ? 'Copied' : 'Copy'}</RailAction>
+      <RailAction onClick={() => shareOnLinkedIn(article?.link)}><FaLinkedinIn /> LinkedIn</RailAction>
+      <RailAction onClick={() => shareOnX(article?.link, xText)}>X</RailAction>
+      <Button size="sm" variant={s.saved ? 'ghost' : 'default'} className="ml-auto" onClick={s.save} disabled={s.saving || s.saved} title={s.saved ? 'Saved to AI Summaries' : 'Save to AI Summaries'}>
+        <Icon /> {label}
+      </Button>
+    </div>
   );
 }
 
 function EmptySummary({ queued, canGenerate, onGenerate }) {
   if (queued) {
-    return (
-      <div className="ai-batch-pending">
-        <span className="spinner" style={{ width: 14, height: 14 }} />
-        <span>Summary queued — will appear here shortly</span>
-      </div>
-    );
+    return <RailEmpty Icon={HiOutlineSparkles} text="Queued for background processing; the summary will appear here." />;
   }
   return (
-    <div className="ai-summary-prompt">
-      <p className="ai-summary-hint">Generate a concise summary, ready to share.</p>
-      <button className="btn btn-primary ai-generate-btn" onClick={onGenerate} disabled={!canGenerate}>
-        <HiOutlineSparkles /> Generate Summary
-      </button>
-    </div>
-  );
-}
-
-function SummaryResult({ article, s }) {
-  return (
-    <div className="ai-summary-result">
-      {s.isBatchSummary && (
-        <div className="ai-batch-label">Background summary · <span onClick={s.generate}>regenerate</span></div>
-      )}
-      <div className="ai-summary-text">
-        {s.summary || <span className="ai-typing-cursor" />}
-        {s.summarizing && <span className="ai-typing-cursor" />}
-      </div>
-      <div className="ai-summary-actions">
-        <SummaryActions article={article} s={s} />
-      </div>
-    </div>
-  );
-}
-
-function SummaryError({ error, onRetry }) {
-  return (
-    <div className="ai-error">
-      <HiOutlineExclamationCircle />
-      <span>{error}</span>
-      <button className="btn btn-ghost btn-sm" onClick={onRetry}>Retry</button>
-    </div>
+    <RailEmpty Icon={HiOutlineSparkles} text="A short summary in your voice, ready to share or save.">
+      <Button onClick={onGenerate} disabled={!canGenerate}><HiOutlineSparkles /> Generate summary</Button>
+    </RailEmpty>
   );
 }
 
 /** Summary tab: generate, stream, copy, share, and save a summary. s = useArticleSummary(). */
 export default function SummaryTab({ article, s, canGenerate }) {
   const hasResult = Boolean(s.summary || s.summarizing);
-  const idle = !hasResult && !s.error;
   return (
-    <div className="ai-drawer-body">
-      {idle && <EmptySummary queued={article?.aiStatus === 'queued'} canGenerate={canGenerate} onGenerate={s.generate} />}
-      {s.error && <SummaryError error={s.error} onRetry={s.generate} />}
-      {hasResult && <SummaryResult article={article} s={s} />}
+    <div className="flex flex-col gap-3 p-4">
+      {!hasResult && !s.error && <EmptySummary queued={article?.aiStatus === 'queued'} canGenerate={canGenerate} onGenerate={s.generate} />}
+      {s.error && <RailError message={s.error}><RailAction onClick={s.generate}>Retry</RailAction></RailError>}
+      {hasResult && (
+        <>
+          {s.isBatchSummary && <RailLabel>Background summary</RailLabel>}
+          <p className="m-0 text-[15px] leading-relaxed text-foreground" style={{ fontFamily: 'var(--reader-font-family)' }}>
+            {s.summary}
+            {s.summarizing && <TypingCursor />}
+          </p>
+          <SummaryActions article={article} s={s} />
+        </>
+      )}
     </div>
   );
 }

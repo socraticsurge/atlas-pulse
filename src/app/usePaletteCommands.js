@@ -16,7 +16,7 @@ export function usePaletteCommands({ goToView, setModal, layout, readerOpen }) {
       setViewMode: (mode) => emit('view-mode', mode),
       actions: {
         addFeed: () => setModal('addFeed'),
-        openSettings: () => setModal('settings'),
+        openSettings: () => emit('open-settings'),
         refreshAll: library.onRefreshAll,
         toggleTheme: onToggleTheme,
         toggleSidebar: layout.toggleSidebarMode,
