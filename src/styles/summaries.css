@@ -30,7 +30,7 @@
 }
 
 .sum-db-path code {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 10.5px;
   color: var(--text-secondary);
   word-break: break-all;

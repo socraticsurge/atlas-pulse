@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { HiOutlineMoon, HiOutlineSun } from 'react-icons/hi2';
 import { ColorRow, SettingsGroup } from './Controls.jsx';
-import { FONTS, PRESET_COLORS, textColorsFor } from './settingsModel.js';
+import { FONTS } from '../../app/fonts.js';
+import { PRESET_COLORS, textColorsFor } from './settingsModel.js';
 
 function FontPicker({ value, onChange }) {
   return (
     <div className="font-picker">
       {FONTS.map((f) => (
         <button key={f.id} className={`font-option ${value === f.id ? 'active' : ''}`} onClick={() => onChange(f.id)} title={f.label}>
-          <span className="font-sample" style={{ fontFamily: f.family }}>{f.sample}</span>
+          <span className="font-sample" style={{ fontFamily: f.stack }}>{f.sample || 'Ag'}</span>
           <span className="font-label">{f.label}</span>
         </button>
       ))}

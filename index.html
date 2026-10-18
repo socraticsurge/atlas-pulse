@@ -17,7 +17,8 @@
         var get = function (key, fallback) { return localStorage.getItem(key) || fallback; };
         var root = document.documentElement;
         root.setAttribute('data-theme', get('atlas-pulse-theme', get('feedflow-theme', 'dark')));
-        root.setAttribute('data-font', get('atlas-pulse-font', 'sans'));
+        var fontStack = localStorage.getItem('atlas-pulse-font-stack');
+        if (fontStack) root.style.setProperty('--font-family', fontStack);
         root.setAttribute('data-color', get('atlas-pulse-color', 'emerald'));
         root.setAttribute('data-text', get('atlas-pulse-text', 'default'));
         if (root.getAttribute('data-color') === 'custom') root.style.setProperty('--accent', get('atlas-pulse-custom-color', '#00d4aa'));

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { accentVars, parseColorChoice } from './appearance.js';
+import { fontById } from './fonts.js';
 
 const AppearanceContext = createContext(null);
 
@@ -7,9 +8,12 @@ const stored = (key, fallback) => localStorage.getItem(key) || fallback;
 
 function applyThemeAndFont(root, theme, font) {
   root.setAttribute('data-theme', theme);
-  root.setAttribute('data-font', font);
+  const { stack } = fontById(font);
+  root.style.setProperty('--font-family', stack);
   localStorage.setItem('atlas-pulse-theme', theme);
   localStorage.setItem('atlas-pulse-font', font);
+  // Read by the inline script in index.html to set the font before first paint.
+  localStorage.setItem('atlas-pulse-font-stack', stack);
 }
 
 function applyTextColor(root, preset, hex) {
@@ -49,7 +53,7 @@ function useColorChoice(presetKey, presetFallback, hexKey, hexFallback) {
 
 function useAppearanceState() {
   const [theme, setTheme] = useState(() => stored('atlas-pulse-theme', localStorage.getItem('feedflow-theme') || 'dark'));
-  const [appFont, setAppFont] = useState(() => stored('atlas-pulse-font', 'sans'));
+  const [appFont, setAppFont] = useState(() => fontById(stored('atlas-pulse-font', 'sans')).id);
   const accent = useColorChoice('atlas-pulse-color', 'emerald', 'atlas-pulse-custom-color', '#00d4aa');
   const text = useColorChoice('atlas-pulse-text', 'default', 'atlas-pulse-custom-text', '#e8eaed');
 

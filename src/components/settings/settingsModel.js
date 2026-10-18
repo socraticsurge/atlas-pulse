@@ -21,18 +21,6 @@ export function textColorsFor(theme) {
   return theme === 'light' ? TEXT_COLORS.map((c) => ({ ...c, hex: c.lightHex })) : TEXT_COLORS;
 }
 
-export const FONTS = [
-  { id: 'sans',     label: 'Inter',        family: 'Inter, sans-serif',                       sample: 'Ag' },
-  { id: 'poppins',  label: 'Poppins',      family: "'Poppins', sans-serif",                   sample: 'Ag' },
-  { id: 'lato',     label: 'Lato',         family: "'Lato', sans-serif",                      sample: 'Ag' },
-  { id: 'nunito',   label: 'Nunito',       family: "'Nunito', sans-serif",                    sample: 'Ag' },
-  { id: 'serif',    label: 'Merriweather', family: "'Merriweather', Georgia, serif",          sample: 'Ag' },
-  { id: 'garamond', label: 'Garamond',     family: "'EB Garamond', Garamond, serif",          sample: 'Ag' },
-  { id: 'times',    label: 'Times',        family: "'Times New Roman', Times, serif",         sample: 'Ag' },
-  { id: 'mono',     label: 'Mono',         family: "'JetBrains Mono', monospace",             sample: '01' },
-  { id: 'system',   label: 'System',       family: 'system-ui, -apple-system, sans-serif',    sample: 'Ag' },
-];
-
 export const BATCH_FEATURES = [
   { id: 'summary',  label: 'Summary only' },
   { id: 'analysis', label: 'Analysis only' },
