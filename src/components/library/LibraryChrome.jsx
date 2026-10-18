@@ -1,5 +1,6 @@
 import { HiOutlineArrowDownTray, HiOutlineExclamationCircle, HiOutlineMagnifyingGlass, HiOutlineXMark } from 'react-icons/hi2';
 import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 /** Header: title with count, a search field, and CSV export. */
 export function LibraryHeader({ Icon, title, collection, exportUrl, exportTitle, placeholder }) {
@@ -78,7 +79,7 @@ export function LibraryBody({ collection, empty, children }) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-[820px] px-6 pt-4 pb-16">
-        {state === 'loading' && <div className="flex justify-center py-24"><span className="spinner" style={{ width: 24, height: 24 }} /></div>}
+        {state === 'loading' && <div className="flex justify-center py-24"><Spinner className="size-6" /></div>}
         {state === 'error' && <ErrorNotice error={collection.error} onRetry={collection.retry} />}
         {state === 'empty' && <EmptyState empty={empty} search={collection.search} />}
         {state === 'list' && children}

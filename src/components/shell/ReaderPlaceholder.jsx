@@ -1,4 +1,4 @@
-import ResizableHandle from '../ResizableHandle.jsx';
+import ResizableHandle from './ResizableHandle.jsx';
 
 const SHORTCUTS = [
   ['⌘K', 'command palette'],
@@ -20,7 +20,7 @@ export default function ReaderPlaceholder({ width, onResize }) {
       className="article-reader-panel visible relative flex flex-col items-center justify-center gap-6 px-10 text-center"
       style={{ width: `${width}px` }}
     >
-      <ResizableHandle className="overlay-resize-handle" onResize={onResize} />
+      <ResizableHandle overlay onResize={onResize} />
       <p className="m-0 text-[15px] text-muted-foreground">Select an article to read it here.</p>
       <dl className="m-0 grid grid-cols-[auto_auto] gap-x-4 gap-y-2 text-left text-[13px]">
         {SHORTCUTS.map(([keys, action]) => (

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { HiOutlineSparkles, HiOutlineXMark } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
-import { NoAIEngine } from '../AIEngines.jsx';
-import ResizableHandle from '../ResizableHandle.jsx';
+import { NoAIEngine } from '../ollama/NoAIEngine.jsx';
+import ResizableHandle from '../shell/ResizableHandle.jsx';
 import AIConfigStrip from './AIConfigStrip.jsx';
 import AnalysisPanel from './AnalysisPanel.jsx';
 import AskBar from './AskBar.jsx';
@@ -14,6 +14,7 @@ import { useAIModels } from './useAIModels.js';
 import { useArticleAnalysis } from './useArticleAnalysis.js';
 import { useArticleChat } from './useArticleChat.js';
 import { useArticleSummary } from './useArticleSummary.js';
+import { Spinner } from '@/components/ui/spinner';
 
 const TABS = [
   { id: 'summary', label: 'Summary' },
@@ -27,7 +28,7 @@ function Header({ ai, onClose }) {
     <div className="flex h-[var(--pane-header-height)] shrink-0 items-center gap-2 border-b border-border pr-2 pl-4">
       <HiOutlineSparkles className="size-4 text-primary" />
       <span className="mr-auto text-[13.5px] font-semibold text-foreground">AI</span>
-      {!ai.checked && <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><span className="spinner" style={{ width: 11, height: 11 }} /> checking</span>}
+      {!ai.checked && <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Spinner className="size-3 border-[1.5px]" /> checking</span>}
       {ai.ready && <ModelPicker models={ai.models} selectedModel={ai.selectedModel} onSelect={ai.setSelectedModel} />}
       <button type="button" onClick={onClose} title="Close AI rail (a)" aria-label="Close AI rail" className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground">
         <HiOutlineXMark className="size-4" />
@@ -100,8 +101,8 @@ export default function AIRail({ isOpen, onClose, width, onResize, article, extr
   const ctx = { ai, article, summary, analysis, chat, highlights, onHighlightDeleted, suggest };
 
   return (
-    <aside className="ai-drawer relative flex h-full shrink-0 flex-col overflow-hidden border-l border-border bg-[var(--bg-secondary)]" aria-label="AI assistant" style={{ width: `${width}px` }}>
-      <ResizableHandle className="overlay-resize-handle" onResize={onResize} />
+    <aside className="ai-drawer flex h-full shrink-0 flex-col overflow-hidden border-l border-border bg-[var(--bg-secondary)]" aria-label="AI assistant" style={{ width: `${width}px` }}>
+      <ResizableHandle overlay className="left-0" onResize={onResize} />
       <Header ai={ai} onClose={onClose} />
       {ai.checked && !ai.ready && <div className="border-b border-border p-4"><NoAIEngine onReady={ai.loadModels} /></div>}
       {ai.ready && (

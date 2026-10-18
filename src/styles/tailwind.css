@@ -1,38 +1,15 @@
-/* The app's stylesheet entry: Tailwind v4, the shadcn/ui theme, and the
- * legacy hand-written CSS.
+/* The app's stylesheet entry: Tailwind v4 (theme, preflight, utilities),
+ * the shadcn/ui theme mapping, and the app stylesheets in src/styles/
+ * (tokens, fonts, page frame, reader), which sit in the components layer:
+ * above the preflight reset, below utilities.
  *
- * Migration mode: the legacy styles in src/styles/ still own most screens, so
- * Tailwind's preflight (its CSS reset) is NOT loaded yet. It is switched on
- * once the redesign has replaced the old base styles.
- *
- * Cascade layers, lowest first: Tailwind's theme, then the legacy CSS, then
- * Tailwind's utilities. Legacy screens use no utilities, so they look the
- * same; components built with utilities win over legacy rules such as the
- * universal `* { margin: 0; padding: 0 }` reset.
+ * Every screen is built with Tailwind classes; Tailwind scans the project
+ * for them automatically.
  */
-@layer theme, legacy, base, components, utilities;
-@import "tailwindcss/theme.css" layer(theme);
-@import "../index.css" layer(legacy);
-@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tailwindcss";
+@import "../index.css" layer(components);
 @import "tw-animate-css";
 
-/* Only migrated code is scanned for class names, so Tailwind classes must
- * live in these folders: a class written elsewhere is silently not generated.
- * Scanning everything would turn ordinary words in legacy class names and
- * comments ("hidden", "contents", "container"…) into real utilities on live
- * elements. Add each folder here as its screens move to Tailwind. */
-@source "../components/ui";
-@source "../components/shell";
-@source "../components/settings";
-@source "../components/library";
-@source "../components/ai-drawer";
-@source "../components/add-feed";
-@source "../components/article-list";
-@source "../components/ArticleList.jsx";
-@source "../components/reader";
-@source "../lib";
-
-/* Dark mode follows the app's own theme attribute, not the OS setting. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* shadcn/ui's semantic colors, pointing at the app's existing tokens
@@ -62,12 +39,10 @@
   --font-sans: var(--font-family);
 }
 
-/* Without preflight, Tailwind borders default to currentColor. shadcn parts
-   (everything with data-slot) get the theme's border color instead; legacy
-   elements keep their own. */
+/* Borders take the theme's border color unless a utility says otherwise
+   (Tailwind's own default is the current text color). */
 @layer base {
-  [data-slot],
-  [data-slot] * {
+  *, ::before, ::after, ::backdrop, ::file-selector-button {
     border-color: var(--color-border);
   }
 }

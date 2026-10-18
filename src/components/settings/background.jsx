@@ -3,7 +3,7 @@ import { getBatchSettings, saveBatchSettings } from '../../utils/batchSettings.j
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { isNanoModel } from '../../utils/chromeAI.js';
-import OllamaSetup from '../OllamaSetup.jsx';
+import OllamaSetup from '../ollama/OllamaSetup.jsx';
 import { useSettingsEnv } from './env.js';
 import { BATCH_FEATURES, BATCH_SIZES } from './settingsModel.js';
 import { Segmented, Select, Switch } from './ui.jsx';

@@ -1,18 +1,28 @@
-import { HiOutlineArrowRightCircle, HiOutlineFolderOpen, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi2';
+import { HiOutlineArrowRightCircle, HiOutlineCheck, HiOutlineFolderOpen, HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi2';
+import { cn } from '@/lib/utils';
+
+function Item({ onClick, danger, active, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn('flex w-full cursor-pointer items-center gap-2 rounded border-0 bg-transparent px-2.5 py-1.5 text-left text-[12.5px] hover:bg-[var(--bg-hover)] [&_svg]:size-3.5', danger ? 'text-[var(--danger)]' : 'text-foreground')}
+    >
+      {children}
+      {active && <HiOutlineCheck className="ml-auto text-primary" />}
+    </button>
+  );
+}
+
+const Divider = () => <div className="my-1 h-px bg-border" />;
 
 function FolderMenu({ id, actions, done }) {
   return (
     <>
-      <button className="context-menu-item" onClick={() => done(() => actions.startRename(id))}>
-        <HiOutlinePencil /> Rename
-      </button>
-      <div className="context-menu-divider" />
-      <button className="context-menu-item danger" onClick={() => done(() => actions.onDeleteFolder(id))}>
-        <HiOutlineTrash /> Delete folder (keep feeds)
-      </button>
-      <button className="context-menu-item danger" onClick={() => done(() => actions.onDeleteFolderAndFeeds(id))}>
-        <HiOutlineTrash /> Delete folder + all feeds
-      </button>
+      <Item onClick={() => done(() => actions.startRename(id))}><HiOutlinePencil /> Rename</Item>
+      <Divider />
+      <Item danger onClick={() => done(() => actions.onDeleteFolder(id))}><HiOutlineTrash /> Delete folder (keep feeds)</Item>
+      <Item danger onClick={() => done(() => actions.onDeleteFolderAndFeeds(id))}><HiOutlineTrash /> Delete folder and its feeds</Item>
     </>
   );
 }
@@ -21,19 +31,15 @@ function FeedMenu({ id, feeds, folders, actions, done }) {
   const currentFolder = feeds.find((f) => f.id === id)?.folderId;
   return (
     <>
-      <div className="context-menu-label"><HiOutlineArrowRightCircle /> Move to folder</div>
-      <button className={`context-menu-item ${!currentFolder ? 'active' : ''}`} onClick={() => done(() => actions.onMoveFeed(id, null))}>
-        Uncategorized
-      </button>
+      <div className="flex items-center gap-2 px-2.5 py-1 font-mono text-[10.5px] uppercase tracking-wider text-[var(--text-tertiary)]"><HiOutlineArrowRightCircle className="size-3.5" /> Move to</div>
+      <Item active={!currentFolder} onClick={() => done(() => actions.onMoveFeed(id, null))}>No folder</Item>
       {folders.map((folder) => (
-        <button key={folder.id} className={`context-menu-item ${currentFolder === folder.id ? 'active' : ''}`} onClick={() => done(() => actions.onMoveFeed(id, folder.id))}>
-          <HiOutlineFolderOpen style={{ fontSize: 13 }} /> {folder.name}
-        </button>
+        <Item key={folder.id} active={currentFolder === folder.id} onClick={() => done(() => actions.onMoveFeed(id, folder.id))}>
+          <HiOutlineFolderOpen /> {folder.name}
+        </Item>
       ))}
-      <div className="context-menu-divider" />
-      <button className="context-menu-item danger" onClick={() => done(() => actions.onRemoveFeed(id))}>
-        <HiOutlineTrash /> Remove Feed
-      </button>
+      <Divider />
+      <Item danger onClick={() => done(() => actions.onRemoveFeed(id))}><HiOutlineTrash /> Remove feed</Item>
     </>
   );
 }
@@ -44,8 +50,8 @@ export function ContextMenu({ menu, feeds, folders, actions, onClose }) {
   const done = (fn) => { fn(); onClose(); };
   return (
     <>
-      <div style={{ position: 'fixed', inset: 0, zIndex: 499 }} onClick={onClose} />
-      <div className="context-menu" style={{ position: 'fixed', left: menu.x, top: menu.y }}>
+      <div className="fixed inset-0 z-[499]" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
+      <div role="menu" className="fixed z-[500] min-w-52 rounded-lg border border-border bg-[var(--bg-modal)] p-1 shadow-xl" style={{ left: menu.x, top: menu.y }}>
         {menu.type === 'folder'
           ? <FolderMenu id={menu.id} actions={actions} done={done} />
           : <FeedMenu id={menu.id} feeds={feeds} folders={folders} actions={actions} done={done} />}

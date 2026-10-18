@@ -1,6 +1,7 @@
 import { HiOutlineArrowPath, HiOutlineBeaker } from 'react-icons/hi2';
 import { Button } from '@/components/ui/button';
 import { RailAction, RailEmpty, RailError, RailLabel } from './parts.jsx';
+import { Spinner } from '@/components/ui/spinner';
 
 const ANALYSIS_DIMS = [
   { key: 'sentiment', label: 'Sentiment', values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative' } },
@@ -52,7 +53,7 @@ export default function AnalysisPanel({ analysis, analyzing, error, onRun, canRu
   const state = panelState({ analyzing, error, analysis });
   return (
     <div className="flex flex-col gap-3 p-4">
-      {state === 'analyzing' && <div className="flex items-center gap-2 py-8 text-[13px] text-muted-foreground"><span className="spinner" style={{ width: 14, height: 14 }} /> Analyzing…</div>}
+      {state === 'analyzing' && <div className="flex items-center gap-2 py-8 text-[13px] text-muted-foreground"><Spinner /> Analyzing…</div>}
       {state === 'error' && <RailError message={error}><RailAction onClick={onRun} disabled={!canRun}>Retry</RailAction></RailError>}
       {state === 'empty' && (
         <RailEmpty Icon={HiOutlineBeaker} text="Classify sentiment, urgency, framing, tone and depth, and pick out topics.">
