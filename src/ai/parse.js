@@ -4,18 +4,29 @@
 // Braces inside JSON strings don't count, and a stray '{' in the prose only
 // spoils the block that starts there.
 
+// The scanner reads one character at a time; each step returns true when the
+// character closes the block it started on.
+const DEPTH_CHANGE = { '{': 1, '}': -1 };
+
+function stepInString(state, ch) {
+  if (state.escaped) state.escaped = false;
+  else if (ch === '\\') state.escaped = true;
+  else if (ch === '"') state.inString = false;
+  return false;
+}
+
+function stepInCode(state, ch) {
+  if (ch === '"') state.inString = true;
+  state.depth += DEPTH_CHANGE[ch] ?? 0;
+  return ch === '}' && state.depth === 0;
+}
+
 // Index of the '}' that closes the '{' at `start`, or -1. Skips string literals.
 function closingBrace(text, start) {
-  let depth = 0;
-  let inString = false;
+  const state = { depth: 0, inString: false, escaped: false };
   for (let i = start; i < text.length; i++) {
-    const ch = text[i];
-    if (inString) {
-      if (ch === '\\') i++; // skip the escaped character
-      else if (ch === '"') inString = false;
-    } else if (ch === '"') inString = true;
-    else if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return i;
+    const step = state.inString ? stepInString : stepInCode;
+    if (step(state, text[i])) return i;
   }
   return -1;
 }
