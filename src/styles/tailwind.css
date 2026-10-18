@@ -35,7 +35,7 @@
   --color-popover: var(--bg-modal);
   --color-popover-foreground: var(--text-primary);
   --color-primary: var(--accent);
-  --color-primary-foreground: var(--bg-primary);
+  --color-primary-foreground: var(--accent-foreground);
   --color-secondary: var(--bg-tertiary);
   --color-secondary-foreground: var(--text-primary);
   --color-muted: var(--bg-tertiary);

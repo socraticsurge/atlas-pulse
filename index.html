@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Atlas Pulse — Your Personal RSS Feed Reader</title>
     <meta name="description" content="Atlas Pulse — A modern, free, and privacy-first RSS feed reader. Subscribe to blogs, news, and content feeds. Read articles in a clean, distraction-free interface." />
-    <meta name="theme-color" content="#0f1117" />
+    <meta name="theme-color" content="#121315" />
     <script>
       // Apply the saved appearance before first paint so a light theme or a
       // custom color does not flash the defaults. AppearanceContext takes over
@@ -19,10 +19,10 @@
         root.setAttribute('data-theme', get('atlas-pulse-theme', get('feedflow-theme', 'dark')));
         var fontStack = localStorage.getItem('atlas-pulse-font-stack');
         if (fontStack) root.style.setProperty('--font-family', fontStack);
-        root.setAttribute('data-color', get('atlas-pulse-color', 'emerald'));
+        root.setAttribute('data-color', get('atlas-pulse-color', 'amber'));
         root.setAttribute('data-text', get('atlas-pulse-text', 'default'));
-        if (root.getAttribute('data-color') === 'custom') root.style.setProperty('--accent', get('atlas-pulse-custom-color', '#00d4aa'));
-        if (root.getAttribute('data-text') === 'custom') root.style.setProperty('--text-primary', get('atlas-pulse-custom-text', '#e8eaed'));
+        if (root.getAttribute('data-color') === 'custom') root.style.setProperty('--accent', get('atlas-pulse-custom-color', '#e8a33d'));
+        if (root.getAttribute('data-text') === 'custom') root.style.setProperty('--text-primary', get('atlas-pulse-custom-text', '#e8e6e1'));
       } catch (e) { /* storage blocked: React applies the defaults */ }
     </script>
   </head>
