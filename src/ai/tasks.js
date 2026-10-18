@@ -4,23 +4,23 @@
 import { streamChat } from '../utils/api.js';
 import { buildSystemPrompt, voiceInstructions } from '../utils/aiSettings.js';
 import { articleContext, titledText } from './context.js';
-import { ANALYSIS_PROMPT, BASE_CHAT, BASE_SUMMARY, BATCH_PROMPT } from './prompts.js';
+import { getPrompt } from './promptRegistry.js';
 
 export function summaryMessages(article, extractedContent, settings) {
   return [
-    { role: 'system', content: buildSystemPrompt(BASE_SUMMARY, settings) },
+    { role: 'system', content: buildSystemPrompt(getPrompt('summary'), settings) },
     { role: 'user', content: articleContext(article, extractedContent) },
   ];
 }
 
 export function chatMessages(article, extractedContent, settings, history) {
-  const system = `${buildSystemPrompt(BASE_CHAT, settings)}\n\nARTICLE:\n${articleContext(article, extractedContent)}`;
+  const system = `${buildSystemPrompt(getPrompt('chat'), settings)}\n\nARTICLE:\n${articleContext(article, extractedContent)}`;
   return [{ role: 'system', content: system }, ...history];
 }
 
 export function analysisMessages(article, extractedContent) {
   return [
-    { role: 'system', content: ANALYSIS_PROMPT },
+    { role: 'system', content: getPrompt('analysis') },
     { role: 'user', content: titledText(article, extractedContent) },
   ];
 }
@@ -28,11 +28,9 @@ export function analysisMessages(article, extractedContent) {
 // Background processing: the summary follows the reader's persona, tone and
 // custom instructions, like an on-demand summary; the classification fields
 // stay neutral.
-const BATCH_VOICE = 'Write the "summary" value in the voice described below. Keep the other fields plain, neutral classifications.';
-
 export function batchMessages(article, settings) {
   return [
-    { role: 'system', content: `${BATCH_PROMPT}\n\n${BATCH_VOICE}${voiceInstructions(settings)}` },
+    { role: 'system', content: `${getPrompt('batch')}\n\n${getPrompt('batch-voice')}${voiceInstructions(settings)}` },
     { role: 'user', content: titledText(article) },
   ];
 }

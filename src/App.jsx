@@ -8,7 +8,7 @@ import MultiArticlePanel from './components/MultiArticlePanel.jsx';
 import ReaderErrorBoundary from './components/ReaderErrorBoundary.jsx';
 import ReaderPlaceholder from './components/shell/ReaderPlaceholder.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
-import SettingsPanel from './components/SettingsPanel.jsx';
+import SettingsScreen from './components/settings/SettingsScreen.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import { AppearanceProvider } from './app/AppearanceContext.jsx';
 import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
@@ -68,6 +68,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const batchActions = useBatchActions(batch);
   const [visibleArticles, setVisibleArticles] = useState([]);
   const [modal, setModal] = useState(null); // 'addFeed' | 'settings' | null
+  const closeModal = useCallback(() => setModal(null), []);
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
   const [summaryCount, refreshSummaryCount] = useSummaryCount(activeView.type);
   const [changedArticle, setChangedArticle] = useState(null);
@@ -128,8 +129,8 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         onOpenArticle={LibraryScreen ? openFromLibrary : setSelectedArticle}
         commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
       />
-      <AddFeedModal isOpen={modal === 'addFeed'} onClose={() => setModal(null)} />
-      <SettingsPanel isOpen={modal === 'settings'} onClose={() => setModal(null)} availableModels={batch.availableModels} />
+      <AddFeedModal isOpen={modal === 'addFeed'} onClose={closeModal} />
+      <SettingsScreen isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />
     </div>
   );
 }

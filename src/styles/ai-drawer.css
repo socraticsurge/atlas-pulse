@@ -461,3 +461,12 @@
   color: var(--text-tertiary);
   font-style: italic;
 }
+
+.ai-checking-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 0 4px;
+}

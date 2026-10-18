@@ -16,6 +16,16 @@ export function readStoredNumber(key, fallback, storage = globalThis.localStorag
   return Number.isFinite(value) ? value : fallback;
 }
 
+/** A stored JSON object, or `fallback` when missing, unreadable or not an object. */
+export function readStoredObject(key, fallback = {}, storage = globalThis.localStorage) {
+  try {
+    const value = JSON.parse(readStored(key, 'null', storage));
+    return typeof value === 'object' && value !== null ? value : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const writeListeners = new Set();
 
 /** Calls fn(key, value) after each writeStored to the browser's localStorage; returns the unsubscribe. */

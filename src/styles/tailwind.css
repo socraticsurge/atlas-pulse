@@ -23,6 +23,7 @@
  * elements. Add each folder here as its screens move to Tailwind. */
 @source "../components/ui";
 @source "../components/shell";
+@source "../components/settings";
 @source "../lib";
 
 /* Dark mode follows the app's own theme attribute, not the OS setting. */
