@@ -6,6 +6,7 @@ import HighlightsLibrary from './components/HighlightsLibrary.jsx';
 import LibraryView from './components/LibraryView.jsx';
 import MultiArticlePanel from './components/MultiArticlePanel.jsx';
 import ReaderErrorBoundary from './components/ReaderErrorBoundary.jsx';
+import ReaderPlaceholder from './components/shell/ReaderPlaceholder.jsx';
 import ResizableHandle from './components/ResizableHandle.jsx';
 import SettingsPanel from './components/SettingsPanel.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -25,7 +26,7 @@ function DetailPanel({ multiPanel, onCloseMulti, reader, layout }) {
       <MultiArticlePanel articles={multiPanel.articles} initialOperation={multiPanel.operation} onClose={onCloseMulti} width={layout.readerWidth} onResize={layout.resizeReader} />
     );
   }
-  if (!reader.article) return null;
+  if (!reader.article) return <ReaderPlaceholder width={layout.readerWidth} onResize={layout.resizeReader} />;
   return (
     <ReaderErrorBoundary width={layout.readerWidth} onClose={reader.onClose}>
       <ArticleReader {...reader} isOpen width={layout.readerWidth} onResize={layout.resizeReader} />

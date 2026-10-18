@@ -1,6 +1,7 @@
 /* ===== Article List ===== */
 .article-list-panel {
   flex: 1;
+  min-width: 320px;
   background: var(--bg-primary);
   border-right: none;
   display: flex;
@@ -10,6 +11,7 @@
 }
 
 .article-list-header {
+  container-type: inline-size;
   padding: 0 16px;
   border-bottom: 1px solid var(--border);
   display: flex;
@@ -28,6 +30,15 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Beside the docked reader the list can be narrow: buttons drop their text
+   labels (tooltips stay) and the article count hides, so every control fits. */
+@container (max-width: 720px) {
+  .article-list-header .view-toggle-label { display: none; }
+}
+@container (max-width: 480px) {
+  .article-list-header .article-count { display: none; }
 }
 
 .article-list-header .article-count {

@@ -1,36 +1,59 @@
 /* ===== Article Reader Overlay ===== */
+/* The reader is the third pane, docked beside the list (the list stays
+   usable). Below 1100px there isn't room for three panes, so it slides over
+   the list instead, with a backdrop. Focus mode (.zen) covers the window. */
 .reader-overlay-backdrop {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-modal-overlay);
-  z-index: 100;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  backdrop-filter: blur(2px);
-}
-
-.reader-overlay-backdrop.visible {
-  opacity: 1;
-  pointer-events: auto;
+  display: none;
 }
 
 .article-reader-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--bg-primary);
+  position: relative;
+  flex: 0 0 auto;
+  height: 100vh;
+  max-width: 60vw;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  z-index: 110;
-  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
-  transform: translateX(100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 1099px) {
+  .reader-overlay-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--bg-modal-overlay);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .reader-overlay-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .article-reader-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    max-width: 100vw;
+    z-index: 110;
+    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.35);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* With nothing open, the overlay reader has nothing to show. */
+  aside.article-reader-panel {
+    display: none;
+  }
 }
 
 .article-reader-panel.visible {
-  transform: translateX(0);
+  transform: none;
 }
 
 .article-reader-empty {
