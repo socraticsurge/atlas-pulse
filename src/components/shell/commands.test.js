@@ -27,8 +27,9 @@ test('view mode commands pass the mode id', () => {
   assert.deepEqual(modes, ['rows', 'magazine', 'excerpt', 'compact']);
 });
 
-test('palette filter matches whole words in any order, not subsequences', () => {
+test('palette filter matches word starts in any order, not subsequences', () => {
   assert.equal(commandFilter('View as Grid view-magazine', 'grid view'), 0.5);
   assert.equal(commandFilter('View as Grid view-magazine', 'view'), 1);
+  assert.equal(commandFilter('MIT Technology Review Feed feed-3', 'view'), 0);
   assert.equal(commandFilter('Articles on Smashing Magazine Feed', 'roman'), 0);
 });

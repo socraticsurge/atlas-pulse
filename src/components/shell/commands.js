@@ -43,13 +43,14 @@ export function buildCommands({ folders = [], feeds = [], go, actions: a, setVie
 }
 
 /**
- * Palette matching: every word of the search must appear in the item's text
- * (no fuzzy subsequence matches). Items starting with the first word rank
- * higher. Returns cmdk's score, 0 to hide.
+ * Palette matching: every word of the search must start a word in the item's
+ * text ("view" matches "View as Grid", not "Review"); no fuzzy subsequence
+ * matches. Items starting with the first word rank higher. Returns cmdk's
+ * score, 0 to hide.
  */
 export function commandFilter(value, search) {
-  const text = value.toLowerCase();
-  const words = search.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.every((w) => text.includes(w))) return 0;
-  return text.startsWith(words[0] ?? '') ? 1 : 0.5;
+  const words = value.toLowerCase().split(/[^\p{L}\p{N}]+/u);
+  const terms = search.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.every((t) => words.some((w) => w.startsWith(t)))) return 0;
+  return words[0].startsWith(terms[0] ?? '') ? 1 : 0.5;
 }
