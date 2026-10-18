@@ -1,10 +1,6 @@
-/* ===== Base Reset ===== */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
+/* ===== Page frame =====
+   Tailwind's preflight is the reset; this sets the page itself, links in
+   app text, scrollbars, the three-pane frame, and the phone layout. */
 html, body, #root {
   height: 100%;
   width: 100%;
@@ -31,7 +27,7 @@ a:hover {
   color: var(--accent-hover);
 }
 
-/* ===== Scrollbar ===== */
+/* Scrollbars: thin, and only visible while the pointer is over the area. */
 * {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
@@ -39,34 +35,42 @@ a:hover {
 *:hover {
   scrollbar-color: var(--border-light) transparent;
 }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 2px; }
+*:hover::-webkit-scrollbar-thumb { background: var(--border-light); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-::-webkit-scrollbar {
-  width: 3px;
-  height: 3px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 2px;
-  transition: background 200ms;
-}
-
-*:hover::-webkit-scrollbar-thumb {
-  background: var(--border-light);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted) !important;
-}
-
-/* ===== App Layout ===== */
 .app-layout {
   display: flex;
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+}
+
+/* Phones: the sidebar floats over the list, the list fills the screen, and
+   an open article covers it. */
+@media (max-width: 768px) {
+  .sidebar-panel {
+    position: fixed;
+    inset: 0 auto 0 52px;
+    z-index: 100;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .article-list-panel {
+    min-width: 100%;
+  }
+
+  .article-reader-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    width: 100vw !important;
+  }
+
+  .article-reader-panel.visible {
+    display: flex;
+  }
 }

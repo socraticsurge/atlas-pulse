@@ -44,7 +44,7 @@ Server ─┼──────────────────────�
 | | **AI surfaces** | `src/components/{AIDrawer,MultiArticlePanel}.jsx`, `src/components/{ai-drawer,multi-article}/`, `src/hooks/useAIBatchProcessor.js` | The per-article drawer, the multi-article panel and background batch processing. |
 | | **Library** | `src/components/{LibraryView,HighlightsLibrary}.jsx`, `src/components/library/` | Saved summaries and highlights. |
 | | **Settings** | `src/components/SettingsPanel.jsx`, `src/components/settings/`, `src/components/ReaderSettings.jsx` | Preferences, one component per section. |
-| | **Styles** | `src/index.css`, `src/styles/`, `src/styles/tailwind.css` | Legacy vanilla CSS, one file per feature area, imported by `index.css` in cascade order. New UI uses Tailwind v4 and shadcn/ui (`src/components/ui/`, `components.json`). See the migration note below. |
+| | **Styles** | `src/styles/tailwind.css`, `src/index.css`, `src/styles/` | Tailwind v4 (with preflight) and shadcn/ui (`src/components/ui/`, `components.json`) for every screen. `index.css` imports the few stylesheets that aren't utilities: tokens, fonts, the page frame, and the reader (panel layout and article prose). |
 
 ## Dependency rules
 
@@ -85,7 +85,7 @@ List endpoints return `LIST_COLUMNS`, which leaves out the article body. The rea
 - **A new feed source:** add it to Ingestion behind the URL guard, and return the same normalized item shape as `normalizeItem`.
 - **A new settings section:** add a component under `src/components/settings/`.
 - **New styles:** build new UI with Tailwind classes and shadcn/ui components (`npx shadcn@latest add <name>` writes JSX into `src/components/ui/`). Use `cn()` from `@/lib/utils` to combine classes.
-- **Styling migration (in progress):** the legacy CSS in `src/styles/` still owns most screens, so Tailwind runs without its preflight reset. `src/styles/tailwind.css` is the stylesheet entry: it imports the legacy CSS into a `legacy` cascade layer that sits below Tailwind's utilities, so legacy screens look the same and utility classes win where they are used. Tailwind only scans the folders listed with `@source` in that file (currently `src/components/shell`, `src/components/ui`, `src/lib`); classes written anywhere else are not generated. Add a folder there when its screens move to Tailwind, and delete the legacy CSS they replace. shadcn's semantic colors (`bg-primary`, `text-muted-foreground`…) map to the tokens in `src/styles/tokens.css`.
+- **Styling:** every component is styled with Tailwind classes; Tailwind scans the project and its preflight is the CSS reset. `src/styles/tailwind.css` imports `index.css` into the `components` layer (above preflight, below utilities), which holds the design tokens (`tokens.css`), fonts, the page frame (`base.css`), and the reader (`reader.css`: docked/overlay/focus panel layout, and `.reader-article-content`, the prose styles for arbitrary article HTML). shadcn's semantic colors (`bg-primary`, `text-muted-foreground`…) map to the tokens in `tokens.css`; every pane's top bar uses `--pane-header-height`. Positioning that a media or container query must override (the AI rail's overlay mode) lives in CSS, not a utility, since utilities win over the components layer.
 
 ## Guardrails
 

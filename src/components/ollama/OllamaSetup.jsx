@@ -1,5 +1,5 @@
-import { Checking, NoModels, NotInstalled, NotRunning, Ready } from './ollama/OllamaStates.jsx';
-import { useOllamaStatus } from './ollama/useOllamaStatus.js';
+import { Checking, NoModels, NotInstalled, NotRunning, Ready } from './OllamaStates.jsx';
+import { useOllamaStatus } from './useOllamaStatus.js';
 
 /** Guided Ollama setup: detect, start, and pull a model; optionally show "ready". */
 export default function OllamaSetup({ onReady, compact = false, showReady = false }) {

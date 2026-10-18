@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import AIConfigStrip from './ai-drawer/AIConfigStrip.jsx';
-import ResizableHandle from './ResizableHandle.jsx';
-import { countHint, countOk, OPERATIONS } from './multi-article/operations.js';
-import { ArticleChips, ExportBar, Instructions, Output, PanelHeader, TemplatePicker } from './multi-article/Panels.jsx';
-import { useMultiArticleGeneration } from './multi-article/useMultiArticleGeneration.js';
+import AIConfigStrip from '../ai-drawer/AIConfigStrip.jsx';
+import ResizableHandle from '../shell/ResizableHandle.jsx';
+import { countHint, countOk, OPERATIONS } from './operations.js';
+import { ArticleChips, ExportBar, Instructions, Output, PanelHeader, TemplatePicker } from './Panels.jsx';
+import { useMultiArticleGeneration } from './useMultiArticleGeneration.js';
 
 // Slides in on mount.
 function useSlideIn() {
@@ -29,7 +29,7 @@ export default function MultiArticlePanel({ articles, initialOperation, onClose,
   return (
     <>
       <ResizableHandle onResize={onResize} />
-      <div className={`article-reader-panel multi-article-panel${visible ? ' visible' : ''}`} style={{ width }}>
+      <div className={`article-reader-panel flex-col bg-[var(--bg-secondary)]${visible ? ' visible' : ''}`} style={{ width }}>
         <PanelHeader operation={operation} onOperationChange={changeOperation} onClose={onClose} />
         <ArticleChips
           articles={articles}
@@ -39,7 +39,7 @@ export default function MultiArticlePanel({ articles, initialOperation, onClose,
           ok={ok}
         />
         {operation === 'newsletter' && <TemplatePicker value={template} onChange={setTemplate} />}
-        <AIConfigStrip className="map-config-strip" />
+        <AIConfigStrip />
         <Instructions operation={operation} value={instructions} onChange={setInstructions} gen={gen} ok={ok} onGenerate={generate} />
         <Output operation={operation} gen={gen} onRetry={generate} />
         {gen.generated && gen.output && <ExportBar operation={operation} output={gen.output} />}

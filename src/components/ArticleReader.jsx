@@ -5,7 +5,7 @@ import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js'
 import { useOnKeyChange } from '../hooks/useOnKeyChange.js';
 import AIRail from './ai-drawer/AIRail.jsx';
 import HighlightToolbar from './reader/HighlightToolbar.jsx';
-import ResizableHandle from './ResizableHandle.jsx';
+import ResizableHandle from './shell/ResizableHandle.jsx';
 import ReaderBody from './reader/ReaderBody.jsx';
 import ReaderToolbar from './reader/ReaderToolbar.jsx';
 import { sanitizeArticleHtml, sanitizeFeedHtml } from './reader/sanitize.js';
@@ -103,7 +103,7 @@ export default function ArticleReader({
 
       <div className={panel.className} style={panel.style}>
         <div className="reading-progress-bar" style={{ width: `${progress}%` }} />
-        {!zen.on && <ResizableHandle className="overlay-resize-handle" onResize={onResize} />}
+        {!zen.on && <ResizableHandle overlay onResize={onResize} />}
 
         <div className="reader-main">
           <ReaderToolbar

@@ -29,7 +29,7 @@ function DialogFooter({ className, showCloseButton = false, children, ...props }
       {children}
       {showCloseButton && (
         <DialogPrimitive.Close asChild>
-          <button type="button" className="btn btn-ghost btn-sm">Close</button>
+          <button type="button" className="h-7 cursor-pointer rounded-md border border-border bg-transparent px-2.5 text-xs text-foreground hover:bg-[var(--bg-hover)]">Close</button>
         </DialogPrimitive.Close>
       )}
     </div>

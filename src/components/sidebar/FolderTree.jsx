@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { HiChevronRight, HiOutlineEllipsisHorizontal, HiOutlineFolderOpen, HiOutlineNewspaper } from 'react-icons/hi2';
+import { HiChevronRight, HiOutlineFolderOpen } from 'react-icons/hi2';
+import { cn } from '@/lib/utils';
 import FeedFavicon from '../FeedFavicon.jsx';
+import { InlineInput, NavRow } from './NavRow.jsx';
 import { folderUnread, isActive } from './sidebarModel.js';
 
 // Opens the context menu at the pointer (right-click or the "…" button).
@@ -10,19 +12,20 @@ const menuOpener = (openMenu, type, id) => (e) => {
   openMenu({ type, id, x: e.clientX, y: e.clientY });
 };
 
-function FeedRow({ feed, unread, active, onViewChange, openMenu }) {
-  const open = menuOpener(openMenu, 'feed', feed.id);
+const feedIcon = (feed) => <FeedFavicon src={feed.favicon} imgClass="size-4 rounded-sm object-contain" iconClass="flex size-4 [&_svg]:size-4" />;
+
+function FeedRow({ feed, unread, active, onViewChange, openMenu, nested }) {
   return (
-    <div
-      className={`nav-item nav-item-feed ${active ? 'active' : ''}`}
+    <NavRow
+      active={active}
       onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
-      onContextMenu={open}
-    >
-      <FeedFavicon src={feed.favicon} imgClass="feed-favicon" iconClass="nav-icon" />
-      <span className="nav-label">{feed.title}</span>
-      {unread > 0 && <span className="badge">{unread}</span>}
-      <button className="nav-item-menu-btn" title="Feed options" onClick={open}><HiOutlineEllipsisHorizontal /></button>
-    </div>
+      onMenu={menuOpener(openMenu, 'feed', feed.id)}
+      menuTitle="Feed options"
+      icon={feedIcon(feed)}
+      label={feed.title}
+      count={unread}
+      className={cn(nested && 'pl-8 text-[12.5px]')}
+    />
   );
 }
 
@@ -30,51 +33,48 @@ function RenameInput({ initial, onSubmit, onCancel }) {
   const [value, setValue] = useState(initial);
   const submit = () => { if (value.trim()) onSubmit(value.trim()); };
   return (
-    <input
-      className="input"
+    <InlineInput
       value={value}
+      aria-label="Folder name"
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
       onClick={(e) => e.stopPropagation()}
       autoFocus
-      style={{ padding: '2px 6px', fontSize: '12px' }}
     />
   );
 }
 
 function FolderRow({ folder, feeds, counts, open, renaming, tree }) {
-  const openMenu = menuOpener(tree.openMenu, 'folder', folder.id);
-  const unread = folderUnread(feeds, counts.byFeed);
+  const toggle = (
+    <span
+      role="button"
+      aria-label={open ? 'Collapse folder' : 'Expand folder'}
+      onClick={(e) => { e.stopPropagation(); tree.toggleFolder(folder.id); }}
+      className={cn('absolute left-0 flex size-5 items-center justify-center text-[var(--text-tertiary)] transition-transform', open && 'rotate-90')}
+    >
+      <HiChevronRight className="size-3" />
+    </span>
+  );
   return (
     <div>
-      <div
-        className={`nav-item ${isActive(tree.activeView, 'folder', folder.id) ? 'active' : ''}`}
-        onClick={() => tree.onViewChange({ type: 'folder', id: folder.id, name: folder.name })}
-        onContextMenu={openMenu}
-      >
-        <span className={`folder-toggle ${open ? 'open' : ''}`} onClick={(e) => { e.stopPropagation(); tree.toggleFolder(folder.id); }}>
-          <HiChevronRight style={{ fontSize: 12 }} />
-        </span>
-        {renaming ? (
-          <RenameInput initial={folder.name} onSubmit={(name) => tree.finishRename(folder.id, name)} onCancel={tree.cancelRename} />
-        ) : (
-          <>
-            <span className="nav-icon"><HiOutlineFolderOpen /></span>
-            <span className="nav-label">{folder.name}</span>
-            {unread > 0 && <span className="badge">{unread}</span>}
-            <button className="nav-item-menu-btn" title="Folder options" onClick={openMenu}><HiOutlineEllipsisHorizontal /></button>
-          </>
-        )}
-      </div>
+      {renaming ? (
+        <div className="flex h-8 items-center gap-2 pl-6"><RenameInput initial={folder.name} onSubmit={(name) => tree.finishRename(folder.id, name)} onCancel={tree.cancelRename} /></div>
+      ) : (
+        <NavRow
+          active={isActive(tree.activeView, 'folder', folder.id)}
+          onClick={() => tree.onViewChange({ type: 'folder', id: folder.id, name: folder.name })}
+          onMenu={menuOpener(tree.openMenu, 'folder', folder.id)}
+          menuTitle="Folder options"
+          icon={<HiOutlineFolderOpen />}
+          label={folder.name}
+          count={folderUnread(feeds, counts.byFeed)}
+          className="pl-5"
+        >
+          {toggle}
+        </NavRow>
+      )}
       {open && feeds.map((feed) => (
-        <FeedRow
-          key={feed.id}
-          feed={feed}
-          unread={counts.byFeed[feed.id]}
-          active={isActive(tree.activeView, 'feed', feed.id)}
-          onViewChange={tree.onViewChange}
-          openMenu={tree.openMenu}
-        />
+        <FeedRow key={feed.id} feed={feed} unread={counts.byFeed[feed.id]} active={isActive(tree.activeView, 'feed', feed.id)} onViewChange={tree.onViewChange} openMenu={tree.openMenu} nested />
       ))}
     </div>
   );
@@ -96,14 +96,7 @@ export function FolderTree({ folders, grouped, counts, tree }) {
         />
       ))}
       {grouped.uncategorized.map((feed) => (
-        <FeedRow
-          key={feed.id}
-          feed={feed}
-          unread={counts.byFeed[feed.id]}
-          active={isActive(tree.activeView, 'feed', feed.id)}
-          onViewChange={tree.onViewChange}
-          openMenu={tree.openMenu}
-        />
+        <FeedRow key={feed.id} feed={feed} unread={counts.byFeed[feed.id]} active={isActive(tree.activeView, 'feed', feed.id)} onViewChange={tree.onViewChange} openMenu={tree.openMenu} />
       ))}
     </>
   );

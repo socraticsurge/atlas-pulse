@@ -37,6 +37,12 @@
   flex-direction: column;
 }
 
+/* The AI rail (ai-drawer/AIRail.jsx): positioned here, not with a utility,
+   so the narrow-panel rule below can turn it into an overlay. */
+.ai-drawer {
+  position: relative;
+}
+
 /* Too narrow for the article and the rail side by side: the rail slides
    over the article instead of squeezing it. */
 @container reader-panel (max-width: 760px) {
@@ -93,6 +99,11 @@
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  /* The overlay never exceeds the screen, rail or not. */
+  .article-reader-panel.has-rail {
+    max-width: 100vw;
+  }
+
   /* With nothing open, the overlay reader has nothing to show. */
   aside.article-reader-panel {
     display: none;
@@ -114,8 +125,6 @@
   margin: 0 auto;
   width: 100%;
 }
-
-/* Headline in the reading face, large and tight. */
 
 /* The saved AI summary, ruled off between the headline and the body. */
 
@@ -142,6 +151,7 @@
   font-weight: 700;
 }
 
+.reader-article-content h1 { font-size: 26px; }
 .reader-article-content h2 { font-size: 22px; }
 .reader-article-content h3 { font-size: 18px; }
 .reader-article-content h4 { font-size: 16px; }
@@ -189,6 +199,41 @@
 .reader-article-content ol {
   padding-left: 24px;
   margin-bottom: 16px;
+}
+
+.reader-article-content ul { list-style: disc; }
+.reader-article-content ol { list-style: decimal; }
+.reader-article-content li > ul { list-style: circle; }
+
+.reader-article-content h5,
+.reader-article-content h6 {
+  margin: 20px 0 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.reader-article-content hr {
+  margin: 32px 0;
+  border-top: 1px solid var(--border);
+}
+
+.reader-article-content table {
+  width: 100%;
+  margin: 20px 0;
+  font-size: 0.9em;
+}
+
+.reader-article-content th,
+.reader-article-content td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.reader-article-content video,
+.reader-article-content iframe {
+  max-width: 100%;
 }
 
 .reader-article-content li {
@@ -246,3 +291,10 @@ mark[data-highlight-id] {
   cursor: default;
 }
 mark[data-highlight-id]:hover { filter: brightness(0.92); }
+
+/* Phones: a tighter article column. */
+@media (max-width: 768px) {
+  .reader-content {
+    padding: 20px 16px 48px;
+  }
+}

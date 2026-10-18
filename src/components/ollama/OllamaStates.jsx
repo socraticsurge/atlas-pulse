@@ -1,4 +1,7 @@
 import { HiOutlineArrowPath } from 'react-icons/hi2';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 
 const RECOMMENDED_MODELS = [
   { name: 'qwen2.5:3b',     label: 'Qwen 2.5 3B',    size: '1.9 GB', badge: '⚡ Fastest' },
@@ -7,37 +10,35 @@ const RECOMMENDED_MODELS = [
   { name: 'deepseek-r1:7b', label: 'DeepSeek R1 7B', size: '4.7 GB', badge: '🎯 Quality' },
 ];
 
-function SetupCard({ emoji, title, compact, extraClass = '', children }) {
+/** A setup step: emoji, title, explanation and actions. */
+export function SetupCard({ emoji, title, compact, children }) {
   return (
-    <div className={`ollama-setup-card ${extraClass} ${compact ? 'compact' : ''}`.replace(/\s+/g, ' ').trim()}>
-      <div className="ollama-setup-emoji">{emoji}</div>
-      <div className="ollama-setup-body">
-        <h4>{title}</h4>
+    <div className={cn('flex gap-3 rounded-lg border border-border bg-[var(--bg-primary)]', compact ? 'p-3' : 'p-4')}>
+      <div className="text-xl leading-none">{emoji}</div>
+      <div className="flex min-w-0 flex-1 flex-col gap-2 text-[13px] leading-relaxed text-muted-foreground [&_p]:m-0">
+        <h4 className="m-0 text-[13.5px] font-semibold text-foreground">{title}</h4>
         {children}
       </div>
     </div>
   );
 }
 
-const ErrorLine = ({ error }) => (error ? <p className="ollama-setup-error">{error}</p> : null);
+export const SetupActions = ({ children }) => <div className="flex flex-wrap gap-1.5">{children}</div>;
+
+const ErrorLine = ({ error }) => (error ? <p className="text-[var(--danger)]">{error}</p> : null);
 
 export function Checking() {
-  return (
-    <div className="ollama-setup-loading">
-      <span className="spinner" style={{ width: 20, height: 20 }} />
-      <span>Checking Ollama…</span>
-    </div>
-  );
+  return <div className="flex items-center gap-2 py-2 text-[13px] text-muted-foreground"><Spinner /> Checking Ollama…</div>;
 }
 
 export function NotInstalled({ compact, ollama }) {
   return (
     <SetupCard emoji="🦙" title="Ollama not found" compact={compact}>
-      <p>Ollama is a free, local AI runtime. It runs models privately on your machine — no cloud, no data sent anywhere.</p>
-      <div className="ollama-setup-actions">
-        <button className="btn btn-primary btn-sm" onClick={() => window.open('https://ollama.com/download', '_blank', 'noopener')}>Download Ollama</button>
-        <button className="btn btn-ghost btn-sm" onClick={ollama.check} title="Check again"><HiOutlineArrowPath /> Check again</button>
-      </div>
+      <p>Ollama is a free, local AI runtime. It runs models privately on your machine: no cloud, no data sent anywhere.</p>
+      <SetupActions>
+        <Button size="sm" onClick={() => window.open('https://ollama.com/download', '_blank', 'noopener')}>Download Ollama</Button>
+        <Button variant="ghost" size="sm" onClick={ollama.check}><HiOutlineArrowPath /> Check again</Button>
+      </SetupActions>
     </SetupCard>
   );
 }
@@ -45,60 +46,57 @@ export function NotInstalled({ compact, ollama }) {
 export function NotRunning({ compact, ollama }) {
   return (
     <SetupCard emoji="😴" title="Ollama is not running" compact={compact}>
-      <p>Ollama is installed but not active. Click below to start it.</p>
+      <p>Ollama is installed but not running.</p>
       <ErrorLine error={ollama.error} />
-      <div className="ollama-setup-actions">
-        <button className="btn btn-primary btn-sm" onClick={ollama.start} disabled={ollama.starting}>
-          {ollama.starting ? <><span className="spinner" style={{ width: 12, height: 12 }} /> Starting…</> : 'Start Ollama'}
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={ollama.check}><HiOutlineArrowPath /> Refresh</button>
-      </div>
+      <SetupActions>
+        <Button size="sm" onClick={ollama.start} disabled={ollama.starting}>{ollama.starting ? <><Spinner /> Starting…</> : 'Start Ollama'}</Button>
+        <Button variant="ghost" size="sm" onClick={ollama.check}><HiOutlineArrowPath /> Refresh</Button>
+      </SetupActions>
     </SetupCard>
   );
 }
 
 function PullProgress({ entry }) {
+  const percent = entry?.percent || 0;
   return (
-    <div className="ollama-pull-progress">
-      <div className="ollama-pull-track"><div className="ollama-pull-fill" style={{ width: `${entry?.percent || 0}%` }} /></div>
-      <span className="ollama-pull-label">{entry?.status} {entry?.percent > 0 ? `${entry.percent}%` : ''}</span>
+    <div className="flex w-32 flex-col gap-1">
+      <div className="h-1 overflow-hidden rounded-full bg-[var(--bg-tertiary)]"><div className="h-full bg-primary transition-[width]" style={{ width: `${percent}%` }} /></div>
+      <span className="truncate font-mono text-[10.5px] text-[var(--text-tertiary)]">{entry?.status} {percent > 0 ? `${percent}%` : ''}</span>
     </div>
   );
 }
 
 function ModelRow({ model, ollama }) {
   return (
-    <div className="ollama-model-row">
-      <div className="ollama-model-info">
-        <span className="ollama-model-name">{model.label}</span>
-        <span className="ollama-model-meta">{model.size}</span>
-        <span className="ollama-model-badge">{model.badge}</span>
+    <div className="flex items-center gap-3 border-b border-border py-2 last:border-b-0">
+      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+        <span className="text-[13px] font-medium text-foreground">{model.label}</span>
+        <span className="font-mono text-[11px] text-[var(--text-tertiary)]">{model.size}</span>
+        <span className="text-[11px] text-muted-foreground">{model.badge}</span>
       </div>
       {ollama.pulling === model.name
         ? <PullProgress entry={ollama.progress[model.name]} />
-        : <button className="btn btn-primary btn-sm" onClick={() => ollama.pull(model.name)} disabled={Boolean(ollama.pulling)}>Pull</button>}
+        : <Button size="sm" onClick={() => ollama.pull(model.name)} disabled={Boolean(ollama.pulling)}>Pull</Button>}
     </div>
   );
 }
 
 export function NoModels({ compact, ollama }) {
   return (
-    <SetupCard emoji="📦" title="No models installed" compact={compact} extraClass="no-models">
+    <SetupCard emoji="📦" title="No models installed" compact={compact}>
       <p>Pull a model to enable AI features. Smaller models are faster; larger ones are more capable.</p>
       <ErrorLine error={ollama.error} />
-      <div className="ollama-model-grid">
-        {RECOMMENDED_MODELS.map((m) => <ModelRow key={m.name} model={m} ollama={ollama} />)}
-      </div>
+      <div>{RECOMMENDED_MODELS.map((m) => <ModelRow key={m.name} model={m} ollama={ollama} />)}</div>
     </SetupCard>
   );
 }
 
 export function Ready({ count, onRefresh }) {
   return (
-    <div className="ollama-ready-status">
-      <span className="ollama-ready-dot" />
-      <span>Running · {count} model{count !== 1 ? 's' : ''} available</span>
-      <button className="btn btn-ghost btn-sm" onClick={onRefresh} title="Refresh"><HiOutlineArrowPath /></button>
+    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
+      <span className="size-2 rounded-full bg-[#3fb950]" />
+      Running · {count} model{count !== 1 ? 's' : ''} available
+      <Button variant="ghost" size="sm" onClick={onRefresh} title="Refresh"><HiOutlineArrowPath /></Button>
     </div>
   );
 }
