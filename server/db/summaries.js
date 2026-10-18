@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { csvCell } from '../../shared/csv.js';
 import { DATA_DIR, openDatabase } from './connection.js';
 import { MIGRATIONS } from './migrations/summaries.js';
 
@@ -70,29 +71,23 @@ export function buildCSV() {
     'AI Model', 'AI Personas', 'Voice', 'Energy', 'Angle', 'Custom Instructions',
   ];
 
-  const escape = (val) => {
-    if (val == null) return '';
-    const s = String(val).replace(/"/g, '""');
-    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
-  };
-
   const lines = [
     headers.join(','),
     ...rows.map((r) => [
       r.id,
-      escape(r.created_at),
-      escape(r.article_title),
-      escape(r.article_url),
-      escape(r.article_author),
-      escape(r.article_source),
-      escape(r.article_published_at),
-      escape(r.summary_text),
-      escape(r.ai_model),
-      escape(r.ai_personas),
-      escape(r.ai_tone_voice),
-      escape(r.ai_tone_energy),
-      escape(r.ai_tone_angle),
-      escape(r.ai_custom_instructions),
+      csvCell(r.created_at),
+      csvCell(r.article_title),
+      csvCell(r.article_url),
+      csvCell(r.article_author),
+      csvCell(r.article_source),
+      csvCell(r.article_published_at),
+      csvCell(r.summary_text),
+      csvCell(r.ai_model),
+      csvCell(r.ai_personas),
+      csvCell(r.ai_tone_voice),
+      csvCell(r.ai_tone_energy),
+      csvCell(r.ai_tone_angle),
+      csvCell(r.ai_custom_instructions),
     ].join(',')),
   ];
 

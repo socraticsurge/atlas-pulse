@@ -1,3 +1,5 @@
+import { csvCell } from '../../../shared/csv.js';
+
 // Pure helpers for the article list: AI filters, empty-state copy, CSV.
 
 export const FILTER_DIMS = [
@@ -58,16 +60,15 @@ export function emptyStateText({ hasActiveFilters, searchQuery, viewType }) {
   return EMPTY_BY_VIEW[viewType] || { title: 'Your feed is empty', body: 'Add feeds from the sidebar to start reading' };
 }
 
-const csvQuote = (value) => `"${String(value || '').replace(/"/g, '""')}"`;
 
 /** CSV of articles: Title, Source, Published, URL, Read, Bookmarked. */
 export function articlesToCSV(articles, sourceOf) {
   const header = 'Title,Source,Published,URL,Read,Bookmarked';
   const rows = articles.map((a) => [
-    csvQuote(a.title),
-    csvQuote(sourceOf(a)),
+    csvCell(a.title),
+    csvCell(sourceOf(a)),
     a.publishedAt ? new Date(a.publishedAt).toISOString() : '',
-    `"${a.link || ''}"`,
+    csvCell(a.link),
     a.isRead ? 'yes' : 'no',
     a.isBookmarked ? 'yes' : 'no',
   ].join(','));

@@ -1,4 +1,5 @@
 import { join } from 'path';
+import { csvCell } from '../../shared/csv.js';
 import { DATA_DIR, openDatabase } from './connection.js';
 import { MIGRATIONS } from './migrations/highlights.js';
 
@@ -52,23 +53,17 @@ export function buildCSV() {
   const rows = getAll.all();
   const headers = ['ID', 'Saved At', 'Highlighted Text', 'Note', 'Color', 'Article Title', 'Source', 'Article URL'];
 
-  const escape = (val) => {
-    if (val == null) return '';
-    const s = String(val).replace(/"/g, '""');
-    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
-  };
-
   const lines = [
     headers.join(','),
     ...rows.map((r) => [
       r.id,
-      escape(r.created_at),
-      escape(r.highlighted_text),
-      escape(r.note),
-      escape(r.color),
-      escape(r.article_title),
-      escape(r.article_source),
-      escape(r.article_url),
+      csvCell(r.created_at),
+      csvCell(r.highlighted_text),
+      csvCell(r.note),
+      csvCell(r.color),
+      csvCell(r.article_title),
+      csvCell(r.article_source),
+      csvCell(r.article_url),
     ].join(',')),
   ];
 

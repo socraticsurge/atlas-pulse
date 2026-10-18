@@ -1,12 +1,14 @@
 import RSSParser from 'rss-parser';
-import { assertPublicHttpUrl } from './urlGuard.js';
+import { fetchText } from './fetchText.js';
 
+const FEED_HEADERS = {
+  'User-Agent': 'RSS-Feed-Reader/1.0',
+  'Accept': 'application/rss+xml, application/xml, application/atom+xml, text/xml, */*',
+};
+
+// Parses text only: the feed is fetched by fetchText, so redirects are checked
+// by the SSRF guard (rss-parser's own parseURL follows them unchecked).
 const parser = new RSSParser({
-  timeout: 15000,
-  headers: {
-    'User-Agent': 'RSS-Feed-Reader/1.0',
-    'Accept': 'application/rss+xml, application/xml, application/atom+xml, text/xml, */*',
-  },
   customFields: {
     item: [
       ['media:content', 'mediaContent'],
@@ -55,8 +57,8 @@ export function normalizeFeed(feed, feedUrl) {
  */
 export async function parseFeed(feedUrl) {
   try {
-    await assertPublicHttpUrl(feedUrl);
-    return normalizeFeed(await parser.parseURL(feedUrl), feedUrl);
+    const { text } = await fetchText(feedUrl, { headers: FEED_HEADERS });
+    return normalizeFeed(await parser.parseString(text), feedUrl);
   } catch (error) {
     throw new Error(`Failed to parse feed: ${error.message}`, { cause: error });
   }

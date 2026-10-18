@@ -1,5 +1,5 @@
-import { extract } from '@extractus/article-extractor';
-import { assertPublicHttpUrl } from './urlGuard.js';
+import { extractFromHtml } from '@extractus/article-extractor';
+import { fetchText } from './fetchText.js';
 
 /**
  * Extract the full article content from a URL.
@@ -24,17 +24,12 @@ export function toExtracted(article, url) {
   return result;
 }
 
-function timeout(ms) {
-  return new Promise((_, reject) => setTimeout(() => reject(new Error('Article extraction timed out')), ms));
-}
-
+// The page is fetched by fetchText (SSRF-guarded on every redirect, with our
+// User-Agent and a real timeout), then parsed from the HTML string.
 export async function extractArticle(url) {
   try {
-    await assertPublicHttpUrl(url);
-    const article = await Promise.race([
-      extract(url, { headers: { 'User-Agent': USER_AGENT } }),
-      timeout(EXTRACTION_TIMEOUT_MS),
-    ]);
+    const page = await fetchText(url, { headers: { 'User-Agent': USER_AGENT }, timeoutMs: EXTRACTION_TIMEOUT_MS });
+    const article = await extractFromHtml(page.text, page.url);
     if (!article) throw new Error('Could not extract article content');
     return toExtracted(article, url);
   } catch (error) {

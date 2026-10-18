@@ -35,12 +35,19 @@ test('viewTitle and emptyStateText', () => {
   assert.equal(emptyStateText({ viewType: 'all' }).title, 'Your feed is empty');
 });
 
-test('articlesToCSV quotes text fields and escapes quotes', () => {
+test('articlesToCSV quotes text fields when needed and neutralises formulas', () => {
   const csv = articlesToCSV(
-    [{ title: 'Say "hi"', link: 'https://e.com/a', publishedAt: '2026-10-01T00:00:00Z', isRead: 1, isBookmarked: 0 }],
+    [
+      { title: 'Say "hi"', link: 'https://e.com/a', publishedAt: '2026-10-01T00:00:00Z', isRead: 1, isBookmarked: 0 },
+      { title: '=1+1', link: 'https://e.com/b', publishedAt: '', isRead: 0, isBookmarked: 1 },
+    ],
     () => 'Src, Inc',
   );
-  assert.equal(csv, 'Title,Source,Published,URL,Read,Bookmarked\n"Say ""hi""","Src, Inc",2026-10-01T00:00:00.000Z,"https://e.com/a",yes,no');
+  assert.equal(csv, [
+    'Title,Source,Published,URL,Read,Bookmarked',
+    '"Say ""hi""","Src, Inc",2026-10-01T00:00:00.000Z,https://e.com/a,yes,no',
+    `'=1+1,"Src, Inc",,https://e.com/b,no,yes`,
+  ].join('\n'));
 });
 
 test('chunkRows groups articles into rows of the column count', () => {
