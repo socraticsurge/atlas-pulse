@@ -103,7 +103,8 @@ function useBatchRunner(availableModels, manualRef, endManualRun) {
   const run = useCallback(async () => {
     const settings = getBatchSettings();
     const model = runnableModel(settings, manualRef.current, availableModels);
-    if (busyRef.current || !mountedRef.current || !model) return;
+    if (!model) return;
+    if (busyRef.current || !mountedRef.current) return;
     busyRef.current = true;
     const outcome = await processNext({
       model,
