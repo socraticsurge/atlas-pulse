@@ -92,3 +92,48 @@ export function chunkRows(articles, columns) {
   for (let i = 0; i < articles.length; i += columns) rows.push(articles.slice(i, i + columns));
   return rows;
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+/** Day heading for an article: Today, Yesterday, Earlier this week (last 7 days) or Older. */
+export function dayGroup(dateStr, now = new Date()) {
+  const time = Date.parse(dateStr);
+  if (!Number.isFinite(time)) return 'Older';
+  const days = Math.floor((startOfDay(now) - startOfDay(new Date(time))) / DAY_MS);
+  if (days <= 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return 'Earlier this week';
+  return 'Older';
+}
+
+/**
+ * The list as rows for the Rows view: a heading before each run of articles
+ * from the same day group. Assumes newest-first order; a group that recurs
+ * later (unusual sort) simply gets another heading.
+ */
+export function withDayHeaders(articles, now = new Date()) {
+  const items = [];
+  let current = null;
+  for (const article of articles) {
+    const label = dayGroup(article.publishedAt, now);
+    if (label !== current) {
+      items.push({ type: 'header', key: `h-${items.length}-${label}`, label });
+      current = label;
+    }
+    items.push({ type: 'article', key: article.id, article });
+  }
+  return items;
+}
+
+/** Compact time for a row: "19:12" today, a weekday this week, else "Oct 3" (or "Oct 3, 2025"). */
+export function shortTime(dateStr, now = new Date()) {
+  const time = Date.parse(dateStr);
+  if (!Number.isFinite(time)) return '';
+  const date = new Date(time);
+  const group = dayGroup(dateStr, now);
+  if (group === 'Today') return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (group !== 'Older') return date.toLocaleDateString(undefined, { weekday: 'short' });
+  const sameYear = date.getFullYear() === now.getFullYear();
+  return date.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
+}

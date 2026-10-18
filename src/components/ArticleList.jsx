@@ -16,11 +16,14 @@ import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
 import { useSelection } from './article-list/useSelection.js';
 import { VirtualArticleList } from './article-list/VirtualArticleList.jsx';
+import ListKeyHints from './shell/ListKeyHints.jsx';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
+// Extra class on the scroll container per view mode.
+const CONTENT_MODIFIER = { magazine: ' content-grid', rows: ' content-rows' };
 
 function useViewMode() {
-  const [viewMode, setViewMode] = useState(() => readStored(VIEW_MODE_KEY, 'magazine'));
+  const [viewMode, setViewMode] = useState(() => readStored(VIEW_MODE_KEY, 'rows'));
   const change = useCallback((mode) => {
     setViewMode(mode);
     writeStored(VIEW_MODE_KEY, mode);
@@ -160,7 +163,7 @@ export default function ArticleList({
       {data.articles.some((a) => a.aiAnalysis) && (
         <FilterBar available={available} active={activeFilters} onChange={setActiveFilters} />
       )}
-      <div ref={scrollRef} className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
+      <div ref={scrollRef} className={`article-list-content${CONTENT_MODIFIER[viewMode] ?? ''}`}>
         <ListContent
           scrollRef={scrollRef}
           loading={data.loading}
@@ -173,6 +176,7 @@ export default function ArticleList({
           onSelectArticle={onSelectArticle}
         />
       </div>
+      <ListKeyHints />
       <SelectionBar count={selection.size} visibleCount={visible.length} actions={actions} />
     </div>
   );

@@ -97,6 +97,11 @@
   width: 100%;
 }
 
+/* Rows mode: rows and headings carry their own horizontal padding. */
+.article-list-content.content-rows {
+  padding: 4px 0 12px;
+}
+
 /* Grid mode — rows of three portrait thumbnail cards */
 .article-list-content.content-grid {
   padding: 14px 14px 20px;

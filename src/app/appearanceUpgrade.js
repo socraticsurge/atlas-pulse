@@ -2,7 +2,7 @@ import { readStored, writeStored } from '../utils/storage.js';
 import { READER_SETTINGS_STORAGE_KEY } from '../utils/readerSettings.js';
 
 // One-time move to the "Instrument" defaults (IBM Plex Sans, amber accent,
-// Newsreader in the reader). The app saved its appearance on every load, so a
+// Newsreader in the reader, the Rows list view). The app saved its appearance on every load, so a
 // stored value can't tell a deliberate choice from an old default. Values
 // equal to the old defaults are treated as defaults and upgraded; anything
 // else was chosen and is kept.
@@ -13,6 +13,7 @@ const CURRENT_VERSION = '2';
 const OLD_TO_NEW = [
   { key: 'atlas-pulse-font', from: 'sans', to: 'plex' },
   { key: 'atlas-pulse-color', from: 'emerald', to: 'amber' },
+  { key: 'atlas-pulse-view-mode', from: 'magazine', to: 'rows' },
 ];
 
 function upgradeReaderFont(storage) {
