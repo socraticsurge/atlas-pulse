@@ -1,0 +1,50 @@
+/* Tailwind v4 and the shadcn/ui theme.
+ *
+ * Migration mode: the hand-written styles in src/styles/ still own the page,
+ * so Tailwind's preflight (its CSS reset) is NOT loaded yet. It is switched on
+ * once the redesign has replaced the old base styles.
+ *
+ * Tailwind's layers lose to the unlayered legacy CSS, so nothing here changes
+ * how existing screens look.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities) source(none);
+@import "tw-animate-css";
+
+/* Only migrated code is scanned for class names. Scanning everything would
+ * turn ordinary words in legacy class names and comments ("hidden",
+ * "contents", "container"…) into real utilities on live elements. Add each
+ * folder here as its screens move to Tailwind. */
+@source "../components/ui";
+@source "../lib";
+
+/* Dark mode follows the app's own theme attribute, not the OS setting. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* shadcn/ui's semantic colors, pointing at the app's existing tokens
+ * (src/styles/tokens.css). `inline` makes utilities use these expressions
+ * directly, so no :root variables are defined here: shadcn's names --accent
+ * and --border would otherwise collide with ours, which mean something else
+ * (our --accent is the brand color; shadcn's is a subtle hover background). */
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--bg-secondary);
+  --color-card-foreground: var(--text-primary);
+  --color-popover: var(--bg-modal);
+  --color-popover-foreground: var(--text-primary);
+  --color-primary: var(--accent);
+  --color-primary-foreground: var(--bg-primary);
+  --color-secondary: var(--bg-tertiary);
+  --color-secondary-foreground: var(--text-primary);
+  --color-muted: var(--bg-tertiary);
+  --color-muted-foreground: var(--text-secondary);
+  --color-accent: var(--bg-hover);
+  --color-accent-foreground: var(--text-primary);
+  --color-destructive: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--border-light);
+  --color-ring: var(--accent);
+  --font-sans: var(--font-family);
+}

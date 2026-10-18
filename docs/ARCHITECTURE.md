@@ -44,7 +44,7 @@ Server ─┼──────────────────────�
 | | **AI surfaces** | `src/components/{AIDrawer,MultiArticlePanel}.jsx`, `src/components/{ai-drawer,multi-article}/`, `src/hooks/useAIBatchProcessor.js` | The per-article drawer, the multi-article panel and background batch processing. |
 | | **Library** | `src/components/{LibraryView,HighlightsLibrary}.jsx`, `src/components/library/` | Saved summaries and highlights. |
 | | **Settings** | `src/components/SettingsPanel.jsx`, `src/components/settings/`, `src/components/ReaderSettings.jsx` | Preferences, one component per section. |
-| | **Styles** | `src/index.css`, `src/styles/` | Vanilla CSS, one file per feature area. `index.css` imports them in cascade order. |
+| | **Styles** | `src/index.css`, `src/styles/`, `src/styles/tailwind.css` | Legacy vanilla CSS, one file per feature area, imported by `index.css` in cascade order. New UI uses Tailwind v4 and shadcn/ui (`src/components/ui/`, `components.json`). See the migration note below. |
 
 ## Dependency rules
 
@@ -82,7 +82,8 @@ List endpoints return `LIST_COLUMNS`, which leaves out the article body. The rea
 - **A new AI output** (for example newsletters): add the prompt and parser to `src/ai/`, add the UI under its own feature folder, and store results through a Storage route backed by a migration.
 - **A new feed source:** add it to Ingestion behind the URL guard, and return the same normalized item shape as `normalizeItem`.
 - **A new settings section:** add a component under `src/components/settings/`.
-- **New styles:** add a file in `src/styles/` and import it from `index.css`, after anything it overrides.
+- **New styles:** build new UI with Tailwind classes and shadcn/ui components (`npx shadcn@latest add <name>` writes JSX into `src/components/ui/`). Use `cn()` from `@/lib/utils` to combine classes.
+- **Styling migration (in progress):** the legacy CSS in `src/styles/` still owns most screens, so Tailwind runs without its preflight reset, and its layered output loses to the unlayered legacy CSS. Tailwind only scans the folders listed with `@source` in `src/styles/tailwind.css`. Add a folder there when its screens move to Tailwind, and delete the legacy CSS they replace. shadcn's semantic colors (`bg-primary`, `text-muted-foreground`…) map to the tokens in `src/styles/tokens.css`.
 
 ## Guardrails
 
