@@ -1,6 +1,21 @@
 import { HiOutlineEllipsisHorizontal, HiOutlineExclamationTriangle } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 
+// A warning icon with its message as the tooltip (hidden under the "…" button on hover).
+function Alert({ text, hideOnHover }) {
+  if (!text) return null;
+  return (
+    <span title={text} aria-label={text} className={cn('flex shrink-0 text-[var(--warning)]', hideOnHover && 'group-hover/nav:invisible')}>
+      <HiOutlineExclamationTriangle className="size-3.5" />
+    </span>
+  );
+}
+
+function Count({ count, hideOnHover }) {
+  if (!(count > 0)) return null;
+  return <span className={cn('font-mono text-[11.5px] text-[var(--text-tertiary)]', hideOnHover && 'group-hover/nav:invisible')}>{count}</span>;
+}
+
 /**
  * One sidebar entry: icon, label, an optional warning (with its message as
  * the tooltip), unread count, and (optionally) a "…" button that replaces
@@ -24,12 +39,8 @@ export function NavRow({ active, onClick, onMenu, menuTitle, icon, label, count,
       {children}
       <span className={cn('flex size-4 shrink-0 items-center justify-center [&_svg]:size-4', active && 'text-primary')}>{icon}</span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {alert && (
-        <span title={alert} aria-label={alert} className={cn('flex shrink-0 text-[var(--warning,#e8a33d)]', onMenu && 'group-hover/nav:invisible')}>
-          <HiOutlineExclamationTriangle className="size-3.5" />
-        </span>
-      )}
-      {count > 0 && <span className={cn('font-mono text-[11.5px] text-[var(--text-tertiary)]', onMenu && 'group-hover/nav:invisible')}>{count}</span>}
+      <Alert text={alert} hideOnHover={Boolean(onMenu)} />
+      <Count count={count} hideOnHover={Boolean(onMenu)} />
       {onMenu && (
         <button
           type="button"

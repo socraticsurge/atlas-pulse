@@ -1,23 +1,12 @@
-import RSSParser from 'rss-parser';
 import { fetchText } from './fetchText.js';
+import { parseFeedText } from './feedText.js';
+
+export { escapeBareAmpersands, NOT_A_FEED, parseFeedText } from './feedText.js';
 
 const FEED_HEADERS = {
   'User-Agent': 'RSS-Feed-Reader/1.0',
   'Accept': 'application/rss+xml, application/xml, application/atom+xml, text/xml, */*',
 };
-
-// Parses text only: the feed is fetched by fetchText, so redirects are checked
-// by the SSRF guard (rss-parser's own parseURL follows them unchecked).
-const parser = new RSSParser({
-  customFields: {
-    item: [
-      ['media:content', 'mediaContent'],
-      ['media:thumbnail', 'mediaThumbnail'],
-      ['content:encoded', 'contentEncoded'],
-      ['dc:creator', 'dcCreator'],
-    ],
-  },
-});
 
 // First truthy value, or '' when none is.
 const firstOf = (...values) => values.find(Boolean) || '';
@@ -52,42 +41,13 @@ export function normalizeFeed(feed, feedUrl) {
   };
 }
 
-// A bare "&" (not starting an entity like &amp; or &#38;) is the most common
-// way real feeds break XML; browsers shrug it off, the XML parser doesn't.
-const BARE_AMPERSAND = /&(?![a-zA-Z][a-zA-Z0-9]*;|#[0-9]+;|#x[0-9a-fA-F]+;)/g;
-
-/** Escapes bare ampersands so slightly malformed feeds still parse. */
-export const escapeBareAmpersands = (xml) => xml.replace(BARE_AMPERSAND, '&amp;');
-
-const looksLikeHtmlPage = (text) => /^\s*(<!doctype html|<html)/i.test(text);
-export const NOT_A_FEED = 'The address returned a web page, not a feed. The site may have moved or dropped its feed.';
-
-/**
- * Parses feed XML strictly first; if that fails, once more with bare "&"s
- * escaped. A web page where the feed should be gets a plain explanation.
- */
-export async function parseFeedText(text) {
-  if (looksLikeHtmlPage(text)) throw new Error(NOT_A_FEED);
-  try {
-    return await parser.parseString(text);
-  } catch (strictError) {
-    const repaired = escapeBareAmpersands(text);
-    if (repaired === text) throw strictError;
-    return parser.parseString(repaired).catch(() => { throw strictError; });
-  }
-}
-
 /**
  * Parse an RSS/Atom feed URL and return structured data.
  */
 export async function parseFeed(feedUrl) {
-  try {
-    const { text } = await fetchText(feedUrl, { headers: FEED_HEADERS });
-    return normalizeFeed(await parseFeedText(text), feedUrl);
-  } catch (error) {
-    const message = error.message === NOT_A_FEED ? NOT_A_FEED : `Failed to parse feed: ${error.message}`;
-    throw new Error(message, { cause: error });
-  }
+  const { text } = await fetchText(feedUrl, { headers: FEED_HEADERS })
+    .catch((error) => { throw new Error(`Failed to parse feed: ${error.message}`, { cause: error }); });
+  return normalizeFeed(await parseFeedText(text), feedUrl);
 }
 
 function enclosureImage(enclosure) {
