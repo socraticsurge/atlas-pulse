@@ -6,6 +6,8 @@ import { getBatchSettings } from './batchSettings.js';
 import { parseScope } from '../ai/batch.js';
 
 const REFRESH_CONCURRENCY = 5;
+// Keeps each bulk-insert request well under the server's JSON body limit.
+const INSERT_CHUNK_BYTES = 1024 * 1024;
 
 // Optional text fields of a feed item, stored as '' when missing.
 const OPTIONAL_ITEM_FIELDS = ['content', 'summary', 'author', 'imageUrl'];
@@ -84,10 +86,41 @@ export async function createFeed(feedUrl, folderId) {
   return saved;
 }
 
+/**
+ * Splits items into consecutive chunks whose JSON stays under maxBytes. An item
+ * larger than maxBytes on its own gets a chunk to itself.
+ */
+export function chunkBySize(items, maxBytes) {
+  const chunks = [];
+  let current = [];
+  let size = 0;
+  for (const item of items) {
+    const itemSize = JSON.stringify(item).length;
+    if (current.length > 0 && size + itemSize > maxBytes) {
+      chunks.push(current);
+      current = [];
+      size = 0;
+    }
+    current.push(item);
+    size += itemSize;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
+}
+
+// Stores articles in size-bounded requests; resolves to how many were new.
+async function insertInChunks(feedId, articles) {
+  let inserted = 0;
+  for (const chunk of chunkBySize(articles, INSERT_CHUNK_BYTES)) {
+    inserted += (await api.bulkInsertArticles(feedId, chunk)).inserted;
+  }
+  return inserted;
+}
+
 /** Fetches a feed's latest items, stores new ones, and queues them for batch AI. */
 export async function refreshOne(feed) {
   const feedData = await api.parseFeed(feed.url);
-  const { inserted } = await api.bulkInsertArticles(feed.id, firstOf(feedData.items, []).map(toArticle));
+  const inserted = await insertInChunks(feed.id, firstOf(feedData.items, []).map(toArticle));
   if (inserted > 0) await queueArticlesForBatch(feed.id);
   const updated = await api.patchFeed(feed.id, {
     lastRefreshed: new Date().toISOString(),

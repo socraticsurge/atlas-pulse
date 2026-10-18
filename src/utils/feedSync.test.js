@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { firstOf, fulfilledTotal, importNewFeeds, inBatchScope, toArticle } from './feedSync.js';
+import { chunkBySize, firstOf, fulfilledTotal, importNewFeeds, inBatchScope, toArticle } from './feedSync.js';
 
 test('firstOf matches a || b || c, including the last-value fallback', () => {
   assert.equal(firstOf('', 'b', 'c'), 'b');
@@ -50,4 +50,12 @@ test('importNewFeeds skips known and duplicate URLs and returns the saved feeds'
   const store = async (feed) => (feed.title === 'Rejected' ? null : { id: nextId++, url: feed.url });
   const saved = await importNewFeeds(parsed, [{ id: 1, url: 'https://a.example/rss' }], store);
   assert.deepEqual(saved, [{ id: 10, url: 'https://b.example/rss' }, { id: 11, url: 'https://d.example/rss' }]);
+});
+
+test('chunkBySize keeps order, respects the limit, and isolates oversized items', () => {
+  const item = (n) => ({ body: 'x'.repeat(n) });
+  const sizes = (chunks) => chunks.map((c) => c.map((i) => i.body.length));
+  assert.deepEqual(sizes(chunkBySize([item(30), item(30), item(30)], 100)), [[30, 30], [30]]);
+  assert.deepEqual(sizes(chunkBySize([item(10), item(500), item(10)], 100)), [[10], [500], [10]]);
+  assert.deepEqual(chunkBySize([], 100), []);
 });
