@@ -18,23 +18,37 @@ DOMPurify.addHook('uponSanitizeElement', (node, data) => {
   }
 });
 
-// Runs after attribute sanitization, so the forced sandbox value survives
-// (it isn't in ADD_ATTR) and overrides any sandbox the feed tried to set.
+// Runs after attribute sanitization, so the forced values survive and override
+// anything the feed set: iframes get a fixed sandbox; links open in a new tab,
+// so following one never navigates the app itself away.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'IFRAME') {
     node.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups');
   }
+  if (node.tagName === 'A' && node.hasAttribute('href')) {
+    node.setAttribute('target', '_blank');
+    node.setAttribute('rel', 'noopener noreferrer');
+  }
 });
+
+// Feed HTML is shown inside the app, so it gets no interactive controls (a
+// feed could otherwise render a fake "sign in again" form) and no inline
+// styles (position:fixed overlays; the reader's own typography applies).
+const BASE = {
+  FORBID_TAGS: ['form', 'input', 'button', 'select', 'option', 'textarea', 'style'],
+  FORBID_ATTR: ['style', 'action', 'formaction'],
+};
 
 /** Full article HTML, with allowlisted video iframes. */
 export function sanitizeArticleHtml(html) {
   return DOMPurify.sanitize(html, {
+    ...BASE,
     ADD_TAGS: ['iframe'],
-    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target'],
   });
 }
 
 /** Feed (RSS) HTML shown while full-text extraction runs. */
 export function sanitizeFeedHtml(html) {
-  return DOMPurify.sanitize(html);
+  return DOMPurify.sanitize(html, { ...BASE, ADD_ATTR: ['target'] });
 }
