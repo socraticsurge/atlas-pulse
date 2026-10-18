@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchAIModels,
   patchArticle, bulkUpdateArticles, fetchQueueCount,
-  fetchArticlesByAiStatus, resetProcessingArticles,
+  fetchArticlesByAiStatus, resetProcessingArticles, claimNextQueued,
 } from '../utils/api.js';
 import { getBatchSettings } from '../utils/batchSettings.js';
 import { batchMessages, collectResponse } from '../ai/tasks.js';
@@ -22,12 +22,11 @@ const NEXT_DELAY_MS = { done: 50, failed: 50, unavailable: 5000 };
 async function processNext({ model, features, onStart, shouldStop }) {
   let articleId = null;
   try {
-    const queued = await fetchArticlesByAiStatus('queued');
-    if (queued.length === 0) return 'empty';
-    const article = newestFirst(queued)[0];
+    // The server hands each queued article to exactly one tab.
+    const { article, queued } = await claimNextQueued();
+    if (!article) return 'empty';
     articleId = article.id;
-    await patchArticle(articleId, { aiStatus: 'processing' });
-    onStart(queued.length);
+    onStart(queued);
     const response = await collectResponse(model, batchMessages(article, getAISettings()), shouldStop);
     await patchArticle(articleId, batchUpdates(parseBatchResult(response), features));
     return 'done';
@@ -146,7 +145,8 @@ export function useAIBatchProcessor() {
   const manual = useManualRun();
   const { progress, run } = useBatchRunner(availableModels, manual.ref, manual.end);
 
-  // Articles left in 'processing' by a previous session go back to the queue.
+  // Articles left in 'processing' by a closed or crashed tab go back to the
+  // queue (the server leaves alone those another open tab is working on).
   useEffect(() => { resetProcessingArticles().catch(() => {}); }, []);
 
   useEffect(() => {

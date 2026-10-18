@@ -5,7 +5,7 @@ import {
   createFeed, listFeeds, getFeed, updateFeed, removeFeed,
   bulkInsertArticles, getArticles, getArticleById, findArticleByLink, searchArticleBodies,
   updateArticle, bulkUpdateArticles, getArticlesByAiStatus, getUnprocessedForFeed,
-  getQueueCount, resetProcessingToQueued, getCounts, clearAll,
+  getQueueCount, resetProcessingToQueued, claimNextQueued, getCounts, clearAll,
   DB_PATH,
 } from '../db/reader.js';
 
@@ -189,6 +189,11 @@ router.put('/articles/bulk-update', (req, res) => {
     return res.status(400).json({ error: 'ids[] is required' });
   }
   try { bulkUpdateArticles(ids, fields); res.json({ ok: true }); }
+  catch (err) { sendDbError(res, err); }
+});
+
+router.post('/articles/claim-next', (req, res) => {
+  try { res.json(claimNextQueued()); }
   catch (err) { sendDbError(res, err); }
 });
 

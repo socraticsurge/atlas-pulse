@@ -116,9 +116,6 @@ const stmts = {
   clearArticles: db.prepare(`DELETE FROM articles`),
   clearFeeds: db.prepare(`DELETE FROM feeds`),
   clearFolders: db.prepare(`DELETE FROM folders`),
-  resetProcessing: db.prepare(
-    `UPDATE articles SET ai_status = 'queued' WHERE ai_status = 'processing'`
-  ),
 };
 
 // ── Folder operations ─────────────────────────────────────────────────────────
@@ -429,8 +426,48 @@ export function getQueueCount() {
   return stmts.getQueueCount.get().cnt;
 }
 
-export function resetProcessingToQueued() {
-  stmts.resetProcessing.run();
+// When each 'processing' article was claimed (in memory: after a server
+// restart every claim is gone, so every 'processing' article is stale).
+const claims = new Map();
+const CLAIM_STALE_MS = 10 * 60 * 1000;
+
+const claimStmts = {
+  nextQueued: db.prepare(`SELECT * FROM articles WHERE ai_status = 'queued' ORDER BY published_at DESC LIMIT 1`),
+  markProcessing: db.prepare(`UPDATE articles SET ai_status = 'processing' WHERE id = ?`),
+  processingIds: db.prepare(`SELECT id FROM articles WHERE ai_status = 'processing'`),
+  requeue: db.prepare(`UPDATE articles SET ai_status = 'queued' WHERE id = ? AND ai_status = 'processing'`),
+};
+
+/**
+ * Hands the newest queued article to one caller and marks it processing, in
+ * one step, so two open tabs never process the same article. Resolves to
+ * { article, queued } (queued = how many were waiting), or { article: null }.
+ */
+export function claimNextQueued(now = Date.now()) {
+  return db.transaction(() => {
+    const row = claimStmts.nextQueued.get();
+    if (!row) return { article: null, queued: 0 };
+    const queued = stmts.getQueueCount.get().cnt;
+    claimStmts.markProcessing.run(row.id);
+    claims.set(row.id, now);
+    return { article: toArticle({ ...row, ai_status: 'processing' }), queued };
+  })();
+}
+
+const isStale = (id, now) => now - (claims.get(id) ?? 0) > CLAIM_STALE_MS;
+
+/**
+ * Puts articles left 'processing' back in the queue, but only stale ones (a
+ * crashed or closed tab), not those another open tab is working on now.
+ */
+export function resetProcessingToQueued(now = Date.now()) {
+  db.transaction(() => {
+    for (const { id } of claimStmts.processingIds.all()) {
+      if (!isStale(id, now)) continue;
+      claimStmts.requeue.run(id);
+      claims.delete(id);
+    }
+  })();
 }
 
 export function getCounts() {
