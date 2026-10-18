@@ -1,6 +1,7 @@
 import { HiOutlineCheck, HiOutlineMagnifyingGlass, HiOutlineNewspaper, HiOutlineSparkles } from 'react-icons/hi2';
 import { stripHtml, timeAgo } from '../../utils/helpers.js';
 import FeedFavicon from '../FeedFavicon.jsx';
+import { shortTime } from './listLogic.js';
 
 function SelectButton({ selected, onToggle, className }) {
   return (
@@ -32,7 +33,7 @@ function CompactCard({ article, feed, state, onOpen, onToggle }) {
       <span className="compact-source">{feed?.title || 'Unknown'}</span>
       <span className="compact-title">{article.title}</span>
       <span className="compact-ai-col">{article.aiStatus === 'done' && <HiOutlineSparkles title="AI analyzed" />}</span>
-      <span className="compact-time">{timeAgo(article.publishedAt)}</span>
+      <span className="compact-time" title={timeAgo(article.publishedAt)}>{shortTime(article.publishedAt)}</span>
     </div>
   );
 }
