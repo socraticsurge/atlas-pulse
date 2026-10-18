@@ -18,10 +18,11 @@ import { useSelection } from './article-list/useSelection.js';
 import { VirtualArticleList } from './article-list/VirtualArticleList.jsx';
 import ListKeyHints from './shell/ListKeyHints.jsx';
 import { on } from '../lib/appEvents.js';
+import { cn } from '../lib/utils.js';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
-// Extra class on the scroll container per view mode.
-const CONTENT_MODIFIER = { magazine: ' content-grid', rows: ' content-rows' };
+// Padding of the scroll container per view mode (rows and cards carry their own sides).
+const CONTENT_PADDING = { magazine: 'px-3.5 pt-3.5 pb-5', rows: 'pt-1 pb-3' };
 
 function useViewMode() {
   const [viewMode, setViewMode] = useState(() => readStored(VIEW_MODE_KEY, 'rows'));
@@ -150,7 +151,7 @@ export default function ArticleList({
   const empty = { ...emptyStateText({ hasActiveFilters, searchQuery: search.query, viewType: activeView.type }), searching: Boolean(search.query) };
 
   return (
-    <div className={`article-list-panel${selection.size > 0 ? ' has-fab' : ''}`}>
+    <div className="article-list-panel">
       <ListHeader
         title={title}
         count={visible.length}
@@ -166,7 +167,7 @@ export default function ArticleList({
       {showFilters && (
         <FilterBar available={available} active={activeFilters} onChange={setActiveFilters} aiOnly={aiOnly} onToggleAiOnly={() => setAiOnly((v) => !v)} />
       )}
-      <div ref={scrollRef} className={`article-list-content${CONTENT_MODIFIER[viewMode] ?? ''}`}>
+      <div ref={scrollRef} className={cn('min-h-0 flex-1 overflow-y-auto', CONTENT_PADDING[viewMode] ?? 'pb-5', selection.size > 0 && 'pb-16')}>
         <ListContent
           scrollRef={scrollRef}
           loading={data.loading}

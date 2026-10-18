@@ -6,6 +6,7 @@ import ArticleRow from '../shell/ArticleRow.jsx';
 import DayHeading from '../shell/DayHeading.jsx';
 
 const GRID_COLUMNS = 3;
+const ROW = 'absolute top-0 left-0 w-full';
 // First-guess heights in px; items are then measured as they render.
 const ESTIMATES = { header: 30, rows: 58, magazine: 292, excerpt: 96, compact: 37 };
 
@@ -101,7 +102,7 @@ export function VirtualArticleList({ scrollRef, articles, viewMode, ...props }) 
   useScrollToActive(virtualizer, indexById, props.selectedArticleId);
 
   return (
-    <div ref={listRef} className="virtual-list" style={{ height: virtualizer.getTotalSize() }}>
+    <div ref={listRef} className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
       {virtualizer.getVirtualItems().map((virtualItem) => {
         const item = items[virtualItem.index];
         return (
@@ -109,7 +110,7 @@ export function VirtualArticleList({ scrollRef, articles, viewMode, ...props }) 
             key={virtualItem.key}
             data-index={virtualItem.index}
             ref={virtualizer.measureElement}
-            className={item.type === 'cards' && viewMode === 'magazine' ? 'virtual-row grid-row' : 'virtual-row'}
+            className={item.type === 'cards' && viewMode === 'magazine' ? `${ROW} grid auto-rows-[280px] grid-cols-3 gap-3 pb-3` : ROW}
             style={{ transform: `translateY(${virtualItem.start - scrollMargin}px)` }}
           >
             <ItemContent item={item} viewMode={viewMode} props={props} />

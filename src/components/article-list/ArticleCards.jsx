@@ -1,39 +1,57 @@
 import { HiOutlineCheck, HiOutlineMagnifyingGlass, HiOutlineNewspaper, HiOutlineSparkles } from 'react-icons/hi2';
+import { cn } from '@/lib/utils';
 import { stripHtml, timeAgo } from '../../utils/helpers.js';
 import FeedFavicon from '../FeedFavicon.jsx';
 import { shortTime } from './listLogic.js';
 
+const hideOnError = (e) => { e.target.style.display = 'none'; };
+
+// Select toggle: a check when selected, a circle on hover, hidden otherwise.
 function SelectButton({ selected, onToggle, className }) {
   return (
     <button
-      className={`article-select-btn${selected ? ' selected' : ''} ${className}`}
+      type="button"
       onClick={(e) => { e.stopPropagation(); onToggle(); }}
       title={selected ? 'Deselect' : 'Select'}
+      aria-label={selected ? 'Deselect article' : 'Select article'}
+      aria-pressed={selected}
+      className={cn('absolute z-10 flex size-5 cursor-pointer items-center justify-center rounded-full border-0 p-0', selected ? 'bg-primary text-primary-foreground' : 'bg-transparent opacity-0 group-hover/card:opacity-100', className)}
     >
-      {selected ? <HiOutlineCheck /> : <span className="select-circle" />}
+      {selected ? <HiOutlineCheck className="size-3" /> : <span className="size-3.5 rounded-full border border-[var(--text-tertiary)] bg-[var(--bg-primary)]" />}
     </button>
   );
 }
 
-function SourceIcon({ feed, imgClass, iconClass }) {
-  return <FeedFavicon src={feed?.favicon} imgClass={imgClass} iconClass={iconClass} />;
-}
+const SourceIcon = ({ feed, className = 'size-3.5' }) => (
+  <FeedFavicon src={feed?.favicon} imgClass={cn('shrink-0 rounded-sm object-contain', className)} iconClass={cn('flex shrink-0 text-[var(--text-tertiary)] [&_svg]:size-full', className)} />
+);
 
-const hideOnError = (e) => { e.target.style.display = 'none'; };
+const UnreadDot = ({ className }) => <span className={cn('size-1.5 shrink-0 rounded-full bg-primary', className)} />;
+const AIBadge = () => <span className="flex shrink-0 items-center gap-0.5 font-mono text-[10.5px] text-primary" title="AI analyzed"><HiOutlineSparkles className="size-3" /> AI</span>;
 
-const cardClass = (base, { article, active, selected }) =>
-  `${base} ${article.isRead ? 'read' : ''} ${active ? 'active' : ''} ${selected ? 'card-selected' : ''}`;
+// Shared surface states: open article (accent bar), selected, read (dimmed).
+const surface = ({ active, selected }) => cn(
+  'group/card relative cursor-pointer transition-colors',
+  active && 'bg-[var(--bg-active)] shadow-[inset_2px_0_0_var(--accent)]',
+  selected && 'bg-[var(--accent-muted)]',
+  !active && !selected && 'hover:bg-[var(--bg-hover)]',
+);
+const titleTone = (read) => (read ? 'font-normal text-[var(--text-tertiary)]' : 'font-medium text-foreground');
 
 function CompactCard({ article, feed, state, onOpen, onToggle }) {
   return (
-    <div className={cardClass('article-card-compact', state)} onClick={onOpen}>
-      <SelectButton selected={state.selected} onToggle={onToggle} className="compact-checkbox" />
-      {!article.isRead && <div className="unread-dot-compact" />}
-      <SourceIcon feed={feed} imgClass="compact-favicon" iconClass="compact-source-icon" />
-      <span className="compact-source">{feed?.title || 'Unknown'}</span>
-      <span className="compact-title">{article.title}</span>
-      <span className="compact-ai-col">{article.aiStatus === 'done' && <HiOutlineSparkles title="AI analyzed" />}</span>
-      <span className="compact-time" title={timeAgo(article.publishedAt)}>{shortTime(article.publishedAt)}</span>
+    <div className={cn(surface(state), 'grid min-h-9 grid-cols-[14px_minmax(0,120px)_1fr_auto] items-center gap-3 border-b border-border py-2 pr-4 pl-5')} onClick={onOpen}>
+      <SelectButton selected={state.selected} onToggle={onToggle} className="left-0.5" />
+      <SourceIcon feed={feed} />
+      <span className="truncate text-[11.5px] text-muted-foreground">{feed?.title || 'Unknown'}</span>
+      <span className={cn('flex min-w-0 items-center gap-2 text-[13px]', titleTone(article.isRead))}>
+        {!article.isRead && <UnreadDot />}
+        <span className="truncate">{article.title}</span>
+      </span>
+      <span className="flex items-center gap-2">
+        {article.aiStatus === 'done' && <AIBadge />}
+        <span className="font-mono text-[11px] text-[var(--text-tertiary)]" title={timeAgo(article.publishedAt)}>{shortTime(article.publishedAt)}</span>
+      </span>
     </div>
   );
 }
@@ -41,21 +59,21 @@ function CompactCard({ article, feed, state, onOpen, onToggle }) {
 function ExcerptCard({ article, feed, state, onOpen, onToggle }) {
   const summary = stripHtml(article.excerpt || '');
   return (
-    <div className={cardClass('article-card-excerpt', state)} onClick={onOpen}>
-      <SelectButton selected={state.selected} onToggle={onToggle} className="excerpt-checkbox" />
-      {!article.isRead && <div className="unread-dot-compact" />}
-      <div className="excerpt-meta">
-        <SourceIcon feed={feed} imgClass="excerpt-favicon" iconClass="excerpt-source-icon" />
-        <span className="excerpt-source">{feed?.title || 'Unknown'}</span>
-        <span className="excerpt-time">{timeAgo(article.publishedAt)}</span>
-        {article.aiStatus === 'done' && <span className="excerpt-ai-badge" title="AI analyzed"><HiOutlineSparkles /> AI</span>}
+    <div className={cn(surface(state), 'border-b border-border py-3.5 pr-4 pl-5')} onClick={onOpen}>
+      <SelectButton selected={state.selected} onToggle={onToggle} className="top-3.5 left-0.5" />
+      <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
+        {!article.isRead && <UnreadDot />}
+        <SourceIcon feed={feed} />
+        <span className="truncate">{feed?.title || 'Unknown'}</span>
+        <span className="ml-auto shrink-0 font-mono text-[11px] text-[var(--text-tertiary)]">{timeAgo(article.publishedAt)}</span>
+        {article.aiStatus === 'done' && <AIBadge />}
       </div>
-      <div className="excerpt-body">
-        <div className="excerpt-text">
-          <div className="excerpt-title">{article.title}</div>
-          {summary && <div className="excerpt-summary">{summary}</div>}
+      <div className="mt-1.5 flex gap-3">
+        <div className="min-w-0 flex-1">
+          <div className={cn('line-clamp-2 text-[14px] leading-snug', titleTone(article.isRead))}>{article.title}</div>
+          {summary && <div className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-[var(--text-tertiary)]">{summary}</div>}
         </div>
-        {article.imageUrl && <img className="excerpt-thumbnail" src={article.imageUrl} alt="" loading="lazy" onError={hideOnError} />}
+        {article.imageUrl && <img className="size-14 shrink-0 rounded-md object-cover" src={article.imageUrl} alt="" loading="lazy" onError={hideOnError} />}
       </div>
     </div>
   );
@@ -63,23 +81,22 @@ function ExcerptCard({ article, feed, state, onOpen, onToggle }) {
 
 function GridCard({ article, feed, state, onOpen, onToggle }) {
   return (
-    <div className={cardClass('article-card-grid', state)} onClick={onOpen}>
-      <SelectButton selected={state.selected} onToggle={onToggle} className="grid-checkbox" />
-      <div className="card-image-wrap">
+    <div className={cn(surface(state), 'flex h-full flex-col overflow-hidden rounded-lg border border-border bg-[var(--bg-secondary)]', state.active && 'border-primary')} onClick={onOpen}>
+      <SelectButton selected={state.selected} onToggle={onToggle} className="top-2 left-2" />
+      <div className="relative h-[150px] shrink-0 bg-[var(--bg-tertiary)]">
         {article.imageUrl
-          ? <img className="card-image" src={article.imageUrl} alt="" loading="lazy" onError={hideOnError} />
-          : <div className="card-image-placeholder"><HiOutlineNewspaper /></div>}
-        {article.aiStatus === 'done' && <span className="card-ai-badge" title="AI analyzed"><HiOutlineSparkles /></span>}
+          ? <img className="size-full object-cover" src={article.imageUrl} alt="" loading="lazy" onError={hideOnError} />
+          : <div className="flex size-full items-center justify-center text-[var(--text-tertiary)]"><HiOutlineNewspaper className="size-7" /></div>}
+        {article.aiStatus === 'done' && <span className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full bg-black/60 text-primary" title="AI analyzed"><HiOutlineSparkles className="size-3.5" /></span>}
       </div>
-      <div className="card-body">
-        <div className="card-meta">
-          {!article.isRead && <span className="card-unread-dot" />}
-          <SourceIcon feed={feed} imgClass="card-favicon" iconClass="card-favicon-icon" />
-          <span className="card-source">{feed?.title || 'Unknown'}</span>
-          <span className="card-dot" />
-          <span className="card-time">{timeAgo(article.publishedAt)}</span>
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 p-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          {!article.isRead && <UnreadDot />}
+          <SourceIcon feed={feed} />
+          <span className="truncate">{feed?.title || 'Unknown'}</span>
+          <span className="ml-auto shrink-0 font-mono text-[10.5px] text-[var(--text-tertiary)]">{shortTime(article.publishedAt)}</span>
         </div>
-        <h3 className="card-title">{article.title}</h3>
+        <h3 className={cn('m-0 line-clamp-4 text-[13.5px] leading-snug', titleTone(article.isRead))}>{article.title}</h3>
       </div>
     </div>
   );
@@ -94,29 +111,32 @@ export function ArticleCard({ viewMode, article, feed, active, selected, onSelec
     <Card
       article={article}
       feed={feed}
-      state={{ article, active, selected }}
+      state={{ active, selected }}
       onOpen={() => onSelectArticle(article)}
       onToggle={() => onToggleSelect(article.id)}
     />
   );
 }
 
+/** Placeholder rows while the list loads. */
 export function LoadingCards() {
   return Array.from({ length: 8 }, (_, i) => (
-    <div key={i} className="article-card-skeleton">
-      <div className="skeleton-line skeleton-short" />
-      <div className="skeleton-line" />
-      <div className="skeleton-line skeleton-medium" />
+    <div key={i} className="flex flex-col gap-2 border-b border-border px-5 py-3.5">
+      <div className="h-3 w-1/4 animate-pulse rounded bg-[var(--bg-tertiary)]" />
+      <div className="h-3.5 w-11/12 animate-pulse rounded bg-[var(--bg-tertiary)]" />
+      <div className="h-3 w-2/3 animate-pulse rounded bg-[var(--bg-tertiary)]" />
     </div>
   ));
 }
 
+/** Empty list: nothing in the view, or nothing matching the search or filters. */
 export function EmptyList({ title, body, searching }) {
+  const Icon = searching ? HiOutlineMagnifyingGlass : HiOutlineSparkles;
   return (
-    <div className="empty-state">
-      <span className="empty-icon">{searching ? <HiOutlineMagnifyingGlass /> : <HiOutlineSparkles />}</span>
-      <h3>{title}</h3>
-      <p>{body}</p>
+    <div className="flex flex-col items-center gap-2 px-6 py-24 text-center">
+      <Icon className="size-8 text-[var(--text-tertiary)]" />
+      <h3 className="m-0 mt-2 text-[15px] font-medium text-foreground">{title}</h3>
+      <p className="m-0 max-w-sm text-[13px] text-muted-foreground">{body}</p>
     </div>
   );
 }
