@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiOutlineChevronDown } from 'react-icons/hi2';
+import { HiOutlineChevronDown, HiOutlineSparkles } from 'react-icons/hi2';
 import { FILTER_DIMS } from './listLogic.js';
 
 function FilterPill({ dim, values, activeValue, open, onOpenChange, onPick }) {
@@ -25,15 +25,21 @@ function FilterPill({ dim, values, activeValue, open, onOpenChange, onPick }) {
   );
 }
 
-/** Per-dimension AI filter pills (shown when any article has an analysis). */
-export function FilterBar({ available, active, onChange }) {
+/**
+ * The filter row, shown on demand: "AI-analyzed only", then a pill per AI
+ * analysis dimension that any article has.
+ */
+export function FilterBar({ available, active, onChange, aiOnly, onToggleAiOnly }) {
   const [openDim, setOpenDim] = useState(null);
-  const hasActive = Object.values(active).some(Boolean);
+  const hasActive = Object.values(active).some(Boolean) || aiOnly;
+  const clear = () => { onChange({}); if (aiOnly) onToggleAiOnly(); };
   return (
     <>
       {openDim && <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setOpenDim(null)} />}
       <div className="ai-filter-row">
-        <span className="ai-filter-label">Filter</span>
+        <button className={`ai-filter-pill ${aiOnly ? 'active' : ''}`} onClick={onToggleAiOnly} aria-pressed={aiOnly} title="Show only articles with an AI summary or analysis">
+          <HiOutlineSparkles /> <span>AI-analyzed only</span>
+        </button>
         {FILTER_DIMS.filter((dim) => available[dim.key]?.size > 0).map((dim) => (
           <FilterPill
             key={dim.key}
@@ -45,7 +51,7 @@ export function FilterBar({ available, active, onChange }) {
             onPick={(value) => onChange({ ...active, [dim.key]: value })}
           />
         ))}
-        {hasActive && <button className="ai-filter-clear-btn" onClick={() => onChange({})}>✕ Clear</button>}
+        {hasActive && <button className="ai-filter-clear-btn" onClick={clear}>✕ Clear</button>}
       </div>
     </>
   );

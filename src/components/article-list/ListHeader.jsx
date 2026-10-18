@@ -1,15 +1,24 @@
 import {
-  HiOutlineBars3, HiOutlineCheckCircle, HiOutlineMagnifyingGlass, HiOutlinePause, HiOutlineSparkles, HiOutlineXMark,
+  HiOutlineCheckCircle, HiOutlineFunnel, HiOutlineMagnifyingGlass, HiOutlinePause, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
 import { VIEW_MODES } from './viewModes.js';
 import { useConfirmAction } from '../../hooks/useConfirmAction.js';
 
+// The mode after `id`, wrapping around.
+const nextMode = (id) => VIEW_MODES[(VIEW_MODES.findIndex((m) => m.id === id) + 1) % VIEW_MODES.length].id;
 
+// One button per view mode. Clicking the active one moves to the next mode,
+// which is how a narrow list (showing only the active button) switches views.
 function ViewModeToggle({ viewMode, onChange }) {
   return (
     <div className="view-toggle-group">
       {VIEW_MODES.map(({ id, label, title, Icon }) => (
-        <button key={id} className={`btn btn-ghost btn-sm view-toggle-btn ${viewMode === id ? 'active' : ''}`} onClick={() => onChange(id)} title={title}>
+        <button
+          key={id}
+          className={`btn btn-ghost btn-sm view-toggle-btn ${viewMode === id ? 'active' : ''}`}
+          onClick={() => onChange(viewMode === id ? nextMode(id) : id)}
+          title={viewMode === id ? `${title} (click for the next view)` : title}
+        >
           <Icon />
           <span className="view-toggle-label">{label}</span>
         </button>
@@ -62,16 +71,22 @@ function MarkAllReadButton({ unreadCount, confirm }) {
   );
 }
 
-/** Title row: view title and count, view modes, AI filter, batch, search, mark all read. */
-export function ListHeader({ title, count, sidebar, viewMode, onViewModeChange, aiOnly, onToggleAiOnly, batch, search, unreadCount, markAllRead }) {
+// Shows or hides the filter row; the count says how many filters are on.
+function FilterButton({ filters }) {
+  const label = filters.activeCount > 0 ? `Filters (${filters.activeCount} on)` : 'Filters';
+  return (
+    <button className={`btn btn-ghost btn-sm view-toggle-btn ${filters.open ? 'active' : ''}`} onClick={filters.toggle} title={label} aria-expanded={filters.open}>
+      <HiOutlineFunnel />
+      {filters.activeCount > 0 && <span className="filter-count">{filters.activeCount}</span>}
+    </button>
+  );
+}
+
+/** Title row: view title and count, view modes, filters, batch, search, mark all read. */
+export function ListHeader({ title, count, viewMode, onViewModeChange, filters, batch, search, unreadCount, markAllRead }) {
   return (
     <div className="article-list-header">
       <div className="article-list-title">
-        {sidebar.hidden && (
-          <button className="btn btn-ghost btn-icon btn-sm" onClick={sidebar.onShow} title="Show sidebar">
-            <HiOutlineBars3 />
-          </button>
-        )}
         <h2>
           {title}
           <span className="article-count"> · {count} articles</span>
@@ -79,14 +94,7 @@ export function ListHeader({ title, count, sidebar, viewMode, onViewModeChange, 
       </div>
       <div className="article-list-actions">
         <ViewModeToggle viewMode={viewMode} onChange={onViewModeChange} />
-        <button
-          className={`btn btn-ghost btn-sm view-toggle-btn ${aiOnly ? 'active' : ''}`}
-          onClick={onToggleAiOnly}
-          title={aiOnly ? 'Showing AI-analyzed only — click to show all' : 'Show only AI-analyzed articles'}
-        >
-          <HiOutlineSparkles />
-          <span className="view-toggle-label">AI</span>
-        </button>
+        <FilterButton filters={filters} />
         <BatchControl {...batch} />
         <button className={`btn btn-ghost btn-icon btn-sm ${search.visible ? 'active' : ''}`} onClick={search.toggle} title="Search articles">
           <HiOutlineMagnifyingGlass />

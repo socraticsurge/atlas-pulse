@@ -19,11 +19,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  height: 52px;
+  height: var(--pane-header-height);
   flex-shrink: 0;
 }
 
 .article-list-title {
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -49,17 +50,13 @@
   .article-list-header .article-count { display: none; }
 }
 
-/* At its 320px minimum the controls don't fit beside the title: they move
-   to a second row under it. */
-@container list-panel (max-width: 420px) {
-  .article-list-header {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 8px 10px;
-    row-gap: 4px;
-  }
-  .article-list-title { flex-basis: 100%; padding-left: 6px; }
+/* Near its 320px minimum the list shows only the active view-mode button
+   (clicking it cycles the modes), so the header stays one row high and lines
+   up with the other panes. */
+@container list-panel (max-width: 520px) {
+  .article-list-header { gap: 6px; padding: 0 8px 0 14px; }
   .article-list-actions { gap: 0; }
+  .view-toggle-group .view-toggle-btn:not(.active) { display: none; }
 }
 
 .article-list-header .article-count {
@@ -69,6 +66,7 @@
 }
 
 .article-list-actions {
+  flex-shrink: 0;
   display: flex;
   gap: 4px;
 }
@@ -304,4 +302,12 @@
 /* Excerpt hidden in grid thumbnail view — too small to show */
 .card-excerpt {
   display: none;
+}
+
+/* Number of active filters, on the header's filter button. */
+.filter-count {
+  margin-left: 3px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--accent);
 }

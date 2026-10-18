@@ -103,8 +103,6 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
             selectedArticleId={selectedArticle?.id}
             onSelectArticle={setSelectedArticle}
             onArticlesLoaded={setVisibleArticles}
-            sidebarHidden={layout.sidebarMode === 'hidden'}
-            onShowSidebar={layout.toggleSidebarMode}
             batch={{ status: batch.status, pauseReason: batch.pauseReason, queuedCount: batch.queuedCount, onTrigger: batchActions.trigger, onClear: batchActions.clear }}
             onOpenAIPanel={(articles, operation) => { setMultiPanel({ articles, operation }); setSelectedArticle(null); }}
             refreshKey={library.articlesRefreshKey}
