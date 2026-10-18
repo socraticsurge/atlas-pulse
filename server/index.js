@@ -40,6 +40,9 @@ app.use(cors({
     return callback(new Error('Not allowed by CORS'));
   },
 }));
+// Feed refreshes post whole articles; the client sends them in ~1 MB chunks,
+// and this route allows more so a single very long article still fits.
+app.use('/api/reader/articles/bulk-insert', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '2mb' }));
 
 // Routes

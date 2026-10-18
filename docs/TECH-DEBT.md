@@ -48,11 +48,11 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - The reader toolbar fits at every reader width: below 680px the buttons drop their labels (tooltips stay), and below 480px the article counter hides.
 - Favicons are fetched and cached by the local server (`GET /api/favicon/:host`, cached in `reader.db`) instead of Google's favicon service. Sites that block automated requests (Ars Technica and OpenAI at the time of writing) show the generic feed icon.
 - Feeds imported from OPML get their articles right away: the import refreshes the saved feed records it got back from the server, instead of calling "refresh all" with the pre-import feed list. Folders created by the import also appear without a reload.
+- Large feeds refresh: the client sends new articles in chunks of about 1 MB, and the bulk-insert route accepts up to 8 MB so a single very long article still fits. (Moving the whole refresh to the server would remove the round trip entirely.)
 
 ### Still open
 
 - **Article list paging.** The list still loads every article (7.8 MB on a 9,500-article library). This needs a paginated endpoint and incremental loading in `ArticleList`.
-- **Large feeds fail to refresh.** `express.json` is limited to 2 MB, and `bulkInsertArticles` receives every item with its full content. A feed whose items exceed 2 MB fails to refresh, and the only sign is a `PayloadTooLargeError` in the server log. Fix it by raising the limit for that route or sending items in chunks. In a test on a copy of the maintainer's library, at least one feed hit this on each full refresh.
 - **Highlights spanning element boundaries.** `applyHighlights` matches text inside a single text node. A highlight that crosses a link or other inline element is saved but not redrawn when the article is reopened.
 - **Scroll restore.** The reader restores scroll position before full-text extraction finishes. When the extracted text is longer than the feed's version, the restored position can land in the wrong place. Positions are remembered only for the current session.
 - **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
