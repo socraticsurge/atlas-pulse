@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { streamChat, fetchAIModels } from './api.js';
+import { streamChat, fetchAIModels, parseFeed, patchFeed } from './api.js';
 
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; });
@@ -43,4 +43,21 @@ test('fetchAIModels returns Ollama models when Gemini Nano is unavailable', asyn
 test('fetchAIModels fails only when neither engine is reachable', async () => {
   globalThis.fetch = async () => { throw new TypeError('network down'); };
   await assert.rejects(fetchAIModels(), /Could not reach the server/);
+});
+
+test('requests surface the server error, or a fallback when the body has none', async () => {
+  globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Feed not found' }), { status: 404 });
+  await assert.rejects(parseFeed('https://x.example/rss'), /Feed not found/);
+  globalThis.fetch = async () => new Response('<html>Bad gateway</html>', { status: 502 });
+  await assert.rejects(parseFeed('https://x.example/rss'), /Failed to parse feed/);
+});
+
+test('reader requests send JSON with the right method and path', async () => {
+  let call;
+  globalThis.fetch = async (url, opts) => { call = { url, ...opts }; return Response.json({ id: 7 }); };
+  assert.deepEqual(await patchFeed(7, { title: 'T' }), { id: 7 });
+  assert.equal(call.url, '/api/reader/feeds/7');
+  assert.equal(call.method, 'PUT');
+  assert.equal(call.headers['Content-Type'], 'application/json');
+  assert.equal(call.body, '{"title":"T"}');
 });

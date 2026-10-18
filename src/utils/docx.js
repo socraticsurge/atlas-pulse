@@ -15,35 +15,44 @@ function parseInline(text) {
   return runs.length ? runs : [new TextRun({ text })];
 }
 
-function markdownToDocxChildren(markdown) {
-  const lines = markdown.split('\n');
-  const children = [];
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    const trimmed = line.trimEnd();
+const HORIZONTAL_RULE = { bottom: { color: '999999', size: 6, space: 1, style: 'single' } };
 
-    if (!trimmed) {
-      children.push(new Paragraph({}));
-    } else if (trimmed.startsWith('### ')) {
-      children.push(new Paragraph({ text: trimmed.slice(4), heading: HeadingLevel.HEADING_3 }));
-    } else if (trimmed.startsWith('## ')) {
-      children.push(new Paragraph({ text: trimmed.slice(3), heading: HeadingLevel.HEADING_2 }));
-    } else if (trimmed.startsWith('# ')) {
-      children.push(new Paragraph({ text: trimmed.slice(2), heading: HeadingLevel.HEADING_1 }));
-    } else if (/^(\*|-) /.test(trimmed)) {
-      children.push(new Paragraph({ children: parseInline(trimmed.slice(2)), bullet: { level: 0 } }));
-    } else if (/^\d+\. /.test(trimmed)) {
-      const text = trimmed.replace(/^\d+\. /, '');
-      children.push(new Paragraph({ children: parseInline(text), numbering: { reference: 'default', level: 0 } }));
-    } else if (/^---+$/.test(trimmed)) {
-      children.push(new Paragraph({ border: { bottom: { color: '999999', size: 6, space: 1, style: 'single' } } }));
-    } else {
-      children.push(new Paragraph({ children: parseInline(trimmed) }));
-    }
-    i++;
-  }
-  return children;
+// Markdown line types, checked in order; the first match wins.
+const LINE_RULES = [
+  { kind: 'blank', test: (t) => !t, build: () => new Paragraph({}) },
+  { kind: 'h3', test: (t) => t.startsWith('### '), build: (t) => new Paragraph({ text: t.slice(4), heading: HeadingLevel.HEADING_3 }) },
+  { kind: 'h2', test: (t) => t.startsWith('## '), build: (t) => new Paragraph({ text: t.slice(3), heading: HeadingLevel.HEADING_2 }) },
+  { kind: 'h1', test: (t) => t.startsWith('# '), build: (t) => new Paragraph({ text: t.slice(2), heading: HeadingLevel.HEADING_1 }) },
+  { kind: 'bullet', test: (t) => /^(\*|-) /.test(t), build: (t) => new Paragraph({ children: parseInline(t.slice(2)), bullet: { level: 0 } }) },
+  {
+    kind: 'numbered',
+    test: (t) => /^\d+\. /.test(t),
+    build: (t) => new Paragraph({ children: parseInline(t.replace(/^\d+\. /, '')), numbering: { reference: 'default', level: 0 } }),
+  },
+  { kind: 'rule', test: (t) => /^---+$/.test(t), build: () => new Paragraph({ border: HORIZONTAL_RULE }) },
+  { kind: 'text', test: () => true, build: (t) => new Paragraph({ children: parseInline(t) }) },
+];
+
+const ruleFor = (line) => LINE_RULES.find((rule) => rule.test(line.trimEnd()));
+
+/** The markdown type of one line, e.g. 'h2', 'bullet' or 'text'. */
+export function markdownLineKind(line) {
+  return ruleFor(line).kind;
+}
+
+function markdownToDocxChildren(markdown) {
+  return markdown.split('\n').map((line) => ruleFor(line).build(line.trimEnd()));
+}
+
+function downloadBlob(blob, filename, extension) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename.replace(/[^a-z0-9\-_]/gi, '_').toLowerCase() + extension;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export async function downloadAsDocx(filename, markdownText) {
@@ -53,26 +62,9 @@ export async function downloadAsDocx(filename, markdownText) {
     },
     sections: [{ properties: {}, children: markdownToDocxChildren(markdownText) }],
   });
-
-  const blob = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename.replace(/[^a-z0-9\-_]/gi, '_').toLowerCase() + '.docx';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(await Packer.toBlob(doc), filename, '.docx');
 }
 
 export function downloadAsMarkdown(filename, text) {
-  const blob = new Blob([text], { type: 'text/markdown' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename.replace(/[^a-z0-9\-_]/gi, '_').toLowerCase() + '.md';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(new Blob([text], { type: 'text/markdown' }), filename, '.md');
 }

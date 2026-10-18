@@ -2,18 +2,33 @@ import { getNanoModel, isNanoModel, streamNanoChat } from './chromeAI.js';
 
 const API_BASE = '/api';
 
+// Sends a request; on failure throws the server's error message, or `fallback`.
+async function send(path, fallback, opts = {}) {
+  const res = await fetch(`${API_BASE}${path}`, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || fallback);
+  }
+  return res;
+}
+
+// Like send(), resolving to the parsed JSON body.
+async function request(path, fallback, opts) {
+  return (await send(path, fallback, opts)).json();
+}
+
+function json(body, method = 'POST') {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+}
+
 // ── Ollama management ────────────────────────────────────────────────────────
 
 export async function fetchOllamaStatus() {
-  const res = await fetch(`${API_BASE}/ollama/status`);
-  if (!res.ok) throw new Error('Could not reach server');
-  return res.json(); // { installed, running, models[] }
+  return request('/ollama/status', 'Could not reach server'); // { installed, running, models[] }
 }
 
 export async function startOllama() {
-  const res = await fetch(`${API_BASE}/ollama/start`, { method: 'POST' });
-  if (!res.ok) throw new Error('Failed to start Ollama');
-  return res.json();
+  return request('/ollama/start', 'Failed to start Ollama', { method: 'POST' });
 }
 
 /**
@@ -22,95 +37,39 @@ export async function startOllama() {
  * @param {(progress: object) => void} onProgress
  */
 export async function streamModelPull(model, onProgress) {
-  const res = await fetch(`${API_BASE}/ollama/pull`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model }),
-  });
-  if (!res.ok) throw new Error('Pull request failed');
-
+  const res = await send('/ollama/pull', 'Pull request failed', json({ model }));
   for await (const chunk of readNdjson(res.body)) {
     onProgress(chunk);
     if (chunk.status === 'success') return;
   }
 }
 
-export async function parseFeed(url) {
-  const res = await fetch(`${API_BASE}/feeds/parse`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(err.error || 'Failed to parse feed');
-  }
-  return res.json();
-}
+// ── Feeds and articles from the web ──────────────────────────────────────────
 
-export async function refreshFeeds(urls) {
-  const res = await fetch(`${API_BASE}/feeds/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ urls }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(err.error || 'Failed to refresh feeds');
-  }
-  return res.json();
+export async function parseFeed(url) {
+  return request('/feeds/parse', 'Failed to parse feed', json({ url }));
 }
 
 export async function discoverFeeds(url) {
-  const res = await fetch(`${API_BASE}/discover`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(err.error || 'Failed to discover feeds');
-  }
-  return res.json();
+  return request('/discover', 'Failed to discover feeds', json({ url }));
 }
 
 export async function extractArticle(url, signal) {
-  const res = await fetch(`${API_BASE}/articles/extract`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
-    signal,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Network error' }));
-    throw new Error(err.error || 'Failed to extract article');
-  }
-  return res.json();
+  return request('/articles/extract', 'Failed to extract article', { ...json({ url }), signal });
 }
 
+// ── Summaries ────────────────────────────────────────────────────────────────
+
 export async function saveSummary(data) {
-  const res = await fetch(`${API_BASE}/summaries`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to save' }));
-    throw new Error(err.error || 'Failed to save summary');
-  }
-  return res.json();
+  return request('/summaries', 'Failed to save summary', json(data));
 }
 
 export async function fetchSummaries() {
-  const res = await fetch(`${API_BASE}/summaries`);
-  if (!res.ok) throw new Error('Failed to fetch summaries');
-  return res.json();
+  return request('/summaries', 'Failed to fetch summaries');
 }
 
 export async function deleteSummary(id) {
-  const res = await fetch(`${API_BASE}/summaries/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete summary');
-  return res.json();
+  return request(`/summaries/${id}`, 'Failed to delete summary', { method: 'DELETE' });
 }
 
 export function getSummariesExportURL() {
@@ -118,46 +77,29 @@ export function getSummariesExportURL() {
 }
 
 export async function fetchDBPath() {
-  const res = await fetch(`${API_BASE}/summaries/db-path`);
-  if (!res.ok) throw new Error('Failed to get DB path');
-  return res.json();
+  return request('/summaries/db-path', 'Failed to get DB path');
 }
 
+// ── Highlights ───────────────────────────────────────────────────────────────
+
 export async function saveHighlight(data) {
-  const res = await fetch(`${API_BASE}/highlights`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Failed to save' }));
-    throw new Error(err.error || 'Failed to save highlight');
-  }
-  return res.json();
+  return request('/highlights', 'Failed to save highlight', json(data));
 }
 
 export async function fetchHighlights() {
-  const res = await fetch(`${API_BASE}/highlights`);
-  if (!res.ok) throw new Error('Failed to fetch highlights');
-  return res.json();
+  return request('/highlights', 'Failed to fetch highlights');
 }
 
 export async function fetchHighlightsByArticle(articleUrl) {
-  const res = await fetch(`${API_BASE}/highlights/by-article?url=${encodeURIComponent(articleUrl)}`);
-  if (!res.ok) throw new Error('Failed to fetch article highlights');
-  return res.json();
+  return request(`/highlights/by-article?url=${encodeURIComponent(articleUrl)}`, 'Failed to fetch article highlights');
 }
 
 export async function fetchHighlightsCount() {
-  const res = await fetch(`${API_BASE}/highlights/count`);
-  if (!res.ok) throw new Error('Failed to fetch highlights count');
-  return res.json();
+  return request('/highlights/count', 'Failed to fetch highlights count');
 }
 
 export async function deleteHighlight(id) {
-  const res = await fetch(`${API_BASE}/highlights/${id}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error('Failed to delete highlight');
-  return res.json();
+  return request(`/highlights/${id}`, 'Failed to delete highlight', { method: 'DELETE' });
 }
 
 export function getHighlightsExportURL() {
@@ -165,33 +107,20 @@ export function getHighlightsExportURL() {
 }
 
 export async function fetchHighlightsDBPath() {
-  const res = await fetch(`${API_BASE}/highlights/db-path`);
-  if (!res.ok) throw new Error('Failed to get highlights DB path');
-  return res.json();
+  return request('/highlights/db-path', 'Failed to get highlights DB path');
 }
 
 // ── Reader storage (folders, feeds, articles) ─────────────────────────────────
 
-const READER = `${API_BASE}/reader`;
-
-async function readerFetch(path, opts = {}) {
-  const res = await fetch(`${READER}${path}`, opts);
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || 'Request failed');
-  }
-  return res.json();
-}
-
-function json(body) {
-  return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+function readerFetch(path, opts) {
+  return request(`/reader${path}`, 'Request failed', opts);
 }
 
 // Folders
 export async function fetchFolders() { return readerFetch('/folders'); }
-export async function createFolder(data) { return readerFetch('/folders', { ...json(data), method: 'POST' }); }
+export async function createFolder(data) { return readerFetch('/folders', json(data)); }
 export async function findOrCreateFolder(name) { return readerFetch('/folders/find-or-create', json({ name })); }
-export async function updateFolder(id, data) { return readerFetch(`/folders/${id}`, { ...json(data), method: 'PUT' }); }
+export async function updateFolder(id, data) { return readerFetch(`/folders/${id}`, json(data, 'PUT')); }
 export async function deleteFolder(id, withFeeds = false) {
   return readerFetch(`/folders/${id}${withFeeds ? '?withFeeds=true' : ''}`, { method: 'DELETE' });
 }
@@ -200,7 +129,7 @@ export async function deleteFolder(id, withFeeds = false) {
 export async function fetchFeeds() { return readerFetch('/feeds'); }
 export async function fetchFeed(id) { return readerFetch(`/feeds/${id}`); }
 export async function storeFeed(data) { return readerFetch('/feeds', json(data)); }
-export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, { ...json(data), method: 'PUT' }); }
+export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, json(data, 'PUT')); }
 export async function removeFeed(id) { return readerFetch(`/feeds/${id}`, { method: 'DELETE' }); }
 
 // Articles
@@ -222,10 +151,10 @@ export async function fetchArticleByLink(url) {
   return readerFetch(`/articles/by-link?url=${encodeURIComponent(url)}`);
 }
 export async function patchArticle(id, data) {
-  return readerFetch(`/articles/${id}`, { ...json(data), method: 'PUT' });
+  return readerFetch(`/articles/${id}`, json(data, 'PUT'));
 }
 export async function bulkUpdateArticles(ids, data) {
-  return readerFetch('/articles/bulk-update', { ...json({ ids, ...data }), method: 'PUT' });
+  return readerFetch('/articles/bulk-update', json({ ids, ...data }, 'PUT'));
 }
 export async function bulkInsertArticles(feedId, articles) {
   return readerFetch('/articles/bulk-insert', json({ feedId, articles }));
@@ -279,15 +208,7 @@ export function streamChat(model, messages) {
 }
 
 async function* streamOllamaChat(model, messages) {
-  const res = await fetch(`${API_BASE}/ai/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages, stream: true }),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'AI request failed' }));
-    throw new Error(err.error || 'AI request failed');
-  }
+  const res = await send('/ai/chat', 'AI request failed', json({ model, messages, stream: true }));
   for await (const chunk of readNdjson(res.body)) {
     if (chunk.message?.content) yield chunk.message.content;
     if (chunk.done) return;
