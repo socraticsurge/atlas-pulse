@@ -2,6 +2,7 @@ import { join } from 'path';
 import { DATA_DIR, openDatabase } from './connection.js';
 import { MIGRATIONS } from './migrations/reader.js';
 import { makeExcerpt, searchText, tokenizeQuery } from '../utils/text.js';
+import { itemGuid, normalizeDate } from '../utils/articleFields.js';
 
 const DB_FILE = 'reader.db';
 export const DB_PATH = join(DATA_DIR, DB_FILE);
@@ -239,12 +240,26 @@ function existingCanonicalLinks(links) {
   );
 }
 
-// Items not already stored: by guid within the feed, then by canonical link anywhere.
+// Keeps the first item for each key; items without a key are all kept.
+function firstPerKey(items, keyOf) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = keyOf(item);
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// Items not already stored: by guid within the feed, then by canonical link
+// anywhere. Duplicates within the batch itself are dropped the same way.
 function unseenItems(feedId, items) {
   const existingGuids = new Set(
     db.prepare(`SELECT guid FROM articles WHERE feed_id = ?`).all(feedId).map(r => r.guid)
   );
-  const candidates = items.filter(a => !existingGuids.has(a.guid || a.link));
+  const batch = firstPerKey(firstPerKey(items, itemGuid), (a) => a.canonicalLink);
+  const candidates = batch.filter(a => !existingGuids.has(itemGuid(a)));
   const known = existingCanonicalLinks(candidates.map(a => a.canonicalLink).filter(Boolean));
   return candidates.filter(a => !a.canonicalLink || !known.has(a.canonicalLink));
 }
@@ -254,11 +269,11 @@ function articleRow(feedId, a, now) {
   const content = toSqlText(a.content);
   return {
     feed_id: feedId,
-    guid: toSqlText(a.guid || a.link),
+    guid: itemGuid(a),
     title: toSqlText(a.title),
     link: toSqlText(a.link),
     canonical_link: toSqlText(a.canonicalLink),
-    published_at: toSqlText(a.publishedAt) || now,
+    published_at: normalizeDate(toSqlText(a.publishedAt), now),
     content,
     summary,
     author: toSqlText(a.author),
