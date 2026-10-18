@@ -373,11 +373,15 @@ export function findArticleByLink(link) {
   return row ? toArticle(row) : null;
 }
 
+// Read/bookmark flags arrive as 0/1 or true/false; SQLite can't bind booleans.
+const flag = (value) => (value ? 1 : 0);
+const BULK_CHUNK = 10000;
+
 export function updateArticle(id, data) {
   const fields = [];
   const values = { id };
-  if (data.isRead !== undefined)      { fields.push('is_read = @is_read');           values.is_read = data.isRead; }
-  if (data.isBookmarked !== undefined){ fields.push('is_bookmarked = @is_bookmarked'); values.is_bookmarked = data.isBookmarked; }
+  if (data.isRead !== undefined)      { fields.push('is_read = @is_read');           values.is_read = flag(data.isRead); }
+  if (data.isBookmarked !== undefined){ fields.push('is_bookmarked = @is_bookmarked'); values.is_bookmarked = flag(data.isBookmarked); }
   if (data.aiStatus !== undefined)    { fields.push('ai_status = @ai_status');       values.ai_status = data.aiStatus; }
   if (data.aiSummary !== undefined)   { fields.push('ai_summary = @ai_summary');     values.ai_summary = data.aiSummary; }
   if (data.aiAnalysis !== undefined)  { fields.push('ai_analysis = @ai_analysis');   values.ai_analysis = data.aiAnalysis; }
@@ -390,13 +394,20 @@ export function bulkUpdateArticles(ids, data) {
   if (ids.length === 0) return;
   const fields = [];
   const values = {};
-  if (data.isRead !== undefined)      { fields.push('is_read = @is_read');           values.is_read = data.isRead; }
-  if (data.isBookmarked !== undefined){ fields.push('is_bookmarked = @is_bookmarked'); values.is_bookmarked = data.isBookmarked; }
+  if (data.isRead !== undefined)      { fields.push('is_read = @is_read');           values.is_read = flag(data.isRead); }
+  if (data.isBookmarked !== undefined){ fields.push('is_bookmarked = @is_bookmarked'); values.is_bookmarked = flag(data.isBookmarked); }
   if (data.aiStatus !== undefined)    { fields.push('ai_status = @ai_status');       values.ai_status = data.aiStatus; }
   if (fields.length === 0) return;
-  const placeholders = ids.map((_, i) => `@id${i}`).join(',');
-  ids.forEach((id, i) => { values[`id${i}`] = id; });
-  db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id IN (${placeholders})`).run(values);
+  // SQLite allows 32,766 bound variables per statement, so "mark all read" on
+  // a large library is split into chunks, all in one transaction.
+  db.transaction(() => {
+    for (let i = 0; i < ids.length; i += BULK_CHUNK) {
+      const chunk = ids.slice(i, i + BULK_CHUNK);
+      const placeholders = chunk.map((_, j) => `@id${j}`).join(',');
+      const params = { ...values, ...Object.fromEntries(chunk.map((id, j) => [`id${j}`, id])) };
+      db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id IN (${placeholders})`).run(params);
+    }
+  })();
 }
 
 export function getArticlesByAiStatus(statuses) {

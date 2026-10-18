@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { bulkUpdateArticles } from '../utils/api.js';
+import { readStored, writeStored } from '../utils/storage.js';
 import { useLibrary } from '../app/LibraryContext.jsx';
 import { useToast } from '../app/ToastContext.jsx';
 import { useArticleSearch } from '../hooks/useArticleSearch.js';
@@ -19,10 +20,10 @@ import { VirtualArticleList } from './article-list/VirtualArticleList.jsx';
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
 
 function useViewMode() {
-  const [viewMode, setViewMode] = useState(() => localStorage.getItem(VIEW_MODE_KEY) || 'magazine');
+  const [viewMode, setViewMode] = useState(() => readStored(VIEW_MODE_KEY, 'magazine'));
   const change = useCallback((mode) => {
     setViewMode(mode);
-    localStorage.setItem(VIEW_MODE_KEY, mode);
+    writeStored(VIEW_MODE_KEY, mode);
   }, []);
   return [viewMode, change];
 }

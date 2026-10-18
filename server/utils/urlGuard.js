@@ -36,6 +36,8 @@ const BLOCKED_V4 = [
   ['192.0.0.0', 24],
   ['192.168.0.0', 16],  // private
   ['198.18.0.0', 15],   // benchmarking
+  ['224.0.0.0', 4],     // multicast
+  ['240.0.0.0', 4],     // reserved, incl. 255.255.255.255 broadcast
 ];
 
 function isBlockedIpv4(ip) {
@@ -48,6 +50,7 @@ function isBlockedIpv6(ip) {
   if (addr === '::1' || addr === '::') return true;
   if (addr.startsWith('fe80')) return true;          // link-local
   if (addr.startsWith('fc') || addr.startsWith('fd')) return true; // unique-local fc00::/7
+  if (addr.startsWith('ff')) return true;            // multicast
   // IPv4-mapped (::ffff:a.b.c.d) — check the embedded v4 address
   const mapped = addr.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return isBlockedIpv4(mapped[1]);
@@ -75,7 +78,8 @@ function parseHttpUrl(rawUrl) {
 }
 
 // Addresses the host resolves to; a literal IP resolves to itself (no DNS).
-async function resolveHost(host) {
+async function resolveHost(rawHost) {
+  const host = rawHost.replace(/^\[(.*)\]$/, '$1'); // URL keeps IPv6 literals in brackets
   if (net.isIP(host)) return [host];
   let records;
   try {

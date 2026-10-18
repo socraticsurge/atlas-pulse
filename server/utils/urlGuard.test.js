@@ -25,6 +25,15 @@ test('assertPublicHttpUrl allows a public literal IP', async () => {
   assert.equal(url.hostname, '93.184.216.34');
 });
 
+test('assertPublicHttpUrl blocks multicast and broadcast, and reads bracketed IPv6 literals', async () => {
+  for (const blocked of ['http://224.0.0.251/', 'http://239.255.255.250/', 'http://255.255.255.255/', 'http://[ff02::1]/', 'http://[fd00::1]/']) {
+    await assert.rejects(assertPublicHttpUrl(blocked), /Blocked/, blocked);
+  }
+  // A public IPv6 literal used to be refused as "not an IP" because URL keeps the brackets.
+  const url = await assertPublicHttpUrl('http://[2606:4700:4700::1111]/');
+  assert.equal(url.hostname, '[2606:4700:4700::1111]');
+});
+
 // The core regression guard: a public URL must not be able to redirect the
 // server into a private/metadata address. If someone removes the per-hop
 // re-validation from safeFetch, this test fails.

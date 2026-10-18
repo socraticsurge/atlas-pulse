@@ -11,18 +11,25 @@ import {
 
 const router = Router();
 
+// A reference to a feed or folder that doesn't exist (deleted meanwhile, or a
+// bad id) is the client's mistake, not a server error.
+function sendDbError(res, err) {
+  if (err.code === 'SQLITE_CONSTRAINT_FOREIGNKEY') return res.status(404).json({ error: 'Feed or folder not found' });
+  return res.status(500).json({ error: err.message });
+}
+
 // ── Folders ───────────────────────────────────────────────────────────────────
 
 router.get('/folders', (req, res) => {
   try { res.json(listFolders()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.post('/folders', (req, res) => {
   const { name, order } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try { res.status(201).json(createFolder({ name: name.trim(), order })); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 // Find-or-create a folder by name (used by OPML import)
@@ -33,7 +40,7 @@ router.post('/folders/find-or-create', (req, res) => {
     const existing = findFolderByName(name.trim());
     if (existing) return res.json(existing);
     res.status(201).json(createFolder({ name: name.trim() }));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.put('/folders/:id', (req, res) => {
@@ -43,7 +50,7 @@ router.put('/folders/:id', (req, res) => {
     const updated = updateFolderById(id, req.body);
     if (!updated) return res.status(404).json({ error: 'Not found' });
     res.json(updated);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.delete('/folders/:id', (req, res) => {
@@ -56,7 +63,7 @@ router.delete('/folders/:id', (req, res) => {
       removeFolderById(id);
     }
     res.json({ ok: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // ── Feeds ─────────────────────────────────────────────────────────────────────
@@ -65,7 +72,7 @@ router.get('/feeds', (req, res) => {
   try {
     const folderId = req.query.folder_id !== undefined ? Number(req.query.folder_id) : undefined;
     res.json(listFeeds(folderId));
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.get('/feeds/:id', (req, res) => {
@@ -75,7 +82,7 @@ router.get('/feeds/:id', (req, res) => {
     const feed = getFeed(id);
     if (!feed) return res.status(404).json({ error: 'Not found' });
     res.json(feed);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.post('/feeds', (req, res) => {
@@ -84,7 +91,7 @@ router.post('/feeds', (req, res) => {
   try { res.status(201).json(createFeed(req.body)); }
   catch (err) {
     if (err.message === 'Feed already exists') return res.status(409).json({ error: err.message });
-    res.status(500).json({ error: err.message });
+    sendDbError(res, err);
   }
 });
 
@@ -95,14 +102,14 @@ router.put('/feeds/:id', (req, res) => {
     const updated = updateFeed(id, req.body);
     if (!updated) return res.status(404).json({ error: 'Not found' });
     res.json(updated);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.delete('/feeds/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
   try { removeFeed(id); res.json({ ok: true }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 // ── Articles ──────────────────────────────────────────────────────────────────
@@ -111,34 +118,34 @@ router.delete('/feeds/:id', (req, res) => {
 
 router.get('/articles/counts', (req, res) => {
   try { res.json(getCounts()); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.get('/articles/queue-count', (req, res) => {
   try { res.json({ count: getQueueCount() }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.get('/articles/by-ai-status', (req, res) => {
   const { status } = req.query;
   if (!status) return res.status(400).json({ error: 'status is required' });
   try { res.json(getArticlesByAiStatus(status.split(','))); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.get('/articles/unprocessed', (req, res) => {
   const feedId = Number(req.query.feedId);
-  const limit = Number(req.query.limit) || 10;
+  const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 500);
   if (!Number.isInteger(feedId)) return res.status(400).json({ error: 'feedId is required' });
   try { res.json(getUnprocessedForFeed(feedId, limit)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 // Full-text body matches per search term: { tokens: [term], matches: [[ids]] } (aligned by index)
 router.get('/articles/search', (req, res) => {
   const q = String(req.query.q || '').slice(0, 500);
   try { res.json(searchArticleBodies(q)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.get('/articles/by-link', (req, res) => {
@@ -148,13 +155,13 @@ router.get('/articles/by-link', (req, res) => {
     const article = findArticleByLink(url);
     if (!article) return res.status(404).json({ error: 'Not found' });
     res.json(article);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.get('/articles', (req, res) => {
   const { view = 'all', id } = req.query;
   try { res.json(getArticles(view, id ? Number(id) : undefined)); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.get('/articles/:id', (req, res) => {
@@ -164,7 +171,7 @@ router.get('/articles/:id', (req, res) => {
     const article = getArticleById(id);
     if (!article) return res.status(404).json({ error: 'Not found' });
     res.json(article);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 router.post('/articles/bulk-insert', (req, res) => {
@@ -173,7 +180,7 @@ router.post('/articles/bulk-insert', (req, res) => {
     return res.status(400).json({ error: 'feedId and articles[] are required' });
   }
   try { res.status(201).json({ inserted: bulkInsertArticles(feedId, articles) }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.put('/articles/bulk-update', (req, res) => {
@@ -182,12 +189,12 @@ router.put('/articles/bulk-update', (req, res) => {
     return res.status(400).json({ error: 'ids[] is required' });
   }
   try { bulkUpdateArticles(ids, fields); res.json({ ok: true }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.post('/articles/reset-processing', (req, res) => {
   try { resetProcessingToQueued(); res.json({ ok: true }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.put('/articles/:id', (req, res) => {
@@ -197,14 +204,14 @@ router.put('/articles/:id', (req, res) => {
     const updated = updateArticle(id, req.body);
     if (!updated) return res.status(404).json({ error: 'Not found' });
     res.json(updated);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { sendDbError(res, err); }
 });
 
 // ── Misc ──────────────────────────────────────────────────────────────────────
 
 router.delete('/all', (req, res) => {
   try { clearAll(); res.json({ ok: true }); }
-  catch (err) { res.status(500).json({ error: err.message }); }
+  catch (err) { sendDbError(res, err); }
 });
 
 router.get('/db-path', (req, res) => {

@@ -1,3 +1,5 @@
+import { readStoredNumber, writeStored } from './storage.js';
+
 /**
  * Curated popular feeds organized by category for the Add Feed modal.
  */
@@ -335,13 +337,11 @@ export const AUTO_REFRESH_OPTIONS = [
 ];
 
 export function getAutoRefreshMinutes() {
-  const stored = localStorage.getItem('atlas-pulse-auto-refresh');
-  if (stored !== null) return parseInt(stored, 10);
-  return 30; // default
+  return readStoredNumber('atlas-pulse-auto-refresh', 30);
 }
 
 export function saveAutoRefreshMinutes(minutes) {
-  localStorage.setItem('atlas-pulse-auto-refresh', String(minutes));
+  writeStored('atlas-pulse-auto-refresh', minutes);
 }
 
 export const HIGHLIGHT_COLORS = {
