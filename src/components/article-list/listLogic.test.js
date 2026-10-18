@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, articlesToCSV, availableFilters, emptyStateText, viewTitle } from './listLogic.js';
+import { applyFilters, articlesToCSV, availableFilters, chunkRows, emptyStateText, viewTitle } from './listLogic.js';
 
 const analyzed = (id, analysis, extra = {}) => ({ id, aiStatus: 'done', aiAnalysis: JSON.stringify(analysis), ...extra });
 const articles = [
@@ -41,4 +41,12 @@ test('articlesToCSV quotes text fields and escapes quotes', () => {
     () => 'Src, Inc',
   );
   assert.equal(csv, 'Title,Source,Published,URL,Read,Bookmarked\n"Say ""hi""","Src, Inc",2026-10-01T00:00:00.000Z,"https://e.com/a",yes,no');
+});
+
+test('chunkRows groups articles into rows of the column count', () => {
+  const ids = (rows) => rows.map((r) => r.map((a) => a.id));
+  const articles = [1, 2, 3, 4, 5, 6, 7].map((id) => ({ id }));
+  assert.deepEqual(ids(chunkRows(articles, 3)), [[1, 2, 3], [4, 5, 6], [7]]);
+  assert.deepEqual(ids(chunkRows(articles.slice(0, 2), 1)), [[1], [2]]);
+  assert.deepEqual(chunkRows([], 3), []);
 });

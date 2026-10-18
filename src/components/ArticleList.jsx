@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { bulkUpdateArticles } from '../utils/api.js';
 import { useArticleSearch } from '../hooks/useArticleSearch.js';
-import { ArticleCard, EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
+import { EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
 import { FilterBar } from './article-list/FilterBar.jsx';
 import { ListHeader, SearchBar } from './article-list/ListHeader.jsx';
 import { SelectionBar } from './article-list/SelectionBar.jsx';
@@ -12,6 +12,7 @@ import { useArticleListData } from './article-list/useArticleListData.js';
 import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
 import { useSelection } from './article-list/useSelection.js';
+import { VirtualArticleList } from './article-list/VirtualArticleList.jsx';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
 
@@ -70,21 +71,10 @@ function useListActions({ data, selection, visible, sourceOf, onCountChanged, on
   }), [selection, visible, update, selected, sourceOf, onOpenAIPanel, data.articles]);
 }
 
-function ListContent({ loading, articles, empty, viewMode, feedMap, selectedArticleId, selection, onSelectArticle }) {
+function ListContent({ loading, articles, empty, ...listProps }) {
   if (loading) return <LoadingCards />;
   if (articles.length === 0) return <EmptyList {...empty} />;
-  return articles.map((article) => (
-    <ArticleCard
-      key={article.id}
-      viewMode={viewMode}
-      article={article}
-      feed={feedMap[article.feedId]}
-      active={selectedArticleId === article.id}
-      selected={selection.has(article.id)}
-      onSelectArticle={onSelectArticle}
-      onToggleSelect={selection.toggle}
-    />
-  ));
+  return <VirtualArticleList articles={articles} {...listProps} />;
 }
 
 export default function ArticleList({
@@ -97,6 +87,7 @@ export default function ArticleList({
   const [activeFilters, setActiveFilters] = useState({});
   const [aiOnly, setAiOnly] = useState(false);
   const selection = useSelection(`${activeView.type}:${activeView.id}`);
+  const scrollRef = useRef(null);
 
   const sourceOf = useCallback((article) => data.feedMap[article.feedId]?.title, [data.feedMap]);
   const searched = useArticleSearch(data.articles, search.query, sourceOf);
@@ -130,8 +121,9 @@ export default function ArticleList({
       {data.articles.some((a) => a.aiAnalysis) && (
         <FilterBar available={available} active={activeFilters} onChange={setActiveFilters} />
       )}
-      <div className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
+      <div ref={scrollRef} className={`article-list-content${viewMode === 'magazine' ? ' content-grid' : ''}`}>
         <ListContent
+          scrollRef={scrollRef}
           loading={data.loading}
           articles={visible}
           empty={empty}

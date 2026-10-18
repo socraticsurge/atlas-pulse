@@ -72,19 +72,31 @@
 .skeleton-short  { width: 30%; }
 .skeleton-medium { width: 60%; }
 
-/* Grid mode — portrait thumbnail cards */
+/* Only the rows near the viewport are rendered (VirtualArticleList); each row
+   is positioned absolutely inside a spacer as tall as the whole list. */
+.virtual-list {
+  position: relative;
+  width: 100%;
+}
+
+.virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* Grid mode — rows of three portrait thumbnail cards */
 .article-list-content.content-grid {
+  padding: 14px 14px 20px;
+}
+
+.virtual-row.grid-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-auto-rows: 280px;
   gap: 12px;
-  padding: 14px 14px 20px;
-  align-content: start;
-}
-
-/* Empty state spans all columns in grid */
-.content-grid > .empty-state {
-  grid-column: 1 / -1;
+  padding-bottom: 12px;
 }
 
 /* ===== Card Article View ===== */
