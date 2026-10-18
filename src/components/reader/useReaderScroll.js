@@ -4,14 +4,9 @@ import { loadScrollPosition, saveScrollPosition } from './scrollMemory.js';
 
 const SAVE_DELAY_MS = 400;
 
-/**
- * Reading progress (0–100) and per-article scroll position memory. The saved
- * position is restored only once `contentSettled` is true, because full-text
- * extraction can replace a short feed excerpt with a much longer article.
- */
-export function useReaderScroll(contentRef, articleId, isOpen, contentSettled) {
+// Reading progress (0–100) of the scroll container.
+function useReadingProgress(contentRef, articleId, isOpen) {
   const [progress, setProgress] = useState(0);
-  const restoredRef = useRef(null);
   useOnKeyChange(articleId, () => setProgress(0));
 
   useEffect(() => {
@@ -25,27 +20,38 @@ export function useReaderScroll(contentRef, articleId, isOpen, contentSettled) {
     return () => el.removeEventListener('scroll', onScroll);
   }, [contentRef, isOpen, articleId]);
 
-  // A new article starts at the top until its final content is in place.
+  return progress;
+}
+
+// Whether the saved position for this article should be applied now: once,
+// after the content has settled.
+const shouldRestore = (el, articleId, contentSettled, restoredId) =>
+  Boolean(el && articleId && contentSettled) && restoredId !== articleId;
+
+// Starts each article at the top, then restores its saved position once the
+// content has settled, unless the reader already scrolled while it loaded.
+// restoredRef holds the id of the article whose position has been restored.
+function useRestoreScroll(contentRef, articleId, contentSettled, restoredRef) {
   useEffect(() => {
     const el = contentRef.current;
     if (el && articleId) el.scrollTop = 0;
     restoredRef.current = null;
-  }, [contentRef, articleId]);
+  }, [contentRef, articleId, restoredRef]);
 
-  // Restore the saved position once, after the content has settled, unless the
-  // reader already started scrolling while the full text was loading.
   useEffect(() => {
     const el = contentRef.current;
-    if (!el || !articleId || !contentSettled || restoredRef.current === articleId) return;
+    if (!shouldRestore(el, articleId, contentSettled, restoredRef.current)) return;
     restoredRef.current = articleId;
     const saved = loadScrollPosition(articleId);
     if (saved > 0 && el.scrollTop === 0) el.scrollTop = saved;
-  }, [contentRef, articleId, contentSettled]);
+  }, [contentRef, articleId, contentSettled, restoredRef]);
+}
 
-  // Save the position shortly after scrolling stops, and when leaving the
-  // article. Leaving saves the last position seen while reading: by the time
-  // this cleanup runs the next article is already in the DOM, and el.scrollTop
-  // no longer belongs to this one.
+// Saves the position shortly after scrolling stops, and when leaving the
+// article. Leaving saves the last position seen while reading: by the time
+// this cleanup runs the next article is already in the DOM, and el.scrollTop
+// no longer belongs to this one.
+function useSaveScroll(contentRef, articleId, restoredRef) {
   useEffect(() => {
     const el = contentRef.current;
     if (!el || !articleId) return undefined;
@@ -64,7 +70,17 @@ export function useReaderScroll(contentRef, articleId, isOpen, contentSettled) {
       el.removeEventListener('scroll', onScroll);
       save();
     };
-  }, [contentRef, articleId]);
+  }, [contentRef, articleId, restoredRef]);
+}
 
-  return progress;
+/**
+ * Reading progress (0–100) and per-article scroll position memory. The saved
+ * position is restored only once `contentSettled` is true, because full-text
+ * extraction can replace a short feed excerpt with a much longer article.
+ */
+export function useReaderScroll(contentRef, articleId, isOpen, contentSettled) {
+  const restoredRef = useRef(null);
+  useRestoreScroll(contentRef, articleId, contentSettled, restoredRef);
+  useSaveScroll(contentRef, articleId, restoredRef);
+  return useReadingProgress(contentRef, articleId, isOpen);
 }
