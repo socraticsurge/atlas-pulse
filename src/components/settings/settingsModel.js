@@ -10,11 +10,16 @@ export const PRESET_COLORS = [
 ];
 
 export const TEXT_COLORS = [
-  { id: 'default', label: 'Cool',  hex: '#e8eaed' },
-  { id: 'warm',    label: 'Warm',  hex: '#f0ead6' },
-  { id: 'pure',    label: 'Pure',  hex: '#ffffff' },
-  { id: 'soft',    label: 'Soft',  hex: '#b8c0cc' },
+  { id: 'default', label: 'Cool',  hex: '#e8eaed', lightHex: '#1a1d2e' },
+  { id: 'warm',    label: 'Warm',  hex: '#f0ead6', lightHex: '#2e2618' },
+  { id: 'pure',    label: 'Pure',  hex: '#ffffff', lightHex: '#000000' },
+  { id: 'soft',    label: 'Soft',  hex: '#b8c0cc', lightHex: '#4a5068' },
 ];
+
+/** Text color swatches showing the shade each preset has in the given theme. */
+export function textColorsFor(theme) {
+  return theme === 'light' ? TEXT_COLORS.map((c) => ({ ...c, hex: c.lightHex })) : TEXT_COLORS;
+}
 
 export const FONTS = [
   { id: 'sans',     label: 'Inter',        family: 'Inter, sans-serif',                       sample: 'Ag' },

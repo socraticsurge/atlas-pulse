@@ -149,9 +149,13 @@
 }
 
 /* Text color variants */
-[data-text="warm"] { --text-primary: #f0ead6; }
-[data-text="pure"] { --text-primary: #ffffff; }
-[data-text="soft"] { --text-primary: #b8c0cc; }
+[data-theme="dark"][data-text="warm"] { --text-primary: #f0ead6; }
+[data-theme="dark"][data-text="pure"] { --text-primary: #ffffff; }
+[data-theme="dark"][data-text="soft"] { --text-primary: #b8c0cc; }
+/* Light theme versions; they must outrank the [data-theme="light"] block below. */
+[data-theme="light"][data-text="warm"] { --text-primary: #2e2618; }
+[data-theme="light"][data-text="pure"] { --text-primary: #000000; }
+[data-theme="light"][data-text="soft"] { --text-primary: #4a5068; }
 
 /* System font */
 [data-font="system"] {

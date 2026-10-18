@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { HiOutlineMoon, HiOutlineSun } from 'react-icons/hi2';
 import { ColorRow, SettingsGroup } from './Controls.jsx';
-import { FONTS, PRESET_COLORS, TEXT_COLORS } from './settingsModel.js';
+import { FONTS, PRESET_COLORS, textColorsFor } from './settingsModel.js';
 
 function FontPicker({ value, onChange }) {
   return (
@@ -43,7 +43,7 @@ export function AppearanceSection({ theme, onToggleTheme, appFont, onChangeFont,
         <FontPicker value={appFont} onChange={onChangeFont} />
       </div>
       <ColorSetting label="Accent Color" presets={PRESET_COLORS} selected={appColor} customHex={customAccentHex} fallbackHex="#00d4aa" onChange={onChangeColor} customTitle="Custom color" />
-      <ColorSetting label="Text Color" presets={TEXT_COLORS} selected={appTextColor} customHex={customTextColorHex} fallbackHex="#e8eaed" onChange={onChangeTextColor} customTitle="Custom text color" />
+      <ColorSetting label="Text Color" presets={textColorsFor(theme)} selected={appTextColor} customHex={customTextColorHex} fallbackHex={textColorsFor(theme)[0].hex} onChange={onChangeTextColor} customTitle="Custom text color" />
     </SettingsGroup>
   );
 }
