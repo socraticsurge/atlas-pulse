@@ -1,14 +1,9 @@
-import { useCallback, useState } from 'react';
-import AddFeedDialog from './components/add-feed/AddFeedDialog.jsx';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
-import HighlightsScreen from './components/library/HighlightsScreen.jsx';
-import SummariesScreen from './components/library/SummariesScreen.jsx';
-import MultiArticlePanel from './components/multi-article/MultiArticlePanel.jsx';
 import ReaderErrorBoundary from './components/reader/ReaderErrorBoundary.jsx';
 import ReaderPlaceholder from './components/shell/ReaderPlaceholder.jsx';
 import ResizableHandle from './components/shell/ResizableHandle.jsx';
-import SettingsScreen from './components/settings/SettingsScreen.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import { AppearanceProvider } from './app/AppearanceContext.jsx';
 import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
@@ -19,17 +14,35 @@ import { emit } from './lib/appEvents.js';
 import { useSettingsModal } from './app/useSettingsModal.js';
 import { useCommandPalette } from './app/useCommandPalette.js';
 import { usePaletteCommands } from './app/usePaletteCommands.js';
-import CommandPalette from './components/shell/CommandPalette.jsx';
 import { useArticleNavigation, useSummaryCount } from './app/useWorkspace.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 
+// Screens opened now and then load on first use, keeping the startup bundle
+// small (the list, the reader and the AI rail are in it).
+const AddFeedDialog = lazy(() => import('./components/add-feed/AddFeedDialog.jsx'));
+const CommandPalette = lazy(() => import('./components/shell/CommandPalette.jsx'));
+const HighlightsScreen = lazy(() => import('./components/library/HighlightsScreen.jsx'));
+const MultiArticlePanel = lazy(() => import('./components/multi-article/MultiArticlePanel.jsx'));
+const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen.jsx'));
+const SummariesScreen = lazy(() => import('./components/library/SummariesScreen.jsx'));
+
 const LIBRARY_VIEWS = { library: SummariesScreen, highlights: HighlightsScreen };
+
+// Mounts lazy children only once they have been opened, then keeps them
+// mounted (so dialogs keep their state and close animations).
+function OnceOpened({ open, children }) {
+  const [opened, setOpened] = useState(open);
+  if (open && !opened) setOpened(true);
+  return opened ? <Suspense fallback={null}>{children}</Suspense> : null;
+}
 
 // Right-hand panel: the multi-article AI panel, the reader, or nothing.
 function DetailPanel({ multiPanel, onCloseMulti, reader, layout }) {
   if (multiPanel) {
     return (
-      <MultiArticlePanel articles={multiPanel.articles} initialOperation={multiPanel.operation} onClose={onCloseMulti} width={layout.readerWidth} onResize={layout.resizeReader} />
+      <Suspense fallback={<ReaderPlaceholder width={layout.readerWidth} onResize={layout.resizeReader} />}>
+        <MultiArticlePanel articles={multiPanel.articles} initialOperation={multiPanel.operation} onClose={onCloseMulti} width={layout.readerWidth} onResize={layout.resizeReader} />
+      </Suspense>
     );
   }
   if (!reader.article) return <ReaderPlaceholder width={layout.readerWidth} onResize={layout.resizeReader} />;
@@ -99,7 +112,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
       />
       {layout.sidebarMode === 'expanded' && <ResizableHandle onResize={layout.resizeSidebar} />}
 
-      {LibraryScreen ? <LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} /> : (
+      {LibraryScreen ? <Suspense fallback={<div className="flex-1" />}><LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} /></Suspense> : (
         <>
           <ArticleList
             activeView={activeView}
@@ -125,13 +138,15 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         </>
       )}
 
-      <PaletteHost
+      <OnceOpened open={paletteOpen}><PaletteHost
         open={paletteOpen} onOpenChange={setPaletteOpen} articles={visibleArticles}
         onOpenArticle={LibraryScreen ? openFromLibrary : setSelectedArticle}
         commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
-      />
-      <AddFeedDialog isOpen={modal === 'addFeed'} onClose={closeModal} />
-      <SettingsScreen key={settingsSection ?? 'start'} section={settingsSection} isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />
+      /></OnceOpened>
+      <OnceOpened open={modal === 'addFeed'}><AddFeedDialog isOpen={modal === 'addFeed'} onClose={closeModal} /></OnceOpened>
+      <OnceOpened open={modal === 'settings'}>
+        <SettingsScreen key={settingsSection ?? 'start'} section={settingsSection} isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />
+      </OnceOpened>
     </div>
   );
 }
