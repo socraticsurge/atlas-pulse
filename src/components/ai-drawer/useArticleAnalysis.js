@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { patchArticle } from '../../utils/api.js';
 import { analysisMessages, collectResponse } from '../../ai/tasks.js';
 import { parseAnalysis } from '../../ai/parse.js';
-import { useStreamRun } from '../../hooks/useStreamRun.js';
+import { useStreamRun, whileCurrent } from '../../hooks/useStreamRun.js';
 import { useArticleFieldSync } from './useArticleFieldSync.js';
 
 function parseStoredAnalysis(raw) {
@@ -12,6 +12,16 @@ function parseStoredAnalysis(raw) {
   } catch {
     return null;
   }
+}
+
+// Runs the analysis and stores it on the article; resolves to the parsed
+// result, or null when the run was stopped or superseded.
+async function analyzeArticle(model, article, extractedContent, signal) {
+  const response = await collectResponse(model, analysisMessages(article, extractedContent), signal);
+  if (signal.aborted) return null;
+  const parsed = parseAnalysis(response);
+  await patchArticle(article.id, { aiAnalysis: JSON.stringify(parsed) }).catch(() => {});
+  return parsed;
 }
 
 /** Analysis tab state: on-demand classification and batch results. */
@@ -42,17 +52,9 @@ export function useArticleAnalysis({ article, extractedContent, model }) {
     setAnalyzing(true);
     setError(null);
     const signal = streamRun.start();
-    try {
-      const response = await collectResponse(model, analysisMessages(article, extractedContent), signal);
-      if (signal.aborted) return; // stopped, or the article changed
-      const parsed = parseAnalysis(response);
-      setAnalysis(parsed);
-      await patchArticle(article.id, { aiAnalysis: JSON.stringify(parsed) }).catch(() => {});
-    } catch (err) {
-      if (!signal.aborted) setError(err.message);
-    } finally {
-      if (!signal.aborted) setAnalyzing(false);
-    }
+    await analyzeArticle(model, article, extractedContent, signal)
+      .then(whileCurrent(signal, setAnalysis), whileCurrent(signal, (err) => setError(err.message)));
+    whileCurrent(signal, setAnalyzing)(false);
   }, [article, extractedContent, model, analyzing, streamRun]);
 
   const stop = useCallback(() => {

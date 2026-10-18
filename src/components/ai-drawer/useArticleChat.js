@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { getAISettings } from '../../utils/aiSettings.js';
 import { chatMessages, streamTokens } from '../../ai/tasks.js';
-import { useStreamRun } from '../../hooks/useStreamRun.js';
+import { useStreamRun, whileCurrent } from '../../hooks/useStreamRun.js';
 import { useTokenBuffer } from '../../hooks/useTokenBuffer.js';
 
 const MAX_CHAT_MESSAGES = 40; // ~20 exchanges
@@ -54,9 +54,8 @@ export function useArticleChat({ article, extractedContent, model }) {
     tokens.reset();
     const signal = streamRun.start();
     const prompt = chatMessages(article, extractedContent, getAISettings(), history);
-    const push = (token) => { if (!signal.aborted) tokens.push(token); };
-    await streamTokens(model, prompt, push, signal).then(tokens.flush, fail);
-    if (!signal.aborted) setLoading(false);
+    await streamTokens(model, prompt, whileCurrent(signal, tokens.push), signal).then(tokens.flush, fail);
+    whileCurrent(signal, setLoading)(false);
   }, [input, messages, model, loading, article, extractedContent, tokens, fail, streamRun]);
 
   const stop = useCallback(() => {

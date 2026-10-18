@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+/** Wraps fn so it does nothing once `signal` is aborted (stopped, or superseded). */
+export function whileCurrent(signal, fn) {
+  return (...args) => {
+    if (!signal.aborted) fn(...args);
+  };
+}
+
 /**
  * One AI generation at a time. start() aborts any previous run and returns the
  * new run's AbortSignal; cancel() aborts the current run (Stop, or the article

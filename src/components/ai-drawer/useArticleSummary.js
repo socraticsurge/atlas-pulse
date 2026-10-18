@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { saveSummary } from '../../utils/api.js';
 import { getAISettings } from '../../utils/aiSettings.js';
 import { streamTokens, summaryMessages } from '../../ai/tasks.js';
-import { useStreamRun } from '../../hooks/useStreamRun.js';
+import { useStreamRun, whileCurrent } from '../../hooks/useStreamRun.js';
 import { useArticleFieldSync } from './useArticleFieldSync.js';
 
 const orNull = (fields) => Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, v || null]));
@@ -61,9 +61,9 @@ function useSummaryGeneration({ article, extractedContent, model, onArticleChang
     setError(null);
     const signal = streamRun.start();
     const messages = summaryMessages(article, extractedContent, getAISettings());
-    const append = (token) => { if (!signal.aborted) appendToken(token); };
-    await streamTokens(model, messages, append, signal).catch((err) => { if (!signal.aborted) setError(err.message); });
-    if (!signal.aborted) setSummarizing(false);
+    const showError = whileCurrent(signal, (err) => setError(err.message));
+    await streamTokens(model, messages, whileCurrent(signal, appendToken), signal).catch(showError);
+    whileCurrent(signal, setSummarizing)(false);
   }, [article, extractedContent, model, summarizing, appendToken, streamRun]);
 
   const stop = useCallback(() => {
