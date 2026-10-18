@@ -33,20 +33,26 @@ function DetailPanel({ multiPanel, onCloseMulti, reader, layout }) {
   );
 }
 
-function useBatchTrigger(triggerBatch) {
+function useBatchActions(batch) {
   const showToast = useToast();
-  return useCallback(async () => {
-    const count = await triggerBatch();
-    if (count > 0) showToast(`Queued ${count} article${count !== 1 ? 's' : ''} for AI analysis`);
+  const trigger = useCallback(async () => {
+    const { queued, reason } = await batch.triggerBatch();
+    if (reason === 'no-model') showToast('No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.', 'error');
+    else if (queued > 0) showToast(`Analyzing ${queued} recent article${queued !== 1 ? 's' : ''}`);
     else showToast('All recent articles are already analyzed', 'error');
-  }, [triggerBatch, showToast]);
+  }, [batch, showToast]);
+  const clear = useCallback(async () => {
+    const cleared = await batch.clearQueue();
+    showToast(`Cleared ${cleared} article${cleared !== 1 ? 's' : ''} from the AI queue`);
+  }, [batch, showToast]);
+  return { trigger, clear };
 }
 
 function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArticle }) {
   const library = useLibrary();
   const layout = useLayout();
   const batch = useAIBatchProcessor();
-  const onTriggerBatch = useBatchTrigger(batch.triggerBatch);
+  const batchActions = useBatchActions(batch);
   const [visibleArticles, setVisibleArticles] = useState([]);
   const [modal, setModal] = useState(null); // 'addFeed' | 'settings' | null
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
@@ -80,9 +86,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
             onArticlesLoaded={setVisibleArticles}
             sidebarHidden={layout.sidebarMode === 'hidden'}
             onShowSidebar={layout.toggleSidebarMode}
-            batchProgress={batch.progress}
-            batchQueuedCount={batch.queuedCount}
-            onTriggerBatch={onTriggerBatch}
+            batch={{ status: batch.status, pauseReason: batch.pauseReason, queuedCount: batch.queuedCount, onTrigger: batchActions.trigger, onClear: batchActions.clear }}
             onOpenAIPanel={(articles, operation) => { setMultiPanel({ articles, operation }); setSelectedArticle(null); }}
             refreshKey={library.articlesRefreshKey}
             onCountChanged={library.bumpCounts}

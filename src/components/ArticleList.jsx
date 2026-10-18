@@ -79,7 +79,7 @@ function ListContent({ loading, articles, empty, ...listProps }) {
 
 export default function ArticleList({
   activeView, selectedArticleId, onSelectArticle, onArticlesLoaded, sidebarHidden = false, onShowSidebar,
-  batchProgress, batchQueuedCount = 0, onTriggerBatch, onOpenAIPanel, refreshKey = 0, onCountChanged,
+  batch, onOpenAIPanel, refreshKey = 0, onCountChanged,
 }) {
   const data = useArticleListData(activeView, refreshKey);
   const [viewMode, setViewMode] = useViewMode();
@@ -112,7 +112,7 @@ export default function ArticleList({
         onViewModeChange={setViewMode}
         aiOnly={aiOnly}
         onToggleAiOnly={() => setAiOnly((v) => !v)}
-        batch={{ running: batchProgress?.running, queuedCount: batchQueuedCount, onTrigger: onTriggerBatch }}
+        batch={batch}
         search={search}
         unreadCount={unreadCount}
         markAllRead={markAllRead}

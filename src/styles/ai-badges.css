@@ -62,4 +62,12 @@
   background: var(--accent-muted);
   border: 1px solid var(--accent-border);
   white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.batch-running-indicator.paused {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border-color: var(--border);
 }

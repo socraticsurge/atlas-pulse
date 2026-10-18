@@ -8,12 +8,16 @@ import { getBatchSettings } from '../utils/batchSettings.js';
 import { batchMessages, collectResponse } from '../ai/tasks.js';
 import { parseBatchResult } from '../ai/parse.js';
 import {
-  IDLE_PROGRESS, batchUpdates, newestFirst, pickBatchModel, progressAfter, progressStarted,
+  IDLE_PROGRESS, batchStatus, batchUpdates, newestFirst, pickBatchModel, progressAfter, progressStarted,
 } from '../ai/batch.js';
 import { usePolling } from './usePolling.js';
 
+// Delay before the next article; much longer after the server was unreachable.
+const NEXT_DELAY_MS = { done: 50, failed: 50, unavailable: 5000 };
+
 // Runs the newest queued article through the model and saves the result.
-// Resolves to 'done', 'failed', or 'empty' when nothing is queued.
+// Resolves to 'done', 'failed', 'empty' when nothing is queued, or
+// 'unavailable' when the queue couldn't even be read (server unreachable).
 async function processNext({ model, features, onStart, shouldStop }) {
   let articleId = null;
   try {
@@ -27,14 +31,15 @@ async function processNext({ model, features, onStart, shouldStop }) {
     await patchArticle(articleId, batchUpdates(parseBatchResult(response), features));
     return 'done';
   } catch (err) {
+    if (!articleId) return 'unavailable';
     console.error('[Batch AI] Error processing article', articleId, err);
-    if (articleId) await patchArticle(articleId, { aiStatus: 'error' }).catch(() => {});
+    await patchArticle(articleId, { aiStatus: 'error' }).catch(() => {});
     return 'failed';
   }
 }
 
 /** Queues the newest unprocessed (or failed) articles; resolves to how many. */
-async function triggerBatch() {
+async function queueRecent() {
   const limit = getBatchSettings().maxPerCycle || 10;
   const picked = newestFirst(await fetchArticlesByAiStatus(['none', 'error'])).slice(0, limit);
   if (picked.length === 0) return 0;
@@ -42,11 +47,18 @@ async function triggerBatch() {
   return picked.length;
 }
 
+/** Returns every queued article to unprocessed; resolves to how many. */
+async function dequeueAll() {
+  const queued = await fetchArticlesByAiStatus('queued');
+  if (queued.length > 0) await bulkUpdateArticles(queued.map((a) => a.id), { aiStatus: 'none' });
+  return queued.length;
+}
+
 function useQueueCount() {
   const [count, setCount] = useState(0);
   const load = useCallback(() => fetchQueueCount().then(setCount).catch(() => {}), []);
   usePolling(load, 3000);
-  return count;
+  return [count, load];
 }
 
 function useAvailableModels() {
@@ -66,8 +78,22 @@ function useMountedRef() {
   return mounted;
 }
 
-// Processes queued articles one after another until the queue drains.
-function useBatchRunner(availableModels) {
+// The model to process with, or '' when nothing should run: background
+// processing is off and no manual run is active, or no model is available.
+function runnableModel(settings, manualRun, availableModels) {
+  const allowed = settings.enabled || manualRun;
+  return allowed ? pickBatchModel(settings.model, availableModels) : '';
+}
+
+// Continues the chain after an outcome, unless the hook has unmounted.
+function scheduleNext(runRef, mountedRef, outcome) {
+  if (mountedRef.current) setTimeout(() => runRef.current?.(), NEXT_DELAY_MS[outcome]);
+}
+
+// Processes queued articles one after another until the queue drains. It runs
+// while background processing is enabled, or during a manual run (manualRef),
+// which ends when the queue is empty.
+function useBatchRunner(availableModels, manualRef, endManualRun) {
   const [progress, setProgress] = useState(IDLE_PROGRESS);
   const mountedRef = useMountedRef();
   const busyRef = useRef(false);
@@ -76,9 +102,9 @@ function useBatchRunner(availableModels) {
 
   const run = useCallback(async () => {
     const settings = getBatchSettings();
-    const model = pickBatchModel(settings.model, availableModels);
+    const model = runnableModel(settings, manualRef.current, availableModels);
+    if (!model) return;
     if (busyRef.current || !mountedRef.current) return;
-    if (!settings.enabled || !model) return;
     busyRef.current = true;
     const outcome = await processNext({
       model,
@@ -88,21 +114,36 @@ function useBatchRunner(availableModels) {
     });
     busyRef.current = false;
     setProgress((p) => progressAfter(p, outcome));
-    if (outcome !== 'empty' && mountedRef.current) setTimeout(() => runRef.current?.(), 50);
-  }, [availableModels, mountedRef]);
+    if (outcome === 'empty') endManualRun();
+    else scheduleNext(runRef, mountedRef, outcome);
+  }, [availableModels, mountedRef, manualRef, endManualRun]);
 
   useEffect(() => { runRef.current = run; }, [run]);
   return { progress, run };
 }
 
+// A manual run lets the runner work with background processing disabled, until
+// the queue drains. Kept in a ref for the runner and in state for rendering.
+function useManualRun() {
+  const ref = useRef(false);
+  const [active, setActive] = useState(false);
+  const set = useCallback((on) => { ref.current = on; setActive(on); }, []);
+  const start = useCallback(() => set(true), [set]);
+  const end = useCallback(() => set(false), [set]);
+  return { ref, active, start, end };
+}
+
 /**
- * Background AI processing: works through articles with aiStatus 'queued'
- * one at a time, newest first, while batch processing is enabled.
+ * AI processing of queued articles (aiStatus 'queued'), one at a time, newest
+ * first. Runs in the background while batch processing is enabled; the ✨
+ * button starts a one-off manual run. `status` says whether the queue is
+ * actually being worked on ('running') or stuck ('paused', with `reason`).
  */
 export function useAIBatchProcessor() {
-  const queuedCount = useQueueCount();
+  const [queuedCount, reloadCount] = useQueueCount();
   const availableModels = useAvailableModels();
-  const { progress, run } = useBatchRunner(availableModels);
+  const manual = useManualRun();
+  const { progress, run } = useBatchRunner(availableModels, manual.ref, manual.end);
 
   // Articles left in 'processing' by a previous session go back to the queue.
   useEffect(() => { resetProcessingArticles().catch(() => {}); }, []);
@@ -117,5 +158,27 @@ export function useAIBatchProcessor() {
     [progress, queuedCount],
   );
 
-  return { progress: shown, queuedCount, triggerBatch, availableModels };
+  // Resolves to { queued, reason }: reason 'no-model' when nothing could run it.
+  const triggerBatch = useCallback(async () => {
+    if (availableModels?.length === 0) return { queued: 0, reason: 'no-model' };
+    const queued = await queueRecent();
+    if (queued > 0) {
+      manual.start();
+      reloadCount();
+    }
+    return { queued, reason: null };
+  }, [availableModels, manual, reloadCount]);
+
+  const clearQueue = useCallback(async () => {
+    const cleared = await dequeueAll();
+    manual.end();
+    reloadCount();
+    return cleared;
+  }, [manual, reloadCount]);
+
+  const { status, reason } = batchStatus({
+    queuedCount, enabled: getBatchSettings().enabled, manualRun: manual.active, models: availableModels,
+  });
+
+  return { progress: shown, queuedCount, status, pauseReason: reason, triggerBatch, clearQueue, availableModels };
 }

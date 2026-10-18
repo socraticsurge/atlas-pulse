@@ -1,8 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  IDLE_PROGRESS, batchUpdates, newestFirst, parseScope, pickBatchModel, progressAfter, progressStarted,
-} from './batch.js';
+import { batchStatus, batchUpdates, IDLE_PROGRESS, newestFirst, parseScope, pickBatchModel, progressAfter, progressStarted } from './batch.js';
 
 const models = [{ name: 'gemini-nano' }, { name: 'llama3.2' }];
 
@@ -49,4 +47,20 @@ test('progress tracks started, done, failed, and drained', () => {
   p = progressAfter(p, 'failed');
   assert.deepEqual(p, { total: 3, done: 1, failed: 1, running: true });
   assert.deepEqual(progressAfter(p, 'empty'), { ...p, running: false });
+});
+
+test('batchStatus pauses a queue that nothing will process, and says why', () => {
+  const models = [{ name: 'gemini-nano' }];
+  assert.deepEqual(batchStatus({ queuedCount: 0, enabled: false, manualRun: false, models }), { status: 'idle', reason: null });
+  assert.deepEqual(batchStatus({ queuedCount: 40, enabled: false, manualRun: false, models }), { status: 'paused', reason: 'off' });
+  assert.deepEqual(batchStatus({ queuedCount: 40, enabled: false, manualRun: true, models }), { status: 'running', reason: null });
+  assert.deepEqual(batchStatus({ queuedCount: 5, enabled: true, manualRun: false, models }), { status: 'running', reason: null });
+  assert.deepEqual(batchStatus({ queuedCount: 5, enabled: true, manualRun: false, models: [] }), { status: 'paused', reason: 'no-model' });
+  // Models still loading: don't flash "paused".
+  assert.deepEqual(batchStatus({ queuedCount: 5, enabled: true, manualRun: false, models: null }), { status: 'running', reason: null });
+});
+
+test('progressAfter leaves progress unchanged when the server was unreachable', () => {
+  const p = { total: 5, done: 2, failed: 1, running: true };
+  assert.deepEqual(progressAfter(p, 'unavailable'), p);
 });

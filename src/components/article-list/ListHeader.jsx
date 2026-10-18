@@ -1,7 +1,8 @@
 import {
   HiOutlineBars3, HiOutlineCheckCircle, HiOutlineDocumentText, HiOutlineMagnifyingGlass,
-  HiOutlineQueueList, HiOutlineRectangleStack, HiOutlineSparkles, HiOutlineXMark,
+  HiOutlinePause, HiOutlineQueueList, HiOutlineRectangleStack, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
+import { useConfirmAction } from '../../hooks/useConfirmAction.js';
 
 const VIEW_MODES = [
   { id: 'magazine', label: 'Grid', title: 'Grid view — portrait thumbnail cards', Icon: HiOutlineRectangleStack },
@@ -22,18 +23,30 @@ function ViewModeToggle({ viewMode, onChange }) {
   );
 }
 
-function BatchControl({ running, queuedCount, onTrigger }) {
-  if (running || queuedCount > 0) {
+const PAUSE_REASONS = {
+  off: 'background AI processing is off (Settings → AI Processing)',
+  'no-model': 'no AI model is available',
+};
+
+// The AI queue: a ✨ button when empty; otherwise its count, running or paused.
+// Clicking the count (twice, to confirm) clears the queue.
+function BatchControl({ status, pauseReason, queuedCount, onTrigger, onClear }) {
+  const clear = useConfirmAction(onClear);
+  if (status === 'idle') {
     return (
-      <div className="batch-running-indicator" title={`AI analyzing · ${queuedCount} remaining`}>
-        <span className="spinner" style={{ width: 12, height: 12, flexShrink: 0 }} />
-        <span>{queuedCount}</span>
-      </div>
+      <button className="btn btn-ghost btn-icon btn-sm" onClick={onTrigger} title="Run AI analysis on recent articles">
+        <HiOutlineSparkles />
+      </button>
     );
   }
+  const paused = status === 'paused';
+  const title = paused
+    ? `${queuedCount} queued, paused: ${PAUSE_REASONS[pauseReason]}. Click to clear the queue.`
+    : `AI analyzing · ${queuedCount} remaining. Click to stop and clear the queue.`;
   return (
-    <button className="btn btn-ghost btn-icon btn-sm" onClick={onTrigger} title="Run AI analysis on recent articles">
-      <HiOutlineSparkles />
+    <button type="button" className={`batch-running-indicator${paused ? ' paused' : ''}`} onClick={clear.trigger} title={title}>
+      {paused ? <HiOutlinePause style={{ flexShrink: 0 }} /> : <span className="spinner" style={{ width: 12, height: 12, flexShrink: 0 }} />}
+      <span>{clear.armed ? `Clear ${queuedCount}?` : queuedCount}</span>
     </button>
   );
 }
@@ -79,7 +92,7 @@ export function ListHeader({ title, count, sidebar, viewMode, onViewModeChange, 
           <HiOutlineSparkles />
           <span className="view-toggle-label">AI</span>
         </button>
-        <BatchControl running={batch.running} queuedCount={batch.queuedCount} onTrigger={batch.onTrigger} />
+        <BatchControl {...batch} />
         <button className={`btn btn-ghost btn-icon btn-sm ${search.visible ? 'active' : ''}`} onClick={search.toggle} title="Search articles">
           <HiOutlineMagnifyingGlass />
         </button>
