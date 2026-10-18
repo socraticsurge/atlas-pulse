@@ -183,6 +183,10 @@ export async function fetchQueueCount() {
   const { count } = await readerFetch('/articles/queue-count');
   return count;
 }
+/** Claims the newest queued article for this tab: { article, queued } or { article: null }. */
+export async function claimNextQueued() {
+  return readerFetch('/articles/claim-next', { method: 'POST' });
+}
 export async function resetProcessingArticles() {
   return readerFetch('/articles/reset-processing', { method: 'POST' });
 }
