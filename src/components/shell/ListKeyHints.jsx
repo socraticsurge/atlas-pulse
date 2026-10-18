@@ -1,4 +1,5 @@
 const HINTS = [
+  ['⌘K', 'commands'],
   ['j/k', 'next'],
   ['o', 'original'],
   ['b', 'save'],
