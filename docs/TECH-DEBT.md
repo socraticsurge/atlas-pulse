@@ -45,6 +45,7 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - The saved theme and colors are applied before first paint, so a light theme no longer flashes dark on load.
 - Removed unused assets (`hero.png`, `vite.svg`, `icons.svg`).
 - Fonts are self-hosted with Fontsource instead of loaded from Google Fonts, and the app and reader share one font list (`src/app/fonts.js`).
+- The reader toolbar fits at every reader width: below 680px the buttons drop their labels (tooltips stay), and below 480px the article counter hides.
 
 ### Still open
 
@@ -55,7 +56,6 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - **Scroll restore.** The reader restores scroll position before full-text extraction finishes. When the extracted text is longer than the feed's version, the restored position can land in the wrong place. Positions are remembered only for the current session.
 - **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
 - **Favicons load from Google.** `getFaviconUrl` in `src/utils/helpers.js` points every feed icon at `www.google.com/s2/favicons`, so Google sees the domain of every subscribed feed on each load. Fetch and cache favicons on the server instead.
-- **Reader toolbar overflows.** With the AI panel open, the last toolbar button is cut off ("Ope…" in `docs/screenshots/03-ai-dark.png`).
 - **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 
 ## 1. File-level Code Health (CodeScene)

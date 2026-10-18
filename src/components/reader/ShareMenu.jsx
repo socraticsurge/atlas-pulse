@@ -25,7 +25,7 @@ export default function ShareMenu({ link, title }) {
   return (
     <div className="share-popover-anchor" ref={ref}>
       <button className={`btn btn-ghost btn-sm ${open ? 'active' : ''}`} onClick={() => setOpen((s) => !s)} title="Share">
-        <HiOutlineArrowUpOnSquare /> Share
+        <HiOutlineArrowUpOnSquare /><span className="toolbar-label"> Share</span>
       </button>
       {open && (
         <div className="share-popover">

@@ -28,8 +28,8 @@ function ExtractionStatus({ extraction }) {
       </span>
     );
   }
-  if (extraction.content) return <span className="reader-status extracted">✓ Full article</span>;
-  if (extraction.error) return <span className="reader-status error">Feed content only</span>;
+  if (extraction.content) return <span className="reader-status extracted" title="Full article">✓<span className="toolbar-label"> Full article</span></span>;
+  if (extraction.error) return <span className="reader-status error" title="Feed content only">!<span className="toolbar-label"> Feed content only</span></span>;
   return null;
 }
 
@@ -62,7 +62,7 @@ export default function ReaderToolbar({ article, live, extraction, nav, zen, ai,
 
       <div className="reader-toolbar-right">
         <button className={`btn btn-ghost btn-sm ${ai.open ? 'active' : ''}`} onClick={ai.toggle} title="AI Assistant — summary & chat">
-          <HiOutlineSparkles /> AI
+          <HiOutlineSparkles /><span className="toolbar-label"> AI</span>
         </button>
         <button className={`btn btn-ghost btn-icon ${zen.on ? 'active' : ''}`} onClick={zen.toggle} title={zen.on ? 'Exit focus mode (f)' : 'Focus mode (f)'}>
           {zen.on ? <HiOutlineArrowsPointingIn /> : <HiOutlineArrowsPointingOut />}
@@ -70,7 +70,7 @@ export default function ReaderToolbar({ article, live, extraction, nav, zen, ai,
         <ReaderSettings settings={settings.value} onSettingsChange={settings.onChange} />
         <ShareMenu link={article.link} title={article.title} />
         <a href={article.link} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm" title="Open in new tab (o)">
-          <HiOutlineArrowTopRightOnSquare /> Open
+          <HiOutlineArrowTopRightOnSquare /><span className="toolbar-label"> Open</span>
         </a>
       </div>
     </div>
