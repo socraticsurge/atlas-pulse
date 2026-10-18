@@ -82,6 +82,17 @@ function DrawerBody({ ai, tab, setTab, article, summary, analysis, chat, highlig
   );
 }
 
+// The closed rail: a thin strip that keeps the way back in view.
+function RailStrip({ onOpen }) {
+  return (
+    <div className="ai-rail-strip">
+      <button className="btn btn-ghost btn-icon" onClick={onOpen} title="Open AI rail (a)" aria-label="Open AI rail">
+        <HiOutlineSparkles />
+      </button>
+    </div>
+  );
+}
+
 /**
  * AI side rail beside the open article: Summary, Analysis, Chat, Highlights.
  * Resizable from its left edge. Tab state lives in hooks here (not in the
@@ -95,7 +106,7 @@ export default function AIDrawer({ isOpen, onClose, width, onResize, article, ex
   const analysis = useArticleAnalysis({ article, extractedContent, model });
   const chat = useArticleChat({ article, extractedContent, model });
 
-  if (!isOpen) return null;
+  if (!isOpen) return <RailStrip onOpen={onClose} />;
   const showSetup = ai.checked && !ai.ready;
 
   return (

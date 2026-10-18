@@ -125,7 +125,7 @@
 /* ===== Compact Article View ===== */
 .article-card-compact {
   display: grid;
-  grid-template-columns: 14px 160px 1fr 18px auto;
+  grid-template-columns: 14px minmax(0, 120px) 1fr 18px auto;
   align-items: center;
   gap: 12px;
   padding: 8px 16px 8px 20px;
@@ -214,6 +214,7 @@
 }
 
 .compact-time {
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;

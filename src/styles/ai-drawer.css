@@ -19,6 +19,22 @@
   left: 0;
 }
 
+/* The closed rail: a narrow strip with the button that reopens it. */
+.ai-rail-strip {
+  flex: 0 0 44px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 6px;
+  border-left: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.ai-rail-strip .btn {
+  color: var(--accent);
+}
+
 /* ── Header ─────────────────────────────────────────────────── */
 .ai-drawer-header {
   display: flex;
