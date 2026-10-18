@@ -62,15 +62,18 @@ export function lastJSONObject(raw, accept) {
   return null;
 }
 
+// Value used for each analysis field the model left out or left empty.
+const ANALYSIS_DEFAULTS = {
+  sentiment: 'neutral',
+  urgency: 'evergreen',
+  frame: 'analytical',
+  tone: 'analytical',
+  depth: 'standard',
+};
+
 function normalizeAnalysis(p) {
-  return {
-    sentiment: p.sentiment || 'neutral',
-    urgency:   p.urgency   || 'evergreen',
-    frame:     p.frame     || 'analytical',
-    tone:      p.tone      || 'analytical',
-    depth:     p.depth     || 'standard',
-    topics:    Array.isArray(p.topics) ? p.topics.slice(0, 5) : [],
-  };
+  const fields = Object.fromEntries(Object.entries(ANALYSIS_DEFAULTS).map(([key, fallback]) => [key, p[key] || fallback]));
+  return { ...fields, topics: Array.isArray(p.topics) ? p.topics.slice(0, 5) : [] };
 }
 
 /** Parses ANALYSIS_PROMPT output. */
