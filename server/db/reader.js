@@ -428,3 +428,23 @@ export function clearAll() {
     stmts.clearFolders.run();
   })();
 }
+
+// ── Favicon cache ─────────────────────────────────────────────────────────────
+
+const faviconStmts = {
+  get: db.prepare('SELECT type, body, fetched_at FROM favicons WHERE host = ?'),
+  put: db.prepare(
+    `INSERT INTO favicons (host, type, body, fetched_at) VALUES (@host, @type, @body, @fetchedAt)
+     ON CONFLICT(host) DO UPDATE SET type = excluded.type, body = excluded.body, fetched_at = excluded.fetched_at`
+  ),
+};
+
+/** The cached icon for a host: { type, body, fetchedAt }, type null when the site has none. */
+export function getCachedFavicon(host) {
+  const row = faviconStmts.get.get(host);
+  return row && { type: row.type, body: row.body, fetchedAt: row.fetched_at };
+}
+
+export function saveCachedFavicon(host, icon) {
+  faviconStmts.put.run({ host, type: icon?.type ?? null, body: icon?.body ?? null, fetchedAt: new Date().toISOString() });
+}

@@ -1,5 +1,6 @@
 import { HiOutlineCheck, HiOutlineMagnifyingGlass, HiOutlineNewspaper, HiOutlineSparkles } from 'react-icons/hi2';
 import { stripHtml, timeAgo } from '../../utils/helpers.js';
+import FeedFavicon from '../FeedFavicon.jsx';
 
 function SelectButton({ selected, onToggle, className }) {
   return (
@@ -14,9 +15,7 @@ function SelectButton({ selected, onToggle, className }) {
 }
 
 function SourceIcon({ feed, imgClass, iconClass }) {
-  return feed?.favicon
-    ? <img className={imgClass} src={feed.favicon} alt="" />
-    : <span className={iconClass}><HiOutlineNewspaper /></span>;
+  return <FeedFavicon src={feed?.favicon} imgClass={imgClass} iconClass={iconClass} />;
 }
 
 const hideOnError = (e) => { e.target.style.display = 'none'; };

@@ -95,4 +95,25 @@ export const MIGRATIONS = [
       }
     },
   },
+  {
+    version: 4,
+    description: "Favicon cache table; point stored favicons at the local /api/favicon route instead of Google's favicon service",
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE favicons (
+          host       TEXT PRIMARY KEY,
+          type       TEXT,
+          body       BLOB,
+          fetched_at TEXT NOT NULL
+        )
+      `);
+      for (const table of ['feeds', 'articles']) {
+        db.exec(`
+          UPDATE ${table}
+          SET favicon = '/api/favicon/' || replace(replace(favicon, 'https://www.google.com/s2/favicons?domain=', ''), '&sz=32', '')
+          WHERE favicon LIKE 'https://www.google.com/s2/favicons?domain=%'
+        `);
+      }
+    },
+  },
 ];
