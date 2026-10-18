@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { bulkUpdateArticles } from '../utils/api.js';
+import { useLibrary } from '../app/LibraryContext.jsx';
+import { useToast } from '../app/ToastContext.jsx';
 import { useArticleSearch } from '../hooks/useArticleSearch.js';
 import { EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
 import { FilterBar } from './article-list/FilterBar.jsx';
@@ -49,16 +51,49 @@ function useNotifyVisible(articles, onArticlesLoaded) {
   }, [articles, onArticlesLoaded]);
 }
 
+// The current values of `keys` for the articles in `ids`.
+function snapshot(articles, ids, keys) {
+  const idSet = new Set(ids);
+  return articles
+    .filter((a) => idSet.has(a.id))
+    .map((a) => Object.fromEntries([['id', a.id], ...keys.map((k) => [k, a[k]])]));
+}
+
+// The view's current name (a feed or folder may have been renamed since it was opened).
+function useLiveViewTitle(activeView) {
+  const { feeds, folders } = useLibrary();
+  const source = activeView.type === 'feed' ? feeds : folders;
+  const item = source.find((x) => x.id === activeView.id);
+  return viewTitle({ ...activeView, name: item?.title ?? item?.name ?? activeView.name });
+}
+
+// Applies read/bookmark changes made in the reader to the matching row.
+function useReaderChanges(changedArticle, updateLocal) {
+  useEffect(() => {
+    if (changedArticle) {
+      updateLocal([changedArticle.id], { isRead: changedArticle.isRead, isBookmarked: changedArticle.isBookmarked });
+    }
+  }, [changedArticle, updateLocal]);
+}
+
 // Bulk actions on the selection and on the whole list.
 function useListActions({ data, selection, visible, sourceOf, onCountChanged, onOpenAIPanel }) {
   const selected = useCallback(() => visible.filter((a) => selection.has(a.id)), [visible, selection]);
 
+  const showToast = useToast();
+  // Optimistic: shown at once, and put back if the server rejects it.
   const update = useCallback(async (ids, changes) => {
     if (ids.length === 0) return;
+    const before = snapshot(data.articles, ids, Object.keys(changes));
     data.updateLocal(ids, changes);
-    await bulkUpdateArticles(ids, changes);
-    onCountChanged?.();
-  }, [data, onCountChanged]);
+    try {
+      await bulkUpdateArticles(ids, changes);
+      onCountChanged?.();
+    } catch (err) {
+      data.restoreLocal(before);
+      showToast(`Couldn't update articles: ${err.message}`, 'error');
+    }
+  }, [data, onCountChanged, showToast]);
 
   return useMemo(() => ({
     clear: selection.clear,
@@ -79,9 +114,12 @@ function ListContent({ loading, articles, empty, ...listProps }) {
 
 export default function ArticleList({
   activeView, selectedArticleId, onSelectArticle, onArticlesLoaded, sidebarHidden = false, onShowSidebar,
-  batch, onOpenAIPanel, refreshKey = 0, onCountChanged,
+  batch, onOpenAIPanel, refreshKey = 0, onCountChanged, changedArticle,
 }) {
-  const data = useArticleListData(activeView, refreshKey);
+  const library = useLibrary();
+  const data = useArticleListData(activeView, refreshKey, library.feeds);
+  useReaderChanges(changedArticle, data.updateLocal);
+  const title = useLiveViewTitle(activeView);
   const [viewMode, setViewMode] = useViewMode();
   const [search, searchInputRef] = useSearchState();
   const [activeFilters, setActiveFilters] = useState({});
@@ -105,7 +143,7 @@ export default function ArticleList({
   return (
     <div className={`article-list-panel${selection.size > 0 ? ' has-fab' : ''}`}>
       <ListHeader
-        title={viewTitle(activeView)}
+        title={title}
         count={visible.length}
         sidebar={{ hidden: sidebarHidden, onShow: onShowSidebar }}
         viewMode={viewMode}

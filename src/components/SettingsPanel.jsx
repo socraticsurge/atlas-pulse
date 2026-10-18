@@ -40,7 +40,7 @@ export default function SettingsPanel({ isOpen, onClose, availableModels = [] })
           <AIProcessingSection availableModels={availableModels || []} />
           <DataSection feeds={library.feeds} folders={library.folders} onImportOPML={library.importFeedsFromOPML} onShowToast={showToast} onClose={onClose} />
           <About />
-          <DangerZone onClose={onClose} />
+          <DangerZone onClearAll={library.onClearAll} onClose={onClose} />
         </div>
       </div>
     </div>

@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { HiOutlineArrowDownTray, HiOutlineArrowUpTray, HiOutlineTrash } from 'react-icons/hi2';
-import { clearAllData } from '../../utils/api.js';
 import { generateOPML, parseOPML } from '../../utils/opml.js';
 import { useConfirmAction } from '../../hooks/useConfirmAction.js';
 import { SettingsGroup } from './Controls.jsx';
@@ -72,9 +71,9 @@ export function DataSection({ feeds, folders, onImportOPML, onShowToast, onClose
 }
 
 /** Two-click "Clear All Data". */
-export function DangerZone({ onClose }) {
+export function DangerZone({ onClearAll, onClose }) {
   const confirm = useConfirmAction(async () => {
-    await clearAllData();
+    await onClearAll();
     onClose();
   }, 3000);
   return (
