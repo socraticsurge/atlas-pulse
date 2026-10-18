@@ -1,11 +1,8 @@
 import { useState } from 'react';
-import {
-  HiOutlineArrowPath, HiOutlineBars3, HiOutlineCog6Tooth, HiOutlineFolderPlus, HiOutlineMagnifyingGlass, HiOutlinePlus,
-} from 'react-icons/hi2';
+import { HiOutlineChevronDoubleLeft, HiOutlineFolderPlus, HiOutlineMagnifyingGlass, HiOutlinePlus } from 'react-icons/hi2';
 import { emit } from '../../lib/appEvents.js';
 import { ContextMenu } from './ContextMenu.jsx';
 import { FolderTree } from './FolderTree.jsx';
-import { ThemeButton } from './IconSidebar.jsx';
 import { isActive, NAV_ITEMS } from './sidebarModel.js';
 
 function NewFolderInput({ onAdd, onCancel }) {
@@ -43,19 +40,15 @@ function MainNav({ activeView, onViewChange, counts }) {
   );
 }
 
+// Wordmark and the hide button; theme, settings and refresh live in the app rail.
 function SidebarHeader({ actions }) {
   return (
     <div className="sidebar-header">
-      <button className="btn btn-ghost btn-icon sidebar-toggle-btn" onClick={actions.onToggleMode} title="Collapse sidebar">
-        <HiOutlineBars3 />
-      </button>
       <div className="sidebar-logo">
-        <img src="/atlas-pulse-icon.svg" alt="Atlas Pulse" className="sidebar-logo-img" />
         <h1>Atlas Pulse</h1>
       </div>
       <div className="sidebar-header-actions">
-        <ThemeButton theme={actions.theme} onToggle={actions.onToggleTheme} />
-        <button className="btn btn-ghost btn-icon" onClick={actions.onSettings} title="Settings"><HiOutlineCog6Tooth /></button>
+        <button className="btn btn-ghost btn-icon" onClick={actions.onToggleMode} title="Hide sidebar ([)"><HiOutlineChevronDoubleLeft /></button>
       </div>
     </div>
   );
@@ -82,7 +75,7 @@ function useFolderTreeState(actions) {
   };
 }
 
-/** Full sidebar: header, the ⌘K bar and Add Feed, navigation, folders and feeds, refresh. */
+/** Full sidebar: header, the ⌘K bar and Add Feed, navigation, folders and feeds. */
 export function ExpandedSidebar({ style, activeView, onViewChange, counts, folders, feeds, grouped, actions }) {
   const [addingFolder, setAddingFolder] = useState(false);
   const tree = { ...useFolderTreeState(actions), activeView, onViewChange };
@@ -112,11 +105,6 @@ export function ExpandedSidebar({ style, activeView, onViewChange, counts, folde
           <FolderTree folders={folders} grouped={grouped} counts={counts} tree={tree} />
         </div>
       </nav>
-      <div className="sidebar-footer">
-        <button className="btn btn-ghost btn-icon" onClick={actions.onRefreshAll} disabled={actions.refreshing} title="Refresh all feeds">
-          <HiOutlineArrowPath className={actions.refreshing ? 'spinning' : ''} />
-        </button>
-      </div>
       <ContextMenu
         menu={tree.menu}
         feeds={feeds}
