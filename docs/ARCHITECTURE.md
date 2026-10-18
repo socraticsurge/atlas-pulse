@@ -61,7 +61,7 @@ There are three SQLite databases in `data/` (or in `ATLAS_DATA_DIR` if set):
 
 | File | Tables | Schema version |
 |---|---|---|
-| `reader.db` | feeds, folders, articles, `articles_fts` | 3 |
+| `reader.db` | feeds, folders, articles, `articles_fts` | 4 |
 | `summaries.db` | summaries | 1 |
 | `highlights.db` | highlights | 1 |
 

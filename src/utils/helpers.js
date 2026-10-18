@@ -84,13 +84,14 @@ export function stripHtml(html, maxLength = 160) {
 }
 
 /**
- * Generate a favicon URL from a website URL.
+ * Favicon URL for a website, served and cached by our own server
+ * (GET /api/favicon/:host) so no third party learns which sites are followed.
  */
 export function getFaviconUrl(siteUrl) {
   if (!siteUrl) return '';
   try {
     const url = new URL(siteUrl);
-    return `https://www.google.com/s2/favicons?domain=${url.hostname}&sz=32`;
+    return `/api/favicon/${url.hostname}`;
   } catch {
     return '';
   }

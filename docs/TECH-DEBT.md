@@ -46,6 +46,7 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - Removed unused assets (`hero.png`, `vite.svg`, `icons.svg`).
 - Fonts are self-hosted with Fontsource instead of loaded from Google Fonts, and the app and reader share one font list (`src/app/fonts.js`).
 - The reader toolbar fits at every reader width: below 680px the buttons drop their labels (tooltips stay), and below 480px the article counter hides.
+- Favicons are fetched and cached by the local server (`GET /api/favicon/:host`, cached in `data/favicons/`) instead of Google's favicon service. Sites that block automated requests (Ars Technica and OpenAI at the time of writing) show the generic feed icon.
 
 ### Still open
 
@@ -55,7 +56,6 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - **Highlights spanning element boundaries.** `applyHighlights` matches text inside a single text node. A highlight that crosses a link or other inline element is saved but not redrawn when the article is reopened.
 - **Scroll restore.** The reader restores scroll position before full-text extraction finishes. When the extracted text is longer than the feed's version, the restored position can land in the wrong place. Positions are remembered only for the current session.
 - **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
-- **Favicons load from Google.** `getFaviconUrl` in `src/utils/helpers.js` points every feed icon at `www.google.com/s2/favicons`, so Google sees the domain of every subscribed feed on each load. Fetch and cache favicons on the server instead.
 - **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 
 ## 1. File-level Code Health (CodeScene)

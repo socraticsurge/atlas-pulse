@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { HiChevronRight, HiOutlineEllipsisHorizontal, HiOutlineFolderOpen, HiOutlineNewspaper } from 'react-icons/hi2';
+import FeedFavicon from '../FeedFavicon.jsx';
 import { folderUnread, isActive } from './sidebarModel.js';
 
 // Opens the context menu at the pointer (right-click or the "…" button).
@@ -17,7 +18,7 @@ function FeedRow({ feed, unread, active, onViewChange, openMenu }) {
       onClick={() => onViewChange({ type: 'feed', id: feed.id, name: feed.title })}
       onContextMenu={open}
     >
-      {feed.favicon ? <img className="feed-favicon" src={feed.favicon} alt="" /> : <span className="nav-icon"><HiOutlineNewspaper /></span>}
+      <FeedFavicon src={feed.favicon} imgClass="feed-favicon" iconClass="nav-icon" />
       <span className="nav-label">{feed.title}</span>
       {unread > 0 && <span className="badge">{unread}</span>}
       <button className="nav-item-menu-btn" title="Feed options" onClick={open}><HiOutlineEllipsisHorizontal /></button>

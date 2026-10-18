@@ -2,6 +2,7 @@ import {
   HiOutlineArrowPath, HiOutlineBars3, HiOutlineCog6Tooth, HiOutlineFolderOpen, HiOutlineMoon,
   HiOutlineNewspaper, HiOutlinePlus, HiOutlineSun,
 } from 'react-icons/hi2';
+import FeedFavicon from '../FeedFavicon.jsx';
 import { capBadge, folderUnread, isActive, NAV_ITEMS } from './sidebarModel.js';
 
 function IconItem({ active, title, onClick, count, children }) {
@@ -14,9 +15,7 @@ function IconItem({ active, title, onClick, count, children }) {
 }
 
 function FeedIcon({ feed }) {
-  return feed.favicon
-    ? <img src={feed.favicon} alt="" style={{ width: 16, height: 16, borderRadius: 3 }} />
-    : <HiOutlineNewspaper />;
+  return <FeedFavicon src={feed.favicon} style={{ width: 16, height: 16, borderRadius: 3 }} />;
 }
 
 /** Collapsed (icon-only) sidebar. */
