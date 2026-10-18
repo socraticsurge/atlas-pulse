@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import OllamaSetup from './OllamaSetup.jsx';
-import { isNanoModel } from '../utils/chromeAI.js';
 
 /**
  * Shown in the AI drawer when no engine is available: explains how to get
@@ -26,53 +25,5 @@ export function NoAIEngine({ onReady }) {
         </div>
       </div>
     </div>
-  );
-}
-
-function NanoStatus({ available }) {
-  if (!available) {
-    return (
-      <span className="settings-sublabel">
-        Not available in this browser. Needs desktop Google Chrome 148+.
-      </span>
-    );
-  }
-  return (
-    <div className="ollama-ready-status">
-      <span className="ollama-ready-dot" />
-      <span>Built into Chrome · runs on your device</span>
-    </div>
-  );
-}
-
-/**
- * Settings rows for the two AI engines: Gemini Nano (default) and Ollama
- * (optional — only checked once the user opens it).
- */
-export function AIEngineSettings({ availableModels }) {
-  const [showOllama, setShowOllama] = useState(false);
-  const nanoAvailable = Boolean(availableModels?.some((m) => isNanoModel(m.name)));
-
-  return (
-    <>
-      <div className="settings-row settings-row-col">
-        <label>Gemini Nano</label>
-        <NanoStatus available={nanoAvailable} />
-      </div>
-
-      <div className="settings-row settings-row-col">
-        <label>
-          Ollama
-          <span className="settings-sublabel"> — optional, for larger local models</span>
-        </label>
-        {showOllama
-          ? <OllamaSetup compact showReady />
-          : (
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowOllama(true)}>
-              Set up Ollama
-            </button>
-          )}
-      </div>
-    </>
   );
 }

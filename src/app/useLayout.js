@@ -21,6 +21,16 @@ export function usePersistedWidth(key, { fallback, min, max, direction = 1 }) {
   return [width, resize];
 }
 
+// A remembered choice among string values.
+export function usePersistedChoice(key, fallback) {
+  const [value, setValue] = useState(() => readStored(key, fallback));
+  const choose = useCallback((next) => {
+    writeStored(key, next);
+    setValue(next);
+  }, [key]);
+  return [value, choose];
+}
+
 // A remembered on/off switch.
 export function usePersistedToggle(key, fallback = false) {
   const [on, setOn] = useState(() => readStored(key, String(fallback)) === 'true');

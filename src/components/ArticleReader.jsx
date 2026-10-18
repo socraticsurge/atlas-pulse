@@ -39,6 +39,13 @@ function useSlideIn(isOpen) {
   return visible;
 }
 
+// Reader typography; Settings changes it too (via an app event).
+function useReaderSettingsState() {
+  const [settings, setSettings] = useState(getReaderSettings);
+  useEffect(() => on('reader-settings', setSettings), []);
+  return [settings, setSettings];
+}
+
 // Best available content: extracted full text, else the feed's own HTML.
 function useArticleContent(current, extractedContent) {
   const feedHtml = current?.content || current?.summary || '';
@@ -64,9 +71,8 @@ export default function ArticleReader({
   article, isOpen, isModalOpen, onClose, onNavigate, hasNext, hasPrev, currentIndex, totalCount,
   width, onResize, onSummarySaved, onArticleChanged,
 }) {
-  const [readerSettings, setReaderSettings] = useState(getReaderSettings);
+  const [readerSettings, setReaderSettings] = useReaderSettingsState();
   const rail = useAIRail();
-  useEffect(() => on('toggle-ai', rail.toggle), [rail.toggle]); // from the command palette
   const contentRef = useRef(null);
 
   const { id: articleId, link, feedId } = article || {};

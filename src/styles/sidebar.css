@@ -359,3 +359,16 @@
   display: flex;
   align-items: center;
 }
+
+/* New-folder input */
+.inline-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+}
+
+.inline-input-wrapper .input {
+  padding: 4px 8px;
+  font-size: 13px;
+}
