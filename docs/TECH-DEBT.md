@@ -51,10 +51,11 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - Large feeds refresh: the client sends new articles in chunks of about 1 MB, and the bulk-insert route accepts up to 8 MB so a single very long article still fits. (Moving the whole refresh to the server would remove the round trip entirely.)
 - Highlights that cross a link, emphasis or a paragraph break are redrawn when the article is reopened: the text is matched across text nodes, ignoring whitespace, and each node gets its own `<mark>`.
 - The reader restores your scroll position after full-text extraction settles, instead of before it (when a short feed excerpt clamped it), and remembers positions across sessions (the last 300 articles, in `localStorage`).
+- The article list renders only the rows near the viewport (`@tanstack/react-virtual`). On a 9,998-article library in development mode: opening All Articles went from 1.8 s to 0.16 s, ticking a checkbox from 0.72 s to 15 ms, and the page from 85,726 DOM elements to 441. Search, filters and select-all are unchanged because the data stays in memory. Reader navigation (j/k) now keeps the active article in view.
 
 ### Still open
 
-- **Article list paging.** The list still loads every article (7.8 MB on a 9,500-article library). This needs a paginated endpoint and incremental loading in `ArticleList`.
+- **Article list payload.** The list endpoint still returns every article (8.2 MB for 9,998 articles). On localhost it downloads and parses in about 0.2 s, so it no longer limits speed now that rendering is virtualized. Paging it means moving search and the AI filters to the server, which fits best with adopting TanStack Query for data fetching.
 - **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
 - **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 

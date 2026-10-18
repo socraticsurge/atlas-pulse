@@ -84,3 +84,10 @@ export function downloadCSV(csv, filename) {
   document.body.removeChild(el);
   URL.revokeObjectURL(url);
 }
+
+/** Groups articles into rows of `columns` (the last row may be shorter). */
+export function chunkRows(articles, columns) {
+  const rows = [];
+  for (let i = 0; i < articles.length; i += columns) rows.push(articles.slice(i, i + columns));
+  return rows;
+}
