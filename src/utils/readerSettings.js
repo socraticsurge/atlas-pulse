@@ -15,7 +15,7 @@ export const CONTENT_WIDTHS = [
 export const READER_SETTINGS_STORAGE_KEY = 'atlas-pulse-reader-settings';
 
 export const DEFAULT_READER_SETTINGS = {
-  fontFamily: 'sans',
+  fontFamily: 'newsreader',
   fontSize: 16,
   lineHeight: 'normal',
   contentWidth: 'normal',

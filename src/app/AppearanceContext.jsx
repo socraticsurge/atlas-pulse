@@ -54,9 +54,9 @@ function useColorChoice(presetKey, presetFallback, hexKey, hexFallback) {
 
 function useAppearanceState() {
   const [theme, setTheme] = useState(() => stored('atlas-pulse-theme', readStored('feedflow-theme') || 'dark'));
-  const [appFont, setAppFont] = useState(() => fontById(stored('atlas-pulse-font', 'sans')).id);
-  const accent = useColorChoice('atlas-pulse-color', 'emerald', 'atlas-pulse-custom-color', '#00d4aa');
-  const text = useColorChoice('atlas-pulse-text', 'default', 'atlas-pulse-custom-text', '#e8eaed');
+  const [appFont, setAppFont] = useState(() => fontById(stored('atlas-pulse-font', 'plex')).id);
+  const accent = useColorChoice('atlas-pulse-color', 'amber', 'atlas-pulse-custom-color', '#e8a33d');
+  const text = useColorChoice('atlas-pulse-text', 'default', 'atlas-pulse-custom-text', '#e8e6e1');
 
   useEffect(() => {
     const root = document.documentElement;

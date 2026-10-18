@@ -85,7 +85,7 @@ mark[data-highlight-id]:hover { filter: brightness(0.92); }
   align-items: center;
   justify-content: center;
   background: var(--accent);
-  color: #0f1117;
+  color: var(--accent-foreground);
   font-size: 9px;
   font-weight: 700;
   min-width: 15px;

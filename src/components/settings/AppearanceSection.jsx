@@ -43,7 +43,7 @@ export function AppearanceSection({ theme, onToggleTheme, appFont, onChangeFont,
         <label>Font</label>
         <FontPicker value={appFont} onChange={onChangeFont} />
       </div>
-      <ColorSetting label="Accent Color" presets={PRESET_COLORS} selected={appColor} customHex={customAccentHex} fallbackHex="#00d4aa" onChange={onChangeColor} customTitle="Custom color" />
+      <ColorSetting label="Accent Color" presets={PRESET_COLORS} selected={appColor} customHex={customAccentHex} fallbackHex="#e8a33d" onChange={onChangeColor} customTitle="Custom color" />
       <ColorSetting label="Text Color" presets={textColorsFor(theme)} selected={appTextColor} customHex={customTextColorHex} fallbackHex={textColorsFor(theme)[0].hex} onChange={onChangeTextColor} customTitle="Custom text color" />
     </SettingsGroup>
   );

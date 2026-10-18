@@ -1,19 +1,19 @@
 // Options and pure helpers for the Settings panel.
 
 export const PRESET_COLORS = [
-  { id: 'emerald', hex: '#00d4aa', label: 'Emerald' },
-  { id: 'blue',    hex: '#3b82f6', label: 'Blue' },
-  { id: 'purple',  hex: '#a855f7', label: 'Purple' },
-  { id: 'orange',  hex: '#f97316', label: 'Orange' },
-  { id: 'rose',    hex: '#f43f5e', label: 'Rose' },
-  { id: 'amber',   hex: '#f59e0b', label: 'Amber' },
+  { id: 'amber',   hex: '#e8a33d', label: 'Amber' },
+  { id: 'emerald', hex: '#2bc4a0', label: 'Emerald' },
+  { id: 'blue',    hex: '#5b9cf2', label: 'Blue' },
+  { id: 'purple',  hex: '#a88bf5', label: 'Purple' },
+  { id: 'orange',  hex: '#f08a4b', label: 'Orange' },
+  { id: 'rose',    hex: '#ef6b82', label: 'Rose' },
 ];
 
 export const TEXT_COLORS = [
-  { id: 'default', label: 'Cool',  hex: '#e8eaed', lightHex: '#1a1d2e' },
+  { id: 'default', label: 'Default', hex: '#e8e6e1', lightHex: '#1c1b19' },
   { id: 'warm',    label: 'Warm',  hex: '#f0ead6', lightHex: '#2e2618' },
   { id: 'pure',    label: 'Pure',  hex: '#ffffff', lightHex: '#000000' },
-  { id: 'soft',    label: 'Soft',  hex: '#b8c0cc', lightHex: '#4a5068' },
+  { id: 'soft',    label: 'Soft',  hex: '#c9c6bf', lightHex: '#4d4a44' },
 ];
 
 /** Text color swatches showing the shade each preset has in the given theme. */

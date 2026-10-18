@@ -111,7 +111,7 @@
   top: 1px;
   right: 1px;
   background: var(--accent);
-  color: #0f1117;
+  color: var(--accent-foreground);
   font-size: 8px;
   font-weight: 700;
   border-radius: 10px;
@@ -240,7 +240,7 @@
 
 .nav-item .badge {
   background: var(--accent);
-  color: #0f1117;
+  color: var(--accent-foreground);
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;
