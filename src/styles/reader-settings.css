@@ -131,15 +131,22 @@
 
 /* ── Zen / focus mode ─────────────────────────────────────── */
 .article-reader-panel.zen {
+  position: fixed;
+  inset: 0;
   width: 100vw !important;
-  left: 0;
+  max-width: none;
+  z-index: 110;
   border-left: none;
+  transform: none;
 }
 
 .reader-overlay-backdrop.zen {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
   background: var(--bg-primary);
   opacity: 1;
-  backdrop-filter: none;
 }
 
 /* ── Share popover ────────────────────────────────────────── */

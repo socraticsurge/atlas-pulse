@@ -62,7 +62,7 @@ function MarkAllReadButton({ unreadCount, confirm }) {
   }
   return (
     <button className="btn btn-ghost btn-sm" onClick={confirm.trigger} title="Mark all as read">
-      <HiOutlineCheckCircle /> Mark all read
+      <HiOutlineCheckCircle /><span className="view-toggle-label"> Mark all read</span>
     </button>
   );
 }
