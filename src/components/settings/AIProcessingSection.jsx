@@ -21,6 +21,9 @@ function ModelSelect({ models, value, onChange }) {
       <select className="settings-select" value={value || ''} onChange={(e) => onChange(e.target.value)}>
         <option value="">Auto (first available)</option>
         {models.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+        {value && !models.some((m) => m.name === value) && (
+          <option value={value}>{value} (not available, using Auto)</option>
+        )}
       </select>
     </div>
   );

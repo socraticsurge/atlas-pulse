@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { pipeBody, setStreamHeaders } from '../utils/stream.js';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
+import { existsSync } from 'fs';
 import rateLimit from 'express-rate-limit';
 
 const execAsync = promisify(exec);
@@ -18,19 +19,35 @@ const processLimiter = rateLimit({
   message: { error: 'Too many requests, please slow down.' },
 });
 
-async function isOllamaInstalled() {
+// Common install locations, for when the server's PATH (a launchd service,
+// say) doesn't include the one Ollama was installed to.
+const OLLAMA_PATHS = ['/opt/homebrew/bin/ollama', '/usr/local/bin/ollama', '/usr/bin/ollama'];
+
+/** Absolute path of the ollama binary, or null when it isn't installed. */
+async function findOllama() {
   try {
-    await execAsync('which ollama');
-    return true;
-  } catch {
-    // Try common install paths on macOS
-    try {
-      await execAsync('test -f /usr/local/bin/ollama || test -f /opt/homebrew/bin/ollama || test -f /usr/bin/ollama');
-      return true;
-    } catch {
-      return false;
-    }
-  }
+    const { stdout } = await execAsync('which ollama');
+    if (stdout.trim()) return stdout.trim();
+  } catch { /* not on PATH */ }
+  return OLLAMA_PATHS.find((p) => existsSync(p)) ?? null;
+}
+
+async function isOllamaInstalled() {
+  return (await findOllama()) !== null;
+}
+
+// Starts `ollama serve` detached. Resolves once the process has started;
+// rejects if it can't (a spawn failure is an 'error' event, which would
+// otherwise crash the server).
+export function spawnOllama(binary) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(binary, ['serve'], { detached: true, stdio: 'ignore' });
+    child.once('error', reject);
+    child.once('spawn', () => {
+      child.unref();
+      resolve();
+    });
+  });
 }
 
 async function getOllamaStatus() {
@@ -71,16 +88,14 @@ router.get('/status', async (req, res) => {
  * POST /api/ollama/start
  * Spawns `ollama serve` as a detached background process.
  */
-router.post('/start', processLimiter, (req, res) => {
+router.post('/start', processLimiter, async (req, res) => {
+  const binary = await findOllama();
+  if (!binary) return res.status(404).json({ error: 'Ollama is not installed' });
   try {
-    const child = spawn('ollama', ['serve'], {
-      detached: true,
-      stdio: 'ignore',
-    });
-    child.unref();
+    await spawnOllama(binary);
     res.json({ started: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: `Could not start Ollama: ${err.message}` });
   }
 });
 

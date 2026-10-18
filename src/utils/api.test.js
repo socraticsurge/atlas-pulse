@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { streamChat, fetchAIModels, parseFeed, patchFeed } from './api.js';
+import { streamChat, fetchAIModels, parseFeed, patchFeed, streamModelPull } from './api.js';
 
 const realFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = realFetch; });
@@ -60,4 +60,14 @@ test('reader requests send JSON with the right method and path', async () => {
   assert.equal(call.method, 'PUT');
   assert.equal(call.headers['Content-Type'], 'application/json');
   assert.equal(call.body, '{"title":"T"}');
+});
+
+test('a model pull that Ollama reports as failed throws instead of ending quietly', async () => {
+  globalThis.fetch = async () => streamedResponse([
+    '{"status":"pulling manifest"}\n',
+    '{"error":"pull model manifest: file does not exist"}\n',
+  ]);
+  const seen = [];
+  await assert.rejects(streamModelPull('nope:1b', (p) => seen.push(p.status)), /file does not exist/);
+  assert.deepEqual(seen, ['pulling manifest']);
 });

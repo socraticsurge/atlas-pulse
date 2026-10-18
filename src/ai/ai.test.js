@@ -153,3 +153,13 @@ test('parseBatchResult keeps the summary and accepts summary-only output', () =>
 test('lastJSONObject handles nesting and stray braces', () => {
   assert.deepEqual(lastJSONObject('} {"a":{"b":1}} trailing', () => true), { a: { b: 1 } });
 });
+
+test('JSON extraction survives braces in strings, stray braces in prose, and nesting', () => {
+  assert.equal(parseBatchResult('{"summary":"returns } on error","sentiment":"neutral","topics":["a"]}').summary, 'returns } on error');
+  assert.equal(parseBatchResult('{"summary":"opens { but never closes","sentiment":"negative"}').sentiment, 'negative');
+  assert.equal(parseAnalysis('Let me think {about this. Result:\n{"sentiment":"positive","urgency":"breaking"}').sentiment, 'positive');
+  assert.equal(parseAnalysis('{"analysis":{"sentiment":"negative","frame":"conflict"}}').frame, 'conflict');
+  assert.equal(parseAnalysis('{"summary":"say \\"hi\\" {","sentiment":"neutral"}').sentiment, 'neutral');
+  // Two complete objects: the later one wins.
+  assert.equal(parseAnalysis('{"sentiment":"negative"} then {"sentiment":"positive"}').sentiment, 'positive');
+});
