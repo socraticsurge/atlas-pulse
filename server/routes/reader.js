@@ -159,8 +159,8 @@ router.get('/articles/by-link', (req, res) => {
 });
 
 router.get('/articles', (req, res) => {
-  const { view = 'all', id } = req.query;
-  try { res.json(getArticles(view, id ? Number(id) : undefined)); }
+  const { view = 'all', id, after } = req.query;
+  try { res.json(getArticles(view, id ? Number(id) : undefined, Number(after) || 0)); }
   catch (err) { sendDbError(res, err); }
 });
 

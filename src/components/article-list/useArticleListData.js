@@ -1,21 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fetchArticles } from '../../utils/api.js';
+import { maxArticleId, mergeNewArticles } from './listLogic.js';
 
 /**
- * Articles for the active view (reloaded when the view or refreshKey
- * changes; stale responses ignored), labelled with the library's feeds.
+ * Articles for the active view, labelled with the library's feeds. Reloaded
+ * when the view changes or refreshKey ({ n, kind }) is bumped; stale
+ * responses are ignored. When the bump only added articles (a feed refresh)
+ * and this view is already loaded, just the new ones are fetched and merged.
  * Only a view change shows the loading state: a refresh swaps the new list in
  * place, so the reader keeps their scroll position.
  */
 export function useArticleListData(activeView, refreshKey, feeds) {
   const [articles, setArticles] = useState([]);
   const [loadedView, setLoadedView] = useState(null);
+  const latest = useRef({ articles, loadedView });
+  useEffect(() => { latest.current = { articles, loadedView }; }, [articles, loadedView]);
 
   const viewKey = `${activeView.type}:${activeView.id}`;
   useEffect(() => {
     let cancelled = false;
-    fetchArticles(activeView.type, activeView.id)
-      .then((data) => { if (!cancelled) setArticles(data); })
+    const afterId = refreshKey.kind === 'added' && latest.current.loadedView === viewKey ? maxArticleId(latest.current.articles) : 0;
+    fetchArticles(activeView.type, activeView.id, afterId)
+      .then((data) => { if (!cancelled) setArticles((prev) => (afterId ? mergeNewArticles(prev, data) : data)); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoadedView(viewKey); });
     return () => { cancelled = true; };

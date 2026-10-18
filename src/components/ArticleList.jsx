@@ -21,6 +21,7 @@ import { on } from '../lib/appEvents.js';
 import { cn } from '../lib/utils.js';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
+const INITIAL_REFRESH = { n: 0, kind: 'changed' };
 // Padding of the scroll container per view mode (rows and cards carry their own sides).
 const CONTENT_PADDING = { magazine: 'px-3.5 pt-3.5 pb-5', rows: 'pt-1 pb-3' };
 
@@ -121,7 +122,7 @@ function ListContent({ loading, articles, empty, ...listProps }) {
 
 export default function ArticleList({
   activeView, selectedArticleId, onSelectArticle, onArticlesLoaded,
-  batch, onOpenAIPanel, refreshKey = 0, onCountChanged, changedArticle,
+  batch, onOpenAIPanel, refreshKey = INITIAL_REFRESH, onCountChanged, changedArticle,
 }) {
   const library = useLibrary();
   const data = useArticleListData(activeView, refreshKey, library.feeds);

@@ -146,9 +146,11 @@ export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, j
 export async function removeFeed(id) { return readerFetch(`/feeds/${id}`, { method: 'DELETE' }); }
 
 // Articles
-export async function fetchArticles(view = 'all', id) {
+/** A view's article list; with afterId, only articles added since (ids increase). */
+export async function fetchArticles(view = 'all', id, afterId) {
   const params = new URLSearchParams({ view });
   if (id !== undefined) params.set('id', id);
+  if (afterId) params.set('after', afterId);
   return readerFetch(`/articles?${params}`);
 }
 export async function fetchArticle(id) { return readerFetch(`/articles/${id}`); }

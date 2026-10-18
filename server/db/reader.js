@@ -56,10 +56,13 @@ function toArticle(row) {
   };
 }
 
-// List views omit the heavy content/summary/description columns; clients
-// fetch the full article (GET /articles/:id) when it is opened.
-const LIST_COLUMNS = `id, feed_id, guid, title, link, canonical_link, published_at, is_read,
-  is_bookmarked, author, image_url, ai_status, ai_summary, ai_analysis, favicon, created_at, excerpt`;
+// List views carry only what the list shows: no content/summary/description
+// (clients fetch the full article, GET /articles/:id, when it is opened), no
+// guid/canonical link/created-at/favicon (the list uses the feed's favicon),
+// and the excerpt cut to what a preview line can show.
+export const LIST_EXCERPT_CHARS = 200;
+const LIST_COLUMNS = `id, feed_id, title, link, published_at, is_read, is_bookmarked, author,
+  image_url, ai_status, ai_summary, ai_analysis, substr(excerpt, 1, ${LIST_EXCERPT_CHARS}) AS excerpt`;
 
 function toListItem(row) {
   const { content: _content, summary: _summary, description: _description, ...item } = toArticle(row);
@@ -326,7 +329,16 @@ export function bulkInsertArticles(feedId, items) {
 }
 
 // List view of articles (no full content). view: all | feed | folder | saved | today
-export function getArticles(view, id) {
+/**
+ * The list for a view, newest first. With afterId, only articles added since
+ * (ids are increasing), so a refresh can fetch just what is new.
+ */
+export function getArticles(view, id, afterId) {
+  const rows = viewArticles(view, id);
+  return afterId > 0 ? rows.filter((a) => a.id > afterId) : rows;
+}
+
+function viewArticles(view, id) {
   switch (view) {
     case 'feed':
       return stmts.getArticlesByFeed.all(id).map(toListItem);
