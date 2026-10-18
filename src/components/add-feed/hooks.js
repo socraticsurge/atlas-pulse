@@ -92,7 +92,8 @@ export function useGoogleNews(status) {
 
 /** Which feeds are already added, which is being added, and the add action. */
 export function useFeedAdder({ onAddFeed, existingFeedUrls, folderId, setError }) {
-  const [added, setAdded] = useState(() => new Set(existingFeedUrls || []));
+  // Adds made in this dialog, until the library's feed list catches up.
+  const [addedHere, setAddedHere] = useState(() => new Set());
   const [adding, setAdding] = useState(null);
 
   const add = useCallback(async (feedUrl) => {
@@ -101,7 +102,7 @@ export function useFeedAdder({ onAddFeed, existingFeedUrls, folderId, setError }
     setError('');
     try {
       await onAddFeed(feedUrl, folderId ? parseInt(folderId) : null);
-      setAdded((prev) => new Set([...prev, feedUrl]));
+      setAddedHere((prev) => new Set([...prev, feedUrl]));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -109,5 +110,6 @@ export function useFeedAdder({ onAddFeed, existingFeedUrls, folderId, setError }
     }
   }, [adding, onAddFeed, folderId, setError]);
 
-  return { isAdded: (url) => added.has(url), adding, add };
+  const isAdded = (url) => addedHere.has(url) || Boolean(existingFeedUrls?.includes(url));
+  return { isAdded, adding, add };
 }

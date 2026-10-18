@@ -5,13 +5,20 @@ import { useOnKeyChange } from '../../hooks/useOnKeyChange.js';
 const flip = (flag) => (flag ? 0 : 1);
 
 // The article as stored on the server, reloaded when the article changes.
+// Responses for an article that is no longer open are ignored (fast j/k can
+// reorder them), so one article's copy never lands on another.
 function useServerCopy(articleId) {
-  const [live, setLive] = useState(null);
-  useOnKeyChange(articleId, () => setLive(null));
+  const [live, setLiveRaw] = useState(null);
+  const openIdRef = useRef(articleId);
+  useEffect(() => { openIdRef.current = articleId; }, [articleId]);
+  useOnKeyChange(articleId, () => setLiveRaw(null));
+  const setLive = useCallback((copy) => {
+    if (copy?.id === openIdRef.current) setLiveRaw(copy);
+  }, []);
   useEffect(() => {
     if (!articleId) return;
-    api.fetchArticle(articleId).then(setLive).catch(() => setLive(null));
-  }, [articleId]);
+    api.fetchArticle(articleId).then(setLive).catch(() => {});
+  }, [articleId, setLive]);
   return [live, setLive];
 }
 
@@ -24,7 +31,7 @@ function useMarkReadOnOpen(article, setLive, notify) {
     if (markedReadRef.current === article.id) return;
     markedReadRef.current = article.id;
     api.patchArticle(article.id, { isRead: 1 })
-      .then((updated) => { setLive(updated); notify(); })
+      .then((updated) => { setLive(updated); notify(updated); })
       .catch(() => {});
   }, [article, setLive, notify]);
 }
@@ -36,14 +43,15 @@ function useMarkReadOnOpen(article, setLive, notify) {
 export function useLiveArticle(article, onArticleChanged) {
   const articleId = article?.id;
   const [live, setLive] = useServerCopy(articleId);
-  const notify = useCallback(() => onArticleChanged?.(), [onArticleChanged]);
+  const notify = useCallback((updated) => onArticleChanged?.(updated), [onArticleChanged]);
   useMarkReadOnOpen(article, setLive, notify);
   const current = live || article;
 
   const patch = useCallback(async (changes) => {
     if (!articleId) return;
-    setLive(await api.patchArticle(articleId, changes));
-    notify();
+    const updated = await api.patchArticle(articleId, changes);
+    setLive(updated);
+    notify(updated);
   }, [articleId, setLive, notify]);
 
   const toggleBookmark = useCallback(() => patch({ isBookmarked: flip(current?.isBookmarked) }), [patch, current]);

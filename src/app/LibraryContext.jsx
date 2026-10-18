@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useFeeds } from '../hooks/useFeeds.js';
 import { useFolders } from '../hooks/useFolders.js';
+import * as api from '../utils/api.js';
 import { getAutoRefreshMinutes } from '../utils/constants.js';
 import { useToast } from './ToastContext.jsx';
 
@@ -33,6 +34,44 @@ function useAutoRefresh(feedCount, refreshAllFeeds) {
   return setMinutes;
 }
 
+// Folder deletes and Clear All Data. The server moves or deletes feeds as a
+// side effect, so each reloads the feed list (and Clear All the folders too).
+function useDestructiveActions({
+  feeds, folders, reloadFeeds, reloadFolders, deleteFolderRaw, deleteFolderAndFeedsRaw,
+  bumpArticles, bumpCounts, onViewRemoved, showToast,
+}) {
+  const deleteFolder = useCallback(async (folderId) => {
+    await deleteFolderRaw(folderId);
+    await reloadFeeds();
+    showToast('Folder deleted — feeds moved to Uncategorized');
+    onViewRemoved('folder', folderId);
+  }, [deleteFolderRaw, reloadFeeds, showToast, onViewRemoved]);
+
+  const deleteFolderAndFeeds = useCallback(async (folderId) => {
+    const folder = folders.find((f) => f.id === folderId);
+    const count = feeds.filter((f) => f.folderId === folderId).length;
+    if (!window.confirm(`Delete "${folder?.name || 'this folder'}" and its ${plural(count, 'feed')}? All their articles will be deleted.`)) return;
+    await deleteFolderAndFeedsRaw(folderId);
+    await reloadFeeds();
+    showToast('Folder and all its feeds deleted');
+    bumpArticles();
+    onViewRemoved('folder', folderId);
+  }, [folders, feeds, deleteFolderAndFeedsRaw, reloadFeeds, showToast, bumpArticles, onViewRemoved]);
+
+  // Settings → Danger Zone. Everything is gone, so reload it all and leave
+  // any feed or folder view.
+  const clearAll = useCallback(async () => {
+    await api.clearAllData();
+    await Promise.all([reloadFeeds(), reloadFolders()]);
+    bumpArticles();
+    bumpCounts();
+    onViewRemoved(null);
+    showToast('All feeds, folders and articles deleted');
+  }, [reloadFeeds, reloadFolders, bumpArticles, bumpCounts, onViewRemoved, showToast]);
+
+  return { deleteFolder, deleteFolderAndFeeds, clearAll };
+}
+
 /**
  * Feeds, folders, and the actions on them (with toasts). onViewRemoved(type, id)
  * lets the app leave a view whose feed or folder was just deleted.
@@ -40,7 +79,7 @@ function useAutoRefresh(feedCount, refreshAllFeeds) {
 function useLibraryState(onViewRemoved) {
   const showToast = useToast();
   const { articlesKey, countsKey, bumpArticles, bumpCounts } = useRefreshKeys();
-  const { feeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
+  const { feeds, reloadFeeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
   const { folders, reloadFolders, addFolder, renameFolder, deleteFolder: deleteFolderRaw, deleteFolderAndFeeds: deleteFolderAndFeedsRaw } = useFolders();
   const [refreshing, setRefreshing] = useState(false);
   const setAutoRefreshMinutes = useAutoRefresh(feeds.length, refreshAllFeeds);
@@ -89,18 +128,10 @@ function useLibraryState(onViewRemoved) {
     }
   }, [refreshAllFeeds, showToast]);
 
-  const deleteFolder = useCallback(async (folderId) => {
-    await deleteFolderRaw(folderId);
-    showToast('Folder deleted — feeds moved to Uncategorized');
-    onViewRemoved('folder', folderId);
-  }, [deleteFolderRaw, showToast, onViewRemoved]);
-
-  const deleteFolderAndFeeds = useCallback(async (folderId) => {
-    await deleteFolderAndFeedsRaw(folderId);
-    showToast('Folder and all its feeds deleted');
-    bumpArticles();
-    onViewRemoved('folder', folderId);
-  }, [deleteFolderAndFeedsRaw, showToast, bumpArticles, onViewRemoved]);
+  const { deleteFolder, deleteFolderAndFeeds, clearAll } = useDestructiveActions({
+    feeds, folders, reloadFeeds, reloadFolders, deleteFolderRaw, deleteFolderAndFeedsRaw,
+    bumpArticles, bumpCounts, onViewRemoved, showToast,
+  });
 
   const existingFeedUrls = useMemo(() => feeds.map((f) => f.url), [feeds]);
 
@@ -110,9 +141,9 @@ function useLibraryState(onViewRemoved) {
     setAutoRefreshMinutes, importFeedsFromOPML,
     onAddFeed: addFeed, onRemoveFeed: removeFeed, onMoveFeed: moveFeed, onRefreshAll: refreshAll,
     onAddFolder: addFolder, onRenameFolder: renameFolder,
-    onDeleteFolder: deleteFolder, onDeleteFolderAndFeeds: deleteFolderAndFeeds,
+    onDeleteFolder: deleteFolder, onDeleteFolderAndFeeds: deleteFolderAndFeeds, onClearAll: clearAll,
   }), [feeds, folders, existingFeedUrls, refreshing, articlesKey, countsKey, bumpCounts, setAutoRefreshMinutes,
-    importFeedsFromOPML, addFeed, removeFeed, moveFeed, refreshAll, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds]);
+    importFeedsFromOPML, addFeed, removeFeed, moveFeed, refreshAll, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds, clearAll]);
 }
 
 /** Feeds and folders with their actions, shared by Sidebar, Add Feed, and Settings. */

@@ -112,8 +112,8 @@ const SummaryCard = memo(function SummaryCard({ row, onDelete, onOpenInReader })
 });
 
 /** Saved AI summaries: browse, search, expand, open in reader, delete, export. */
-export default function LibraryView({ onOpenArticle }) {
-  const collection = useLibraryCollection({ fetchRows: fetchSummaries, fetchDbPath: fetchDBPath, deleteRow: deleteSummary, searchFields: SEARCH_FIELDS });
+export default function LibraryView({ onOpenArticle, onChanged }) {
+  const collection = useLibraryCollection({ fetchRows: fetchSummaries, fetchDbPath: fetchDBPath, deleteRow: deleteSummary, searchFields: SEARCH_FIELDS, onChanged });
   const openInReader = useOpenInReader(onOpenArticle);
   return (
     <div className="library-panel">

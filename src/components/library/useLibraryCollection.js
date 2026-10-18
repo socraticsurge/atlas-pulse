@@ -6,7 +6,7 @@ import { filterRows } from './libraryModel.js';
  * A saved collection (summaries, highlights): load with retry, the SQLite
  * file path, search across `searchFields`, and delete.
  */
-export function useLibraryCollection({ fetchRows, fetchDbPath, deleteRow, searchFields }) {
+export function useLibraryCollection({ fetchRows, fetchDbPath, deleteRow, searchFields, onChanged }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,7 +28,8 @@ export function useLibraryCollection({ fetchRows, fetchDbPath, deleteRow, search
   const remove = useCallback(async (id) => {
     await deleteRow(id);
     setRows((prev) => prev.filter((r) => r.id !== id));
-  }, [deleteRow]);
+    onChanged?.();
+  }, [deleteRow, onChanged]);
   const toggleSearch = useCallback(() => { setShowSearch((s) => !s); setSearch(''); }, []);
   const filtered = useMemo(() => filterRows(rows, search, searchFields), [rows, search, searchFields]);
 

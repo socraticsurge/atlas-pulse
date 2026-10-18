@@ -5,13 +5,12 @@ import { createFeed, importNewFeeds, refreshInChunks, refreshOne } from '../util
 // The subscribed feeds, loaded once, plus a helper to swap in an updated one.
 function useFeedList() {
   const [feeds, setFeeds] = useState([]);
-  useEffect(() => {
-    api.fetchFeeds().then(setFeeds).catch(() => {});
-  }, []);
+  const reloadFeeds = useCallback(() => api.fetchFeeds().then(setFeeds).catch(() => {}), []);
+  useEffect(() => { reloadFeeds(); }, [reloadFeeds]);
   const replaceFeed = useCallback((updated) => {
     setFeeds((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
   }, []);
-  return { feeds, setFeeds, replaceFeed };
+  return { feeds, setFeeds, replaceFeed, reloadFeeds };
 }
 
 // Refreshing one feed or all of them; resolves to the number of new articles.
@@ -58,7 +57,7 @@ function useOPMLImport({ feeds, setFeeds, replaceFeed, onDataChanged }) {
 }
 
 export function useFeeds(onDataChanged) {
-  const { feeds, setFeeds, replaceFeed } = useFeedList();
+  const { feeds, setFeeds, replaceFeed, reloadFeeds } = useFeedList();
   const refresh = useFeedRefresh({ feeds, replaceFeed, onDataChanged });
   const importFeedsFromOPML = useOPMLImport({ feeds, setFeeds, replaceFeed, onDataChanged });
 
@@ -80,5 +79,5 @@ export function useFeeds(onDataChanged) {
     replaceFeed(await api.patchFeed(feedId, { folderId }));
   }, [replaceFeed]);
 
-  return { feeds, addFeed, removeFeed, updateFeedFolder, ...refresh, importFeedsFromOPML };
+  return { feeds, reloadFeeds, addFeed, removeFeed, updateFeedFolder, ...refresh, importFeedsFromOPML };
 }

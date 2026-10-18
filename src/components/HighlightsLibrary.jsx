@@ -58,8 +58,8 @@ function HighlightCard({ h, onOpenInReader, onDelete }) {
 }
 
 /** Saved highlights across all articles: search, open, delete, export. */
-export default function HighlightsLibrary({ onOpenArticle }) {
-  const collection = useLibraryCollection({ fetchRows: fetchHighlights, fetchDbPath: fetchHighlightsDBPath, deleteRow: deleteHighlight, searchFields: SEARCH_FIELDS });
+export default function HighlightsLibrary({ onOpenArticle, onChanged }) {
+  const collection = useLibraryCollection({ fetchRows: fetchHighlights, fetchDbPath: fetchHighlightsDBPath, deleteRow: deleteHighlight, searchFields: SEARCH_FIELDS, onChanged });
   const openInReader = useOpenInReader(onOpenArticle);
   const showList = !collection.error && collection.filtered.length > 0;
   return (

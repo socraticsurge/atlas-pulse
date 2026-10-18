@@ -57,6 +57,9 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const [modal, setModal] = useState(null); // 'addFeed' | 'settings' | null
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
   const [summaryCount, refreshSummaryCount] = useSummaryCount(activeView.type);
+  const [changedArticle, setChangedArticle] = useState(null);
+  const onArticleChanged = useCallback((updated) => { library.bumpCounts(); setChangedArticle(updated); }, [library]);
+  const onLibraryChanged = useCallback(() => { refreshSummaryCount(); library.bumpCounts(); }, [refreshSummaryCount, library]);
   const nav = useArticleNavigation(selectedArticle, setSelectedArticle, visibleArticles);
 
   const closeReader = useCallback(() => setSelectedArticle(null), [setSelectedArticle]);
@@ -77,7 +80,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
       />
       {layout.sidebarMode === 'expanded' && <ResizableHandle onResize={layout.resizeSidebar} />}
 
-      {LibraryScreen ? <LibraryScreen onOpenArticle={openFromLibrary} /> : (
+      {LibraryScreen ? <LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} /> : (
         <>
           <ArticleList
             activeView={activeView}
@@ -90,6 +93,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
             onOpenAIPanel={(articles, operation) => { setMultiPanel({ articles, operation }); setSelectedArticle(null); }}
             refreshKey={library.articlesRefreshKey}
             onCountChanged={library.bumpCounts}
+            changedArticle={changedArticle}
           />
           <DetailPanel
             multiPanel={multiPanel}
@@ -105,7 +109,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
               currentIndex: nav.index,
               totalCount: visibleArticles.length,
               onSummarySaved: refreshSummaryCount,
-              onArticleChanged: library.bumpCounts,
+              onArticleChanged,
             }}
           />
         </>
@@ -122,8 +126,9 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
 function AppShell() {
   const [activeView, setActiveView] = useState({ type: 'all' });
   const [selectedArticle, setSelectedArticle] = useState(null);
+  // (type, id) leaves that feed or folder view; (null) leaves any of them.
   const onViewRemoved = useCallback((type, id) => {
-    setActiveView((view) => (view.type === type && view.id === id ? { type: 'all' } : view));
+    setActiveView((view) => (type === null || (view.type === type && view.id === id) ? { type: 'all' } : view));
   }, []);
   return (
     <LibraryProvider onViewRemoved={onViewRemoved}>
