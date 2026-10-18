@@ -29,6 +29,7 @@
 @source "../components/add-feed";
 @source "../components/article-list";
 @source "../components/ArticleList.jsx";
+@source "../components/reader";
 @source "../lib";
 
 /* Dark mode follows the app's own theme attribute, not the OS setting. */

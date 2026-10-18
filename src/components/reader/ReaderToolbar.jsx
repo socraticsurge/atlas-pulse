@@ -3,76 +3,85 @@ import {
   HiOutlineArrowsPointingOut, HiOutlineBookmark, HiOutlineEye, HiOutlineEyeSlash, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
 import { BsBookmarkFill } from 'react-icons/bs';
-import ReaderSettings from '../ReaderSettings.jsx';
+import { IconButton } from '@/components/ui/icon-button';
+import { Spinner } from '@/components/ui/spinner';
+import ReaderSettingsMenu from './ReaderSettingsMenu.jsx';
 import ShareMenu from './ShareMenu.jsx';
 
 function NavControls({ nav }) {
   return (
-    <div className="reader-nav-controls">
-      <button className="btn btn-ghost btn-icon reader-nav-btn" onClick={() => nav.onNavigate(-1)} disabled={!nav.hasPrev} title="Previous article (k / ↑)">
-        <HiOutlineArrowLeft />
-      </button>
-      <span className="reader-nav-counter">{nav.currentIndex + 1} of {nav.totalCount}</span>
-      <button className="btn btn-ghost btn-icon reader-nav-btn" onClick={() => nav.onNavigate(1)} disabled={!nav.hasNext} title="Next article (j / ↓)">
-        <HiOutlineArrowRight />
-      </button>
+    <div className="flex items-center">
+      <IconButton onClick={() => nav.onNavigate(-1)} disabled={!nav.hasPrev} title="Previous article (k / ↑)"><HiOutlineArrowLeft /></IconButton>
+      <span className="min-w-16 text-center font-mono text-[11px] text-muted-foreground @max-[480px]:hidden">{nav.currentIndex + 1} of {nav.totalCount.toLocaleString()}</span>
+      <IconButton onClick={() => nav.onNavigate(1)} disabled={!nav.hasNext} title="Next article (j / ↓)"><HiOutlineArrowRight /></IconButton>
     </div>
   );
 }
 
-function ExtractionStatus({ extraction }) {
-  if (extraction.extracting) {
-    return (
-      <span className="reader-status extracting">
-        <span className="spinner" style={{ width: 12, height: 12 }} /> Loading…
-      </span>
-    );
-  }
-  if (extraction.content) return <span className="reader-status extracted" title="Full article">✓<span className="toolbar-label"> Full article</span></span>;
-  if (extraction.error) return <span className="reader-status error" title="Feed content only">!<span className="toolbar-label"> Feed content only</span></span>;
-  return null;
-}
+const STATUS = {
+  loading: { label: 'Loading', title: 'Fetching the full article…' },
+  full: { label: 'Full article', title: 'Showing the full article' },
+  feed: { label: 'Feed text', title: 'Showing the feed’s text; the full article could not be fetched' },
+};
 
-function ArticleActions({ current, live }) {
+function ExtractionStatus({ extraction }) {
+  let state = null;
+  if (extraction.extracting) state = 'loading';
+  else if (extraction.content) state = 'full';
+  else if (extraction.error) state = 'feed';
+  if (!state) return null;
   return (
-    <>
-      <button className="btn btn-ghost btn-icon" onClick={live.toggleBookmark} title={current.isBookmarked ? 'Remove bookmark (b)' : 'Bookmark (b)'}>
-        {current.isBookmarked ? <BsBookmarkFill style={{ color: 'var(--accent)' }} /> : <HiOutlineBookmark />}
-      </button>
-      <button className="btn btn-ghost btn-icon" onClick={live.toggleRead} title={current.isRead ? 'Mark as unread' : 'Mark as read'}>
-        {current.isRead ? <HiOutlineEyeSlash /> : <HiOutlineEye />}
-      </button>
-    </>
+    <span title={STATUS[state].title} className="ml-1 flex items-center gap-1.5 font-mono text-[10.5px] text-[var(--text-tertiary)] @max-[680px]:hidden">
+      {state === 'loading' && <Spinner className="size-3 border-[1.5px]" />}
+      {STATUS[state].label}
+    </span>
   );
 }
 
-/** Reader toolbar: close/navigation/bookmark/read on the left; AI, focus, settings, share, open on the right. */
-export default function ReaderToolbar({ article, live, extraction, nav, zen, ai, settings }) {
+// Dimmed until pointed at or focused, and fully shown while one of its menus is open.
+const GROUP = 'flex items-center gap-0.5 opacity-60 transition-opacity group-hover/toolbar:opacity-100 group-focus-within/toolbar:opacity-100 has-[[data-open]]:opacity-100';
+
+// Left: close, navigation, bookmark, read, extraction status.
+function ArticleControls({ live, extraction, nav, zen }) {
   const current = live.current;
   return (
-    <div className="reader-toolbar">
-      <div className="reader-toolbar-left">
-        <button className="btn btn-ghost btn-icon" onClick={zen.on ? zen.exit : nav.onClose} title={zen.on ? 'Exit focus mode (Esc)' : 'Close reader (Esc)'}>
-          <HiOutlineXMark />
-        </button>
-        {!zen.on && <NavControls nav={nav} />}
-        <ArticleActions current={current} live={live} />
-        <ExtractionStatus extraction={extraction} />
-      </div>
+    <div className={GROUP}>
+      <IconButton onClick={zen.on ? zen.exit : nav.onClose} title={zen.on ? 'Exit focus mode (Esc)' : 'Close reader (Esc)'}><HiOutlineXMark /></IconButton>
+      {!zen.on && <NavControls nav={nav} />}
+      <IconButton active={current.isBookmarked} onClick={live.toggleBookmark} title={current.isBookmarked ? 'Remove bookmark (b)' : 'Bookmark (b)'}>
+        {current.isBookmarked ? <BsBookmarkFill className="text-primary" /> : <HiOutlineBookmark />}
+      </IconButton>
+      <IconButton onClick={live.toggleRead} title={current.isRead ? 'Mark as unread' : 'Mark as read'}>
+        {current.isRead ? <HiOutlineEyeSlash /> : <HiOutlineEye />}
+      </IconButton>
+      <ExtractionStatus extraction={extraction} />
+    </div>
+  );
+}
 
-      <div className="reader-toolbar-right">
-        <button className={`btn btn-ghost btn-sm ${ai.open ? 'active' : ''}`} onClick={ai.toggle} title="AI Assistant — summary & chat">
-          <HiOutlineSparkles /><span className="toolbar-label"> AI</span>
-        </button>
-        <button className={`btn btn-ghost btn-icon ${zen.on ? 'active' : ''}`} onClick={zen.toggle} title={zen.on ? 'Exit focus mode (f)' : 'Focus mode (f)'}>
-          {zen.on ? <HiOutlineArrowsPointingIn /> : <HiOutlineArrowsPointingOut />}
-        </button>
-        <ReaderSettings settings={settings.value} onSettingsChange={settings.onChange} />
-        <ShareMenu link={article.link} title={article.title} />
-        <a href={article.link} target="_blank" rel="noopener noreferrer" className="btn btn-ghost btn-sm" title="Open in new tab (o)">
-          <HiOutlineArrowTopRightOnSquare /><span className="toolbar-label"> Open</span>
-        </a>
-      </div>
+// Right: AI rail, focus mode, typography, share, open original.
+function ViewControls({ article, zen, ai, settings }) {
+  return (
+    <div className={GROUP}>
+      <IconButton active={ai.open} onClick={ai.toggle} title="AI rail (a)"><HiOutlineSparkles className={ai.open ? 'text-primary' : undefined} /></IconButton>
+      <IconButton active={zen.on} onClick={zen.toggle} title={zen.on ? 'Exit focus mode (f)' : 'Focus mode (f)'}>
+        {zen.on ? <HiOutlineArrowsPointingIn /> : <HiOutlineArrowsPointingOut />}
+      </IconButton>
+      <ReaderSettingsMenu settings={settings.value} onSettingsChange={settings.onChange} />
+      <ShareMenu link={article.link} title={article.title} />
+      <a href={article.link} target="_blank" rel="noopener noreferrer" title="Open the original (o)" className="inline-flex size-7 items-center justify-center rounded-md text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground">
+        <HiOutlineArrowTopRightOnSquare className="size-4" />
+      </a>
+    </div>
+  );
+}
+
+/** Reader toolbar: article controls on the left, view controls on the right; dimmed until pointed at or focused. */
+export default function ReaderToolbar({ article, live, extraction, nav, zen, ai, settings }) {
+  return (
+    <div className="group/toolbar @container flex h-[var(--pane-header-height)] shrink-0 items-center justify-between gap-2 border-b border-border px-2">
+      <ArticleControls live={live} extraction={extraction} nav={nav} zen={zen} />
+      <ViewControls article={article} zen={zen} ai={ai} settings={settings} />
     </div>
   );
 }

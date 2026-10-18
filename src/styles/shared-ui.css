@@ -91,32 +91,6 @@
   background: var(--accent-muted);
 }
 
-/* ===== Reader Status Indicators ===== */
-.reader-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  white-space: nowrap;
-}
-
-.reader-status.extracting {
-  color: var(--text-tertiary);
-  background: var(--bg-tertiary);
-}
-
-.reader-status.extracted {
-  color: var(--accent);
-  background: var(--accent-muted);
-}
-
-.reader-status.error {
-  color: var(--warning);
-  background: rgba(255, 179, 71, 0.12);
-}
-
 /* ===== Tabs improvements ===== */
 .tab {
   display: inline-flex;

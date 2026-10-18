@@ -1,4 +1,3 @@
-/* ===== Article Reader Overlay ===== */
 /* The reader is the third pane, docked beside the list (the list stays
    usable). Below 1100px there isn't room for three panes, so it slides over
    the list instead, with a backdrop. Focus mode (.zen) covers the window.
@@ -104,90 +103,8 @@
   transform: none;
 }
 
-.article-reader-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--text-tertiary);
-}
-
-.article-reader-empty .empty-icon {
-  font-size: 48px;
-  opacity: 0.3;
-}
-
-.article-reader-empty p {
-  font-size: 14px;
-}
-
-.reader-toolbar {
-  container-type: inline-size;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: var(--pane-header-height);
-  flex-shrink: 0;
-  background: transparent;
-}
-
-/* A quiet toolbar: dimmed until the pointer or keyboard focus is on it. */
-.reader-toolbar > * {
-  opacity: 0.55;
-  transition: opacity var(--transition-fast);
-}
-
-.reader-toolbar:hover > *,
-.reader-toolbar:focus-within > * {
-  opacity: 1;
-}
-
-.reader-toolbar .btn {
-  color: var(--text-secondary);
-}
-
-.reader-toolbar-left,
-.reader-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 /* A narrow reader drops the button labels so every control stays visible;
    each control keeps its tooltip. */
-@container (max-width: 680px) {
-  .reader-toolbar .toolbar-label { display: none; }
-}
-@container (max-width: 480px) {
-  .reader-toolbar .reader-nav-counter { display: none; }
-  .reader-toolbar-left,
-  .reader-toolbar-right { gap: 0; }
-}
-
-.reader-nav-controls {
-  display: flex;
-  align-items: center;
-  margin: 0 4px;
-}
-
-.reader-nav-counter {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  padding: 0 8px;
-  min-width: 60px;
-  text-align: center;
-}
-
-.reader-nav-btn {
-  width: 28px;
-  height: 28px;
-}
 
 .reader-content {
   flex: 1;
@@ -199,70 +116,8 @@
 }
 
 /* Headline in the reading face, large and tight. */
-.reader-content .article-title {
-  font-family: var(--reader-font-family);
-  font-size: clamp(30px, 2.4vw + 12px, 44px);
-  font-weight: 560;
-  line-height: 1.1;
-  color: var(--text-primary);
-  margin-bottom: 28px;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
-
-/* Kicker above the headline: source in the accent, then the details. */
-.reader-meta {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  font-family: var(--font-mono);
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.reader-meta span {
-  color: var(--text-tertiary);
-}
-
-.reader-meta .meta-source {
-  font-weight: 600;
-  color: var(--accent);
-}
-
-.reader-meta .meta-divider {
-  color: var(--text-muted);
-  margin-right: 2px;
-}
 
 /* The saved AI summary, ruled off between the headline and the body. */
-.reader-brief {
-  display: flex;
-  gap: 18px;
-  margin: 0 0 36px;
-  padding: 14px 0;
-  border-top: 2px solid var(--text-primary);
-  border-bottom: 1px solid var(--border);
-}
-
-.reader-brief-label {
-  flex: 0 0 auto;
-  padding-top: 3px;
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.reader-brief p {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.55;
-  color: var(--text-secondary);
-}
 
 .reader-article-content {
   font-family: var(--reader-font-family);
@@ -350,3 +205,44 @@
   text-align: center;
   margin-top: 8px;
 }
+
+/* ── Reading progress bar ─────────────────────────────────── */
+.reading-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: var(--accent);
+  transition: width 150ms ease;
+  z-index: 10;
+  border-radius: 0 2px 2px 0;
+  pointer-events: none;
+}
+
+/* ── Zen / focus mode ─────────────────────────────────────── */
+.article-reader-panel.zen {
+  position: fixed;
+  inset: 0;
+  width: 100vw !important;
+  max-width: none;
+  z-index: 110;
+  border-left: none;
+  transform: none;
+}
+
+.reader-overlay-backdrop.zen {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--bg-primary);
+  opacity: 1;
+}
+
+/* marks in article content */
+mark[data-highlight-id] {
+  border-radius: 2px;
+  padding: 0 1px;
+  cursor: default;
+}
+mark[data-highlight-id]:hover { filter: brightness(0.92); }

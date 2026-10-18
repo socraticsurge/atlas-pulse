@@ -4,7 +4,7 @@ import { on } from '../lib/appEvents.js';
 import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js';
 import { useOnKeyChange } from '../hooks/useOnKeyChange.js';
 import AIRail from './ai-drawer/AIRail.jsx';
-import HighlightToolbar from './HighlightToolbar.jsx';
+import HighlightToolbar from './reader/HighlightToolbar.jsx';
 import ResizableHandle from './ResizableHandle.jsx';
 import ReaderBody from './reader/ReaderBody.jsx';
 import ReaderToolbar from './reader/ReaderToolbar.jsx';
