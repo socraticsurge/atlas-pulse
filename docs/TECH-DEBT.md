@@ -1,6 +1,6 @@
 # Technical Debt & Maintainability Assessment
 
-_Assessed: 15 October 2026, at v1.4.0. Owner: maintainers. Review this document at each minor release._
+_Assessed: 15 October 2026, at v1.4.0. Updated: 18 October 2026, after the second round. Owner: maintainers. Review this document at each minor release._
 
 This document records where Atlas Pulse's maintainability stands, why, and the planned work to improve it. It draws on three independent sources:
 
@@ -10,16 +10,17 @@ This document records where Atlas Pulse's maintainability stands, why, and the p
 
 ## Summary
 
-| Metric | Value |
-|---|---|
-| Average Code Health (CodeScene) | **8.2** / 10 |
-| Hotspot Code Health | **7.0** / 10 |
-| Code files below 10.0 | 27 of 43 |
-| Code files below 9.0 | 15 of 43 |
-| Files with complexity findings (ESLint scan) | 22 of 48 |
-| Development effort spent in hotspots | 45.5% of effort in 13% of the code |
+| Metric | Baseline (v1.4.0) | After round 1 (15 Oct) | After round 2 (18 Oct) |
+|---|---|---|---|
+| Average Code Health (CodeScene) | 8.2 | 9.9 | **10.0** |
+| Hotspot Code Health | 7.0 | 9.7 | **10.0** |
+| Files below 10.0 | 27 of 43 | 3 of 155 | **0 of 167** |
+| ESLint complexity warnings | 58 | 0 | 0 |
+| Tests | 20 | 83 | 105 |
 
-No file is in CodeScene's red ("risky") band. The debt is broad rather than deep. It sits mainly in large React components that combine several features, plus a few structural gaps: no AI layer, no data-access paging, no schema migrations.
+CodeScene runs: baseline before v1.4.0; round 1 job 7969336; round 2 job 8005520 (project 86144, analysis of `master` at the merge of #70).
+
+The rest of this summary describes the baseline. No file was in CodeScene's red ("risky") band. The debt is broad rather than deep. It sits mainly in large React components that combine several features, plus a few structural gaps: no AI layer, no data-access paging, no schema migrations.
 
 ## Status after the refactoring round (v1.5 foundations)
 
@@ -34,13 +35,18 @@ Packages 1–6 below were carried out as a series of behavior-preserving pull re
 | 5 Ingestion and server cleanup | Done. Parsers, discovery, the URL guard, OPML, the AI and Ollama routes, `saveSummary` and `bulkInsertArticles`. Batch processor and feed hooks too. |
 | 6 Guardrails | CSS split into `src/styles/` (24 files, built output unchanged). The ESLint complexity ratchet went from 58 warnings to **0**. CodeScene components and PR integration still need configuring by a maintainer. |
 
-The test suite grew from 20 to 79 tests. The architecture is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
+The test suite grew from 20 to 83 tests. The architecture is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
 **Fixed along the way:**
 - "Mark all read" now asks for confirmation.
 - The batch processor stops polling when its queue is empty. It used to re-query every 50 ms.
 - ReDoS-safe tag stripping.
 - Rate limiting on static files.
+
+## Status after the second round (18 October 2026)
+
+The second round fixed the items left open by the first, plus issues found while fixing them, in PRs #61–#70. Each PR was checked in the app against a copy of a 9,998-article library before merging.
+
 - Text color presets now work in the light theme, with light shades of their own.
 - The saved theme and colors are applied before first paint, so a light theme no longer flashes dark on load.
 - Removed unused assets (`hero.png`, `vite.svg`, `icons.svg`).
@@ -52,6 +58,8 @@ The test suite grew from 20 to 79 tests. The architecture is documented in [ARCH
 - Highlights that cross a link, emphasis or a paragraph break are redrawn when the article is reopened: the text is matched across text nodes, ignoring whitespace, and each node gets its own `<mark>`.
 - The reader restores your scroll position after full-text extraction settles, instead of before it (when a short feed excerpt clamped it), and remembers positions across sessions (the last 300 articles, in `localStorage`).
 - The article list renders only the rows near the viewport (`@tanstack/react-virtual`). On a 9,998-article library in development mode: opening All Articles went from 1.8 s to 0.16 s, ticking a checkbox from 0.72 s to 15 ms, and the page from 85,726 DOM elements to 441. Search, filters and select-all are unchanged because the data stays in memory. Reader navigation (j/k) now keeps the active article in view.
+- `api.js` routes every request through one `send()`/`request()` pair, and `docx.js` uses a rule table for markdown lines. These were the last two files below 10.0, at 9.1 and 9.69.
+- Removed the unused batch endpoint `POST /api/feeds/refresh`, the third file below 10.0 (9.69).
 
 ### Still open
 
@@ -98,6 +106,8 @@ Ranked by impact.
 
 ### 3.2 Performance: the article list loads the entire library
 `GET /api/reader/articles` returns every article **with full content**, with no pagination. On the maintainer's library (9,447 articles, an 81 MB database) that is **78 MB of JSON**. It is re-fetched on every view switch, every feed refresh (automatic every 30 minutes by default), and every feed add or remove. Filtering and search then run in the browser over all of it, which is why search uses a 160-character excerpt: full-text search in the browser would be too slow. The cost grows with every article fetched.
+
+_Status:_ list views stopped sending full content in round 1 (78 MB → 7.8 MB), and in round 2 the list renders only the visible rows. The payload itself is still unpaginated; see "Still open".
 
 ### 3.3 Data layer
 - **No migrations.** Schemas use `CREATE TABLE IF NOT EXISTS` only. Existing databases cannot be changed safely.
@@ -182,4 +192,5 @@ Packages 1 and 2 come first because both new feature areas depend on them. The S
 
 - **CodeScene:** project `atlas-pulse` → Technical Debt → Code Health. Compare against the tables above.
 - **Local complexity scan:** these rules (`complexity: 9`, `max-lines-per-function: 70`, `max-depth: 3`, `max-params: 4`, `max-nested-callbacks: 3`) are part of `npm run lint` as warnings. The lint script's `--max-warnings` cap is the ratchet: it started at **58**, was lowered as each package landed, and is now **0**, so any new finding fails CI.
-- **Article list payload:** `curl -so /dev/null -w '%{size_download}\n' http://localhost:3001/api/reader/articles`. The Package 1 target is a page under 1 MB.
+- **Article list payload:** `curl -so /dev/null -w '%{size_download}\n' http://localhost:3001/api/reader/articles`. The Package 1 target is a page under 1 MB. It is 8.2 MB for 9,998 articles, see "Still open".
+- **Article list rendering:** open All Articles on a large library and count DOM elements (`document.getElementsByTagName('*').length`). With virtualization it stays in the hundreds whatever the library size.
