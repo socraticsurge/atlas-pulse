@@ -59,3 +59,8 @@
 .nl-evening .nl-sources { padding-top: 14px; border-top: 6px solid var(--ev-red); font-family: var(--ev-label); font-weight: 500; font-size: 14px; line-height: 1.6; }
 .nl-evening .nl-sources .nl-panel-title { font-family: var(--ev-label); font-size: 14px; font-weight: 600; letter-spacing: 0.14em; }
 .nl-evening .nl-source-site { color: var(--ev-muted); }
+
+/* Printed, the banner still meets the top edge of the first sheet. */
+@media print {
+  .nl-evening .nl-masthead { margin-top: -48px; }
+}

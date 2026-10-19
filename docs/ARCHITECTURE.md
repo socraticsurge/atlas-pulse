@@ -70,7 +70,7 @@ Gemini Nano only exists in Google Chrome, so any packaging keeps the UI in Chrom
 | Core | `src/ai/`, models and parsers, all tested | Done; keep the rule |
 | Settings and prompt registries | `src/components/settings/registry.js`, `src/ai/promptRegistry.js`, Simple/Power switch | Done (#90) |
 | Engine port | `streamChat()` switches on the model name; `isNanoModel` is still checked in callers | With the newsletter work |
-| Template registry and Studio | `studio/templates/designs/` is the design-system registry; Studio edits a newsletter beside its page and remembers the chosen design | Exports (PNG, PDF) next |
+| Template registry and Studio | `studio/templates/designs/` is the design-system registry; Studio edits a newsletter beside its page, remembers the chosen design, and exports it as PNG or PDF | Done |
 | Store and Fetcher ports | `api.js` is the single seam, but it is the HTTP implementation | Only when a second backend is real |
 | Platform port | `scripts/service.sh` (macOS launchd) | With the installer |
 
@@ -92,7 +92,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | Server | **Ingestion** | `server/routes/{feeds,discover,articles,favicon}.js`, `server/utils/{articleExtractor,articleFields,favicon,feedDiscovery,feedParser,feedText,fetchText,text,urlGuard}.js` | Fetching, parsing and extracting feeds and articles, and favicons. Every outbound URL passes `assertPublicHttpUrl` / `safeFetch` (SSRF guard). |
 | | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js`, `server/routes/studio*.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
 | | **AI bridge** | `server/routes/{ai,ollama}.js`, `server/utils/stream.js` | Optional proxy to a local Ollama, plus its install and start helpers. |
-| | **Platform** | `server/index.js`, `scripts/**`, `experiments/**`, `.github/**`, `vite.config.js`, `eslint.config.js`, `jsconfig.json`, `package.json`, `index.html`, `.gitignore` | Server wiring, the background service, build and CI. The installer goes here. |
+| | **Platform** | `server/index.js`, `scripts/**`, `experiments/**`, `.github/**`, `vite.config.js`, `eslint.config.js`, `jsconfig.json`, `package.json`, `index.html`, `print.html`, `server/utils/loopback.js`, `.gitignore` | Server wiring, the background service, build and CI. The installer goes here. |
 | Shared | **Shared** | `shared/{searchQuery,search,aiFilters,csv}.js` | Search tokenizing and ranking, the AI-analysis filters, and CSV export: pure rules the server applies when it pages the list. |
 | Client | **API client** | `src/utils/api.js`, `src/lib/queryClient.js` | The only place the client talks to the server, and the TanStack Query client that caches its results. Every feature touches it, so it is a hotspot by design. |
 | | **Shell** | `src/App.jsx`, `src/main.jsx`, `src/app/**`, `src/lib/appEvents.js`, `src/components/Sidebar.jsx`, `src/components/{shell,sidebar}/**`, `src/utils/{helpers,constants}.js` | Layout, panes, the app rail, the ⌘K palette, navigation, and the app-wide contexts (Appearance, Toast, Library). |
@@ -104,7 +104,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | | **AI tasks** | `src/ai/**` | Prompts, the prompt registry, article context, output parsing and the batch helpers. One module per concern; no React. |
 | | **AI surfaces** | `src/components/{ai-drawer,multi-article}/**`, `src/hooks/{useAIBatchProcessor,useStreamRun,useTokenBuffer}.js` | The AI rail, the multi-article panel and background batch processing. |
 | | **Library** | `src/components/library/**` | The Summaries and Highlights screens. |
-| | **Export** | `src/utils/{docx,share}.js` | Word export and sharing. Newsletter PNG, PDF and HTML export goes here. |
+| | **Export** | `src/utils/{docx,share,download}.js`, `src/print/**`, `server/utils/pageRenderer.js`, `server/routes/pageExport.js` | Word export and sharing; newsletter PNG and PDF. `POST /api/studio/:id/export` opens `print.html` (one page, drawn by `src/print/`) in a headless copy of the installed Chrome via puppeteer-core and returns the capture. |
 | | **Studio** | `src/components/studio/**` | Saved, editable AI outputs (newsletters first): the list, the Markdown editor with live preview, and the newsletter templates (`studio/templates/`: parser, presentation rules, page renderer, design systems, checks). |
 
 Tests (`*.test.js`) belong to the component of the file they test. CodeScene excludes `docs/**`, `package-lock.json`, `dist/**` and `data/**`.
