@@ -28,13 +28,15 @@
     "express"
   ],
   "engines": {
-    "node": ">=20.19"
+    "node": "^22.13.0 || >=24"
   },
   "type": "module",
   "scripts": {
+    "predev": "node scripts/check-node.js",
     "dev": "concurrently --kill-others \"npm run dev:frontend\" \"npm run dev:server\"",
     "dev:frontend": "vite",
     "dev:server": "node server/index.js",
+    "prebuild": "node scripts/check-node.js",
     "build": "vite build",
     "lint": "eslint . --max-warnings=0",
     "test": "node --test",

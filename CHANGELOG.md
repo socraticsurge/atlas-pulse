@@ -3,6 +3,14 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
+## Unreleased
+
+### Fixed
+
+- **A clear message on an unsupported Node.** `npm run dev` and `npm run build` now stop and say which Node to install, instead of failing inside Vite with `SyntaxError: … does not provide an export named 'styleText'`, and `npm install` refuses an unsupported Node. The minimum is now stated correctly as Node 22.13+ or 24+, since several dependencies no longer support Node 20. `.nvmrc` pins 24 LTS, and CI runs on it (#123).
+- **Images in Medium articles.** Full-text extraction dropped the inline images from Medium publications such as Towards AI; they now come through (#122).
+- **Delete all** in Settings → Data says that it also deletes your saves and their notes and empties collections, and AI errors point to Settings → AI engines (#121).
+
 ## 2.0.0 (2026-10-19)
 
 A new reader. Atlas Pulse now scans like an inbox, reads like a magazine, and keeps what you find: saves with notes, collections, NotebookLM export and Studio. Your data moves into a single local database; the upgrade is automatic.
