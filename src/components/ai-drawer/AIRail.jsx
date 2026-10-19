@@ -83,6 +83,21 @@ function TabPanel({ tab, ctx }) {
   return <SummaryTab article={article} s={summary} canGenerate={Boolean(model) && !analysis.analyzing} />;
 }
 
+// What the rail shows under its header: nothing while models load, setup
+// when there is no engine or Gemini Nano still has to be downloaded, else the tabs.
+function railStage(ai) {
+  if (!ai.checked) return 'checking';
+  if (!ai.ready) return 'no-engine';
+  return nanoNeedsDownload(ai.models.find((m) => m.name === ai.selectedModel)) ? 'nano-download' : 'tabs';
+}
+
+function SetupNotice({ stage, ai }) {
+  if (stage === 'no-engine') return <div className="border-b border-border p-4"><NoAIEngine onReady={ai.loadModels} /></div>;
+  if (stage !== 'nano-download') return null;
+  const reloadModels = () => fetchAIModels().then(({ models }) => ai.loadModels(models)).catch(() => {});
+  return <div className="border-b border-border p-4"><NanoDownloadNotice onDone={reloadModels} /></div>;
+}
+
 /**
  * The AI rail beside the open article: Summary, Analysis, Chat and
  * Highlights, the voice it answers in, and an "Ask AI" box on every tab.
@@ -99,9 +114,7 @@ export default function AIRail({ isOpen, onClose, width, onResize, article, extr
   const chat = useArticleChat({ article, extractedContent, model });
 
   if (!isOpen) return <RailStrip onOpen={onClose} />;
-  // Gemini Nano picked but not downloaded yet: the download comes first.
-  const nanoPending = ai.ready && nanoNeedsDownload(ai.models.find((m) => m.name === model));
-  const reloadModels = () => fetchAIModels().then(({ models }) => ai.loadModels(models)).catch(() => {});
+  const stage = railStage(ai);
   const ask = () => { setTab('chat'); chat.send(); };
   const suggest = (text) => { chat.setInput(text); askRef.current?.focus(); };
   const ctx = { ai, article, summary, analysis, chat, highlights, onHighlightDeleted, suggest };
@@ -110,9 +123,8 @@ export default function AIRail({ isOpen, onClose, width, onResize, article, extr
     <aside className="ai-drawer flex h-full shrink-0 flex-col overflow-hidden border-l border-border bg-[var(--bg-secondary)]" aria-label="AI assistant" style={{ width: `${width}px` }}>
       <ResizableHandle overlay className="left-0" onResize={onResize} />
       <Header ai={ai} onClose={onClose} />
-      {ai.checked && !ai.ready && <div className="border-b border-border p-4"><NoAIEngine onReady={ai.loadModels} /></div>}
-      {nanoPending && <div className="border-b border-border p-4"><NanoDownloadNotice onDone={reloadModels} /></div>}
-      {ai.ready && !nanoPending && (
+      <SetupNotice stage={stage} ai={ai} />
+      {stage === 'tabs' && (
         <>
           <TabBar tab={tab} onChange={setTab} highlightCount={highlights.length} />
           <AIConfigStrip />
