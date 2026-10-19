@@ -61,17 +61,28 @@ function FeedMenu({ id, feeds, folders, actions, done }) {
   );
 }
 
-/** Right-click / "…" menu for a folder or feed. menu = { type, id, x, y }. */
+function CollectionMenu({ id, actions, done }) {
+  return (
+    <>
+      <Item onClick={() => done(() => actions.startRename(id))}><HiOutlinePencil /> Rename</Item>
+      <Divider />
+      <Item danger onClick={() => done(() => actions.onDeleteCollection(id))}><HiOutlineTrash /> Delete collection (keep the saves)</Item>
+    </>
+  );
+}
+
+const MENUS = { folder: FolderMenu, feed: FeedMenu, collection: CollectionMenu };
+
+/** Right-click / "…" menu for a folder, feed or collection. menu = { type, id, x, y }. */
 export function ContextMenu({ menu, feeds, folders, actions, onClose }) {
   if (!menu) return null;
   const done = (fn) => { fn(); onClose(); };
+  const Menu = MENUS[menu.type];
   return (
     <>
       <div className="fixed inset-0 z-[499]" onClick={onClose} onContextMenu={(e) => { e.preventDefault(); onClose(); }} />
       <div role="menu" className="fixed z-[500] min-w-52 rounded-lg border border-border bg-[var(--bg-modal)] p-1 shadow-xl" style={{ left: menu.x, top: menu.y }}>
-        {menu.type === 'folder'
-          ? <FolderMenu id={menu.id} actions={actions} done={done} />
-          : <FeedMenu id={menu.id} feeds={feeds} folders={folders} actions={actions} done={done} />}
+        <Menu id={menu.id} feeds={feeds} folders={folders} actions={actions} done={done} />
       </div>
     </>
   );

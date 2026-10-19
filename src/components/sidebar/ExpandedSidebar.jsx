@@ -3,6 +3,7 @@ import { HiOutlineChevronDoubleLeft, HiOutlineFolderPlus, HiOutlineMagnifyingGla
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { emit } from '../../lib/appEvents.js';
+import { CollectionList } from './CollectionList.jsx';
 import { ContextMenu } from './ContextMenu.jsx';
 import { FolderTree } from './FolderTree.jsx';
 import { InlineInput, NavRow } from './NavRow.jsx';
@@ -86,7 +87,7 @@ function useFolderTreeState(actions) {
   };
 }
 
-/** Full sidebar: header, the ⌘K bar and Add Feed, navigation, folders and feeds. */
+/** Full sidebar: header, the ⌘K bar and Add Feed, navigation, collections, folders and feeds. */
 export function ExpandedSidebar({ style, activeView, onViewChange, counts, folders, feeds, grouped, actions }) {
   const [addingFolder, setAddingFolder] = useState(false);
   const tree = { ...useFolderTreeState(actions), activeView, onViewChange };
@@ -98,6 +99,7 @@ export function ExpandedSidebar({ style, activeView, onViewChange, counts, folde
       <CommandBar onAddFeed={actions.onAddFeed} />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-1.5 pb-4">
         <MainNav activeView={activeView} onViewChange={onViewChange} counts={counts} />
+        <CollectionList activeView={activeView} onViewChange={onViewChange} />
         <div className="mt-4">
           <div className="flex items-center justify-between px-2.5 pb-1">
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Folders</span>

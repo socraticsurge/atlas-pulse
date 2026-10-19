@@ -57,13 +57,15 @@ function useArticleContent(current, extractedContent) {
 }
 
 // Focus ("zen") mode plus the reader's keyboard shortcuts, which depend on it.
-function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI, editNote }) {
+function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI, note }) {
   const [on, setOn] = useState(false);
   const keyboardActions = useMemo(() => ({
-    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote,
+    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI,
+    editNote: note.edit,
+    collect: note.collect,
     toggleZen: () => setOn((z) => !z),
     escape: () => (on ? setOn(false) : onClose()),
-  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote, on, onClose]);
+  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, note.edit, note.collect, on, onClose]);
   useReaderKeyboard(isOpen, keyboardActions);
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
 }
@@ -85,7 +87,7 @@ export default function ArticleReader({
   const progress = useReaderScroll(contentRef, articleId, isOpen, extraction.settled);
   const visible = useSlideIn(isOpen);
   const note = useNoteEditing(articleId, live);
-  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle, editNote: note.edit });
+  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle, note });
   const { displayContent, html, previewHtml } = useArticleContent(current, extraction.content);
   const cssVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
 
@@ -110,7 +112,7 @@ export default function ArticleReader({
         <div className="reader-main">
           <ReaderToolbar
             article={article}
-            live={live} onNote={note.edit}
+            live={live} note={note}
             extraction={extraction}
             nav={{ onNavigate, onClose, hasPrev, hasNext, currentIndex, totalCount }}
             zen={zen}

@@ -47,7 +47,7 @@ const isShown = (article, draft, focusRequest) => [focusRequest > 0, article.isB
  * up; it starts at 0 for each article). Writing a note saves the article.
  * Enter or Esc finishes; Shift+Enter adds a line.
  */
-export default function SaveNote({ article, focusRequest, onSave }) {
+export default function SaveNote({ article, focusRequest, onSave, children }) {
   const fieldRef = useRef(null);
   const { draft, change, flush } = useNoteDraft(article, onSave);
   const shown = isShown(article, draft, focusRequest);
@@ -74,6 +74,7 @@ export default function SaveNote({ article, focusRequest, onSave }) {
         placeholder="What caught your eye? (n)"
         className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-[var(--text-tertiary)]"
       />
+      {children}
     </section>
   );
 }

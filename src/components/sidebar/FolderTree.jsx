@@ -3,14 +3,8 @@ import { HiChevronRight, HiOutlineFolderOpen } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import FeedFavicon from '../FeedFavicon.jsx';
 import { InlineInput, NavRow } from './NavRow.jsx';
-import { folderUnread, isActive } from './sidebarModel.js';
+import { folderUnread, isActive, menuOpener } from './sidebarModel.js';
 
-// Opens the context menu at the pointer (right-click or the "…" button).
-const menuOpener = (openMenu, type, id) => (e) => {
-  e.preventDefault();
-  e.stopPropagation();
-  openMenu({ type, id, x: e.clientX, y: e.clientY });
-};
 
 // Tooltip for a feed whose last refresh failed, or undefined.
 const refreshAlert = (feed) => (feed.lastError ? `Last refresh failed: ${feed.lastError}` : undefined);
@@ -33,13 +27,13 @@ function FeedRow({ feed, unread, active, onViewChange, openMenu, nested }) {
   );
 }
 
-function RenameInput({ initial, onSubmit, onCancel }) {
+export function RenameInput({ initial, label = 'Folder name', onSubmit, onCancel }) {
   const [value, setValue] = useState(initial);
   const submit = () => { if (value.trim()) onSubmit(value.trim()); };
   return (
     <InlineInput
       value={value}
-      aria-label="Folder name"
+      aria-label={label}
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
       onClick={(e) => e.stopPropagation()}

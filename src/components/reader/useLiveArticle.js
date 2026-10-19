@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as api from '../../utils/api.js';
 import { useOnKeyChange } from '../../hooks/useOnKeyChange.js';
+import { on } from '../../lib/appEvents.js';
 
 const flip = (flag) => (flag ? 0 : 1);
 
@@ -36,6 +37,14 @@ function useMarkReadOnOpen(article, setLive, notify) {
   }, [article, setLive, notify]);
 }
 
+// Changed elsewhere (filed in a collection, which saves it): reload the server copy.
+function useReloadWhenChanged(articleId, setLive, notify) {
+  useEffect(() => on('articles-changed', (ids) => {
+    if (!ids?.includes(articleId)) return;
+    api.fetchArticle(articleId).then((updated) => { setLive(updated); notify(updated); }).catch(() => {});
+  }), [articleId, setLive, notify]);
+}
+
 /**
  * The open article as stored on the server (full content, latest read and
  * save state and note), plus actions that update it. Marks the article read on open.
@@ -45,6 +54,7 @@ export function useLiveArticle(article, onArticleChanged) {
   const [live, setLive] = useServerCopy(articleId);
   const notify = useCallback((updated) => onArticleChanged?.(updated), [onArticleChanged]);
   useMarkReadOnOpen(article, setLive, notify);
+  useReloadWhenChanged(articleId, setLive, notify);
   const current = live || article;
 
   const patch = useCallback(async (changes) => {

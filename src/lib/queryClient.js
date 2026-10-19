@@ -10,3 +10,4 @@ export const queryClient = new QueryClient({
 
 /** Query keys shared by more than one feature. */
 export const STUDIO_QUERY_KEY = 'studio';
+export const COLLECTIONS_QUERY_KEY = 'collections';

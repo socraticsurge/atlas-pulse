@@ -201,4 +201,24 @@ export const MIGRATIONS = [
       CREATE INDEX idx_articles_saved_at ON articles(saved_at);
     `),
   },
+  {
+    version: 10,
+    description: 'Collections: named groups of saved articles; an article can be in several',
+    up: (db) => db.exec(`
+      CREATE TABLE collections (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        description TEXT,
+        created_at  TEXT NOT NULL,
+        updated_at  TEXT NOT NULL
+      );
+      CREATE TABLE collection_items (
+        collection_id INTEGER NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+        article_id    INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+        added_at      TEXT NOT NULL,
+        PRIMARY KEY (collection_id, article_id)
+      );
+      CREATE INDEX idx_collection_items_article ON collection_items(article_id);
+    `),
+  },
 ];

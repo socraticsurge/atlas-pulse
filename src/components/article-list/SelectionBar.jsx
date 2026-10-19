@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  HiOutlineArrowDownTray, HiOutlineBookmark, HiOutlineCheckCircle, HiOutlineChevronUp, HiOutlineSparkles, HiOutlineXMark,
+  HiOutlineArrowDownTray, HiOutlineBookmark, HiOutlineCheckCircle, HiOutlineChevronUp, HiOutlineRectangleStack, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ function AIActionsMenu({ count, onOpenAIPanel }) {
 
 const ACTION = 'inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border-0 bg-transparent px-2 text-xs text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground [&_svg]:size-3.5';
 
-/** Floating bar for the multi-selection: read, save, CSV, AI actions. */
+/** Floating bar for the multi-selection: read, save, collect, CSV, AI actions. */
 export function SelectionBar({ count, visibleCount, actions }) {
   if (count === 0) return null;
   return (
@@ -63,6 +63,7 @@ export function SelectionBar({ count, visibleCount, actions }) {
       <span className="mx-1 h-4 w-px bg-border" />
       <button type="button" className={ACTION} onClick={actions.markRead}><HiOutlineCheckCircle /> Read</button>
       <button type="button" className={ACTION} onClick={actions.bookmark}><HiOutlineBookmark /> Save</button>
+      <button type="button" className={ACTION} onClick={actions.collect} title="Add to a collection (saves them)"><HiOutlineRectangleStack /> Collect</button>
       <button type="button" className={ACTION} onClick={actions.exportCSV}><HiOutlineArrowDownTray /> CSV</button>
       <span className="ml-auto"><AIActionsMenu count={count} onOpenAIPanel={actions.openAIPanel} /></span>
     </div>

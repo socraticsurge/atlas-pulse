@@ -1,6 +1,6 @@
 import {
   HiOutlineArrowLeft, HiOutlineArrowRight, HiOutlineArrowTopRightOnSquare, HiOutlineArrowsPointingIn,
-  HiOutlineArrowsPointingOut, HiOutlineBookmark, HiOutlineEye, HiOutlineEyeSlash, HiOutlinePencil, HiOutlineSparkles, HiOutlineXMark,
+  HiOutlineArrowsPointingOut, HiOutlineBookmark, HiOutlineEye, HiOutlineEyeSlash, HiOutlinePencil, HiOutlineRectangleStack, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
 import { BsBookmarkFill } from 'react-icons/bs';
 import { IconButton } from '@/components/ui/icon-button';
@@ -41,29 +41,30 @@ function ExtractionStatus({ extraction }) {
 // Dimmed until pointed at or focused, and fully shown while one of its menus is open.
 const GROUP = 'flex items-center gap-0.5 opacity-60 transition-opacity group-hover/toolbar:opacity-100 group-focus-within/toolbar:opacity-100 has-[[data-open]]:opacity-100';
 
-// Save (b) and the note (n, which also saves).
-function SaveControls({ live, onNote }) {
-  const { isBookmarked, note } = live.current;
+// Save (b), the note (n) and collections (c); the last two also save.
+function SaveControls({ live, note }) {
+  const { isBookmarked, note: text } = live.current;
   return (
     <>
       <IconButton active={isBookmarked} onClick={live.toggleBookmark} title={isBookmarked ? 'Unsave (b)' : 'Save (b)'}>
         {isBookmarked ? <BsBookmarkFill className="text-primary" /> : <HiOutlineBookmark />}
       </IconButton>
-      <IconButton active={Boolean(note)} onClick={onNote} title={note ? 'Edit your note (n)' : 'Save with a note (n)'}>
-        <HiOutlinePencil className={note ? 'text-primary' : undefined} />
+      <IconButton active={Boolean(text)} onClick={note.edit} title={text ? 'Edit your note (n)' : 'Save with a note (n)'}>
+        <HiOutlinePencil className={text ? 'text-primary' : undefined} />
       </IconButton>
+      <IconButton onClick={note.collect} title="Add to a collection (c)"><HiOutlineRectangleStack /></IconButton>
     </>
   );
 }
 
 // Left: close, navigation, save, note, read, extraction status.
-function ArticleControls({ live, onNote, extraction, nav, zen }) {
+function ArticleControls({ live, note, extraction, nav, zen }) {
   const current = live.current;
   return (
     <div className={GROUP}>
       <IconButton onClick={zen.on ? zen.exit : nav.onClose} title={zen.on ? 'Exit focus mode (Esc)' : 'Close reader (Esc)'}><HiOutlineXMark /></IconButton>
       {!zen.on && <NavControls nav={nav} />}
-      <SaveControls live={live} onNote={onNote} />
+      <SaveControls live={live} note={note} />
       <IconButton onClick={live.toggleRead} title={current.isRead ? 'Mark as unread' : 'Mark as read'}>
         {current.isRead ? <HiOutlineEyeSlash /> : <HiOutlineEye />}
       </IconButton>
@@ -90,10 +91,10 @@ function ViewControls({ article, zen, ai, settings }) {
 }
 
 /** Reader toolbar: article controls on the left, view controls on the right; dimmed until pointed at or focused. */
-export default function ReaderToolbar({ article, live, onNote, extraction, nav, zen, ai, settings }) {
+export default function ReaderToolbar({ article, live, note, extraction, nav, zen, ai, settings }) {
   return (
     <div className="group/toolbar @container flex h-[var(--pane-header-height)] shrink-0 items-center justify-between gap-2 border-b border-border px-2">
-      <ArticleControls live={live} onNote={onNote} extraction={extraction} nav={nav} zen={zen} />
+      <ArticleControls live={live} note={note} extraction={extraction} nav={nav} zen={zen} />
       <ViewControls article={article} zen={zen} ai={ai} settings={settings} />
     </div>
   );
