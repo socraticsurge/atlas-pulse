@@ -10,6 +10,7 @@ import { parseIssue } from '../../src/components/studio/layout/parseIssue.js';
 import { libraryPlan, rulesPlan } from '../../src/components/studio/layout/plan.js';
 import { nanoPlan } from '../../src/components/studio/layout/nanoQuestions.js';
 import Broadsheet from '../../src/components/studio/layout/Broadsheet.jsx';
+import { checkPage } from '../../src/components/studio/layout/pageChecks.js';
 
 const NANO_KEY = 'layout-exp-nano';
 const VERDICT_KEY = 'layout-exp-verdicts';
@@ -55,6 +56,26 @@ window.runNano = async (times = 3, ids) => {
     }
   }
   return 'done';
+};
+
+// Checks every newsletter's three pages against the presentation principles.
+// Turns side-by-side off first (the checks read sizes at full scale).
+window.checkPages = async () => {
+  const pause = () => new Promise((r) => setTimeout(r, 350));
+  const side = [...document.querySelectorAll('.bar button')].find((b) => b.innerText.includes('Side'));
+  if (side.getAttribute('aria-pressed') === 'true') { side.click(); await pause(); }
+  const select = document.querySelector('select');
+  const report = [];
+  for (let i = 0; i < select.options.length; i += 1) {
+    select.value = String(i);
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    await pause();
+    document.querySelectorAll('.page').forEach((page) => {
+      const problems = checkPage(page.querySelector('.bs'));
+      report.push({ newsletter: select.options[i].text.slice(0, 50), page: page.querySelector('.label').textContent, problems });
+    });
+  }
+  return report;
 };
 
 window.layoutResults = () => ({ nano: read(NANO_KEY), verdicts: read(VERDICT_KEY) });

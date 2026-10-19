@@ -9,7 +9,7 @@ import { quoteCandidates } from './parseIssue.js';
 export const ROLES = ['intro', 'story', 'essay', 'takeaways', 'callout', 'closing'];
 export const LAYOUTS = ['flow', 'front', 'digest', 'longform', 'briefing'];
 
-const CALLOUT_HEADING = /decision|action|bottom line|what to (watch|do)|why it matters|key question|recommend|next step/i;
+const CALLOUT_HEADING = /\b(decisions?|decision point|action items?|call to action|bottom line|what to (watch|do)|why it matters|key questions?|recommendations?|next steps?)\b/i;
 // Headings that name a list of points rather than a story.
 export const GENERIC_LIST_HEADING = /take ?aways|key (points|insights|findings|lessons)|highlights|at a glance|in brief|tl;?dr|summary|quick hits/i;
 
