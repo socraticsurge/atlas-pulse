@@ -73,13 +73,18 @@ function sectionStats(blocks) {
 }
 
 // Takes the headline (the first heading before any long text) off the front.
-function takeHeadline(items, fallbackTitle) {
+// The first heading is the headline when it comes early (within the first
+// three items) and only short lines precede it.
+function headlineIndex(items) {
   const first = items.findIndex((i) => i.type === 'heading');
-  const beforeIt = items.slice(0, Math.max(first, 0)).filter((i) => i.kind);
-  if (first >= 0 && first <= 2 && beforeIt.every((b) => blockText(b).length < 200)) {
-    return { headline: items[first].text, rest: [...items.slice(0, first), ...items.slice(first + 1)] };
-  }
-  return { headline: fallbackTitle || '', rest: items };
+  const early = first >= 0 && first <= 2;
+  return early && items.slice(0, first).every((b) => !b.kind || blockText(b).length < 200) ? first : -1;
+}
+
+function takeHeadline(items, fallbackTitle) {
+  const at = headlineIndex(items);
+  if (at === -1) return { headline: fallbackTitle || '', rest: items };
+  return { headline: items[at].text, rest: [...items.slice(0, at), ...items.slice(at + 1)] };
 }
 
 // Meta lines ("**Date:** …") and the opening paragraph, from the front.
@@ -94,29 +99,37 @@ function takeOpening(items) {
   return { meta, standfirst, rest: items.slice(i + (standfirst ? 1 : 0)) };
 }
 
-function toSections(items) {
+// Splits items into sections: a heading starts one, a rule ends one, and
+// blocks outside any section start an unheaded one.
+function groupSections(items) {
   const sections = [];
   let current = null;
-  const start = (heading, depth) => {
+  const open = (heading = null, depth = null) => {
     current = { heading, depth, blocks: [] };
     sections.push(current);
+    return current;
+  };
+  const steps = {
+    heading: (item) => open(item.text, item.depth),
+    rule: () => { current = null; },
   };
   for (const item of items) {
-    if (item.type === 'heading') start(item.text, item.depth);
-    else if (item.type === 'rule') current = null;
-    else {
-      if (!current) start(null, null);
-      current.blocks.push(item);
-    }
+    const step = steps[item.type];
+    if (step) step(item);
+    else (current ?? open()).blocks.push(item);
   }
-  return sections
+  return sections;
+}
+
+function toSections(items) {
+  return groupSections(items)
     .filter((s) => s.blocks.length > 0 || s.heading)
     .map((s, n) => ({ id: `s${n + 1}`, ...s, heading: s.heading?.replace(/[:：]\s*$/, '') ?? null, stats: sectionStats(s.blocks) }));
 }
 
 /**
  * The issue for a newsletter's Markdown: { headline, meta, standfirst,
- * sections: [{ id, heading, depth, blocks, stats }], quote candidates, words }.
+ * sections: [{ id, heading, depth, blocks, stats }], words }.
  * fallbackTitle is used when the Markdown has no headline of its own.
  */
 export function parseIssue(md, fallbackTitle = '') {

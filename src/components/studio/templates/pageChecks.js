@@ -24,16 +24,19 @@ function measureProblems(root, scale) {
 const textBlocks = (root) => [...root.querySelectorAll('.nl-column :is(p, li, h3, blockquote, aside, .nl-kicker)')]
   .filter((el) => !el.closest('aside') || el.tagName === 'ASIDE');
 
+// Two boxes share a row when one starts above the other's bottom and they don't overlap sideways.
+const shareRow = (a, b) => b.top < a.bottom - 2 && (b.left >= a.right - 2 || b.right <= a.left + 2);
+const nested = (a, b) => a.contains(b) || b.contains(a);
+
 function holeAndRowProblems(root, scale) {
   const out = [];
   const blocks = textBlocks(root).map((el) => ({ el, r: box(el) })).sort((a, b) => a.r.top - b.r.top);
   for (let i = 1; i < blocks.length; i += 1) {
-    const prev = blocks[i - 1].r;
-    const { r } = blocks[i];
-    const gap = (r.top - prev.bottom) / scale;
-    if (gap > MAX_GAP) out.push({ rule: 'hole', detail: `${Math.round(gap)} px gap before “${blocks[i].el.textContent.slice(0, 40)}”` });
-    const sideBySide = r.top < prev.bottom - 2 && (r.left >= prev.right - 2 || r.right <= prev.left + 2);
-    if (sideBySide && !blocks[i].el.contains(blocks[i - 1].el) && !blocks[i - 1].el.contains(blocks[i].el)) out.push({ rule: 'one-path', detail: 'two text blocks side by side' });
+    const prev = blocks[i - 1];
+    const next = blocks[i];
+    const gap = (next.r.top - prev.r.bottom) / scale;
+    if (gap > MAX_GAP) out.push({ rule: 'hole', detail: `${Math.round(gap)} px gap before “${next.el.textContent.slice(0, 40)}”` });
+    if (shareRow(prev.r, next.r) && !nested(prev.el, next.el)) out.push({ rule: 'one-path', detail: 'two text blocks side by side' });
   }
   return out;
 }
