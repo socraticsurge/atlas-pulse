@@ -1,0 +1,108 @@
+/* Broadsheet design system. Tokens first; every rule is scoped to .bs. */
+
+.bs {
+  --bs-paper: #f3efe6;
+  --bs-ink: #1b1b1b;
+  --bs-accent: #7a1e12;
+  --bs-rule: #1b1b1b;
+  --bs-display: 'Libre Caslon Display', Georgia, serif;
+  --bs-text: 'Libre Caslon Text', Georgia, serif;
+  --bs-masthead: 'UnifrakturMaguntia', 'Libre Caslon Display', serif;
+  width: 1000px;
+  box-sizing: border-box;
+  padding: 40px 52px 48px;
+  background: var(--bs-paper);
+  color: var(--bs-ink);
+  font-family: var(--bs-text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.bs *, .bs *::before, .bs *::after { box-sizing: border-box; }
+.bs a { color: inherit; }
+
+/* Masthead */
+.bs-ears { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.bs-title { margin: 12px 0 6px; text-align: center; font-family: var(--bs-masthead); font-weight: 400; font-size: 92px; line-height: 1; }
+.bs-dateline { display: flex; justify-content: space-between; border-top: 3px solid var(--bs-rule); border-bottom: 1px solid var(--bs-rule); padding: 6px 0; font-size: 13px; font-style: italic; box-shadow: 0 3px 0 -2px var(--bs-paper), 0 4px 0 -2px var(--bs-rule); }
+
+/* Headline and standfirst */
+.bs-front { margin: 26px 0 8px; text-align: center; }
+.bs-headline { margin: 0 32px; font-family: var(--bs-display); font-weight: 400; line-height: 1.05; }
+.bs-headline-l { font-size: 60px; }
+.bs-headline-m { font-size: 48px; }
+.bs-headline-s { font-size: 38px; }
+.bs-front .bs-p { margin: 18px 30px 0; font-size: 18px; line-height: 1.55; font-style: italic; }
+
+/* Text */
+.bs-p { margin: 0 0 12px; text-align: justify; hyphens: auto; }
+.bs-runin { font-weight: 700; font-size: 0.82em; letter-spacing: 0.08em; text-transform: uppercase; }
+.bs-dropcap > span:last-child::first-letter { float: left; font-family: var(--bs-display); font-size: 4.2em; line-height: 0.8; padding: 6px 8px 0 0; }
+.bs-h { margin: 0 0 10px; font-family: var(--bs-display); font-weight: 400; line-height: 1.12; }
+.bs-h-l { font-size: 34px; }
+.bs-h-m { font-size: 26px; }
+.bs-h-s { font-size: 21px; }
+.bs-list { margin: 0 0 12px; padding-left: 20px; }
+.bs-list li { margin-bottom: 6px; }
+.bs-quote { margin: 0 0 12px; padding-left: 14px; font-style: italic; border-left: 2px solid var(--bs-rule); }
+.bs-pullquote { margin: 8px 0 16px; padding: 12px 0; border-top: 2px solid var(--bs-rule); border-bottom: 2px solid var(--bs-rule); font-family: var(--bs-display); font-size: 23px; line-height: 1.25; text-align: center; break-inside: avoid; }
+
+/* Columns */
+.bs-body { min-width: 0; }
+.bs-cols-2 { column-count: 2; column-gap: 28px; }
+.bs-cols-3 { column-count: 3; column-gap: 28px; column-rule: 1px solid var(--bs-rule); }
+.bs-cols-2 .bs-list, .bs-cols-3 .bs-list { break-inside: avoid; }
+
+/* Grids */
+.bs-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; margin-top: 26px; }
+.bs-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; margin-top: 26px; }
+.bs-span-2 { grid-column: span 2; }
+.bs-span-3 { grid-column: 1 / -1; }
+.bs-grid-2 .bs-span-2 { grid-column: 1 / -1; }
+.bs-rule-right { border-right: 1px solid var(--bs-rule); padding-right: 30px; }
+.bs-stack { display: flex; flex-direction: column; gap: 22px; }
+.bs-below { border-top: 3px double var(--bs-rule); padding-top: 22px; }
+.bs-cards > .bs-card { border-top: 2px solid var(--bs-rule); padding-top: 12px; }
+
+/* Flow (R): everything in reading order through three columns */
+.bs-flow { margin-top: 26px; column-count: 3; column-gap: 28px; column-rule: 1px solid var(--bs-rule); border-top: 1px solid var(--bs-rule); padding-top: 18px; }
+.bs-flow-item { margin-bottom: 14px; }
+.bs-flow .bs-h { font-size: 22px; break-after: avoid; }
+
+/* Longform: one measure */
+.bs-longform { max-width: 660px; margin: 30px auto 0; font-size: 16.5px; line-height: 1.7; }
+.bs-longform > * { margin-bottom: 26px; }
+
+/* Panels: takeaways */
+.bs-panel-title { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; }
+.bs-panel-items { margin: 0; padding: 0; list-style: none; }
+.bs-takeaways-box { border: 2px solid var(--bs-rule); padding: 16px 18px; font-size: 14.5px; line-height: 1.55; break-inside: avoid; }
+.bs-takeaways-box .bs-panel-title { text-align: center; border-bottom: 1px solid var(--bs-rule); padding-bottom: 8px; }
+.bs-takeaways-box li { padding: 10px 0; border-bottom: 1px dotted var(--bs-rule); }
+.bs-takeaways-box li:last-child { border-bottom: 0; padding-bottom: 0; }
+.bs-takeaways-band { margin-top: 26px; border-top: 3px double var(--bs-rule); border-bottom: 1px solid var(--bs-rule); padding: 14px 0; }
+.bs-takeaways-band .bs-panel-items { margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 28px; font-size: 14.5px; }
+.bs-takeaways-numbered { margin-top: 26px; border-top: 3px solid var(--bs-rule); padding-top: 14px; }
+.bs-takeaways-numbered .bs-panel-items { margin-top: 12px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 32px; }
+.bs-takeaways-numbered li { display: flex; gap: 14px; font-size: 15px; }
+.bs-numeral { font-family: var(--bs-display); font-size: 40px; line-height: 0.9; color: var(--bs-accent); }
+
+/* Takeaways under their story */
+.bs-takeaways-inline { margin-top: 6px; padding: 10px 12px; background: rgba(0, 0, 0, 0.04); border-left: 3px solid var(--bs-accent); font-size: 14px; break-inside: avoid; }
+.bs-takeaways-inline .bs-panel-title { font-size: 11px; color: var(--bs-accent); }
+.bs-takeaways-inline .bs-panel-items { margin-top: 6px; }
+.bs-takeaways-inline li { margin-bottom: 4px; padding-left: 14px; position: relative; }
+.bs-takeaways-inline li::before { content: '–'; position: absolute; left: 0; }
+
+/* Callout */
+.bs-callout { margin-top: 22px; display: flex; gap: 20px; align-items: baseline; border-top: 1px solid var(--bs-rule); border-bottom: 1px solid var(--bs-rule); padding: 14px 0; break-inside: avoid; }
+.bs-stack .bs-callout { margin-top: 0; flex-direction: column; gap: 6px; }
+.bs-callout-label { flex: none; font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; color: var(--bs-accent); }
+.bs-callout-body .bs-p { margin: 0; font-size: 16px; text-align: left; }
+
+.bs-closing { margin-top: 24px; text-align: center; font-style: italic; }
+.bs-closing .bs-p { text-align: center; }
+.bs-intro { margin-top: 20px; }
+
+/* Sources */
+.bs-sources { margin-top: 32px; border-top: 1px solid var(--bs-rule); padding-top: 12px; font-size: 12.5px; line-height: 1.45; }
+.bs-sources ol { margin: 8px 0 0; padding-left: 18px; columns: 2; column-gap: 28px; }

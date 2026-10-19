@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Layout experiment: blind judging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; font: 14px/1.4 system-ui, sans-serif; background: #d9d6cf; color: #1b1b1b; }
+  .bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; background: #1b1b1b; color: #fff; }
+  .bar button, .bar select { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid #555; background: #2b2b2b; color: #fff; cursor: pointer; }
+  .bar button[aria-pressed="true"] { background: #f0b429; color: #111; border-color: #f0b429; }
+  .bar .spacer { flex: 1; }
+  .pages { display: flex; gap: 24px; padding: 24px; align-items: flex-start; overflow-x: auto; }
+  .pages.compare .page { zoom: 0.42; }
+  .label { font: 700 40px system-ui; margin-bottom: 8px; }
+  .compare .label { font-size: 80px; }
+  .verdict { display: flex; gap: 10px; align-items: center; margin-top: 8px; font-size: 15px; }
+  .compare .verdict { font-size: 34px; }
+  textarea { width: 340px; height: 44px; font: inherit; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="module" src="./lab.jsx"></script>
+</body>
+</html>
