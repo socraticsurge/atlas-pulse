@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { pipeBody, setStreamHeaders } from '../utils/stream.js';
+import { ollamaBase } from '../utils/ollamaHost.js';
 
-const OLLAMA_BASE = 'http://localhost:11434';
+const OLLAMA_BASE = ollamaBase();
 const router = Router();
 
 /**

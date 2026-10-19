@@ -13,6 +13,7 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 - **A clear message on an unsupported Node.** `npm run dev` and `npm run build` now stop and say which Node to install, instead of failing inside Vite with `SyntaxError: … does not provide an export named 'styleText'`, and `npm install` refuses an unsupported Node. The minimum is now stated correctly as Node 22.13+ or 24+, since several dependencies no longer support Node 20. `.nvmrc` pins 24 LTS, and CI runs on it (#123).
 - **Images in Medium articles.** Full-text extraction dropped the inline images from Medium publications such as Towards AI; they now come through (#122).
 - **Delete all** in Settings → Data says that it also deletes your saves and their notes and empties collections, and AI errors point to Settings → AI engines (#121).
+- **Ollama somewhere else.** `OLLAMA_HOST` (the variable Ollama reads) now points Atlas Pulse at an Ollama on another port or machine; it was fixed at `localhost:11434`. Finding Ollama also works on Windows (`where`, `%LOCALAPPDATA%\Programs\Ollama`) and with the macOS app's own copy. The background service keeps `CHROME_PATH`, `ATLAS_DATA_DIR` and `OLLAMA_HOST` if they are set at `install` (#PR).
 
 ### Security
 
