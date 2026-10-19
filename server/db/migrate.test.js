@@ -114,8 +114,24 @@ test('reader migration 7 adds Studio items whose sources are deleted with them',
 
 test('reader migration 8 lets a Studio item remember its design', () => {
   const db = new Database(':memory:');
-  migrate(db, READER);
+  migrate(db, READER.slice(0, 8));
   db.prepare("INSERT INTO studio_items (kind, title, body_md, created_at, updated_at, template) VALUES ('newsletter', 'T', 'B', 'now', 'now', 'evening')").run();
   assert.equal(db.prepare('SELECT template FROM studio_items').get().template, 'evening');
   assert.equal(db.pragma('user_version', { simple: true }), 8);
+});
+
+test('reader migration 9 dates existing saves and adds notes', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER.slice(0, 8));
+  db.prepare("INSERT INTO feeds (title, url, created_at) VALUES ('F', 'u', 'now')").run();
+  const insert = db.prepare("INSERT INTO articles (feed_id, guid, is_bookmarked, created_at) VALUES (1, ?, ?, '2026-10-01T00:00:00.000Z')");
+  insert.run('saved', 1);
+  insert.run('unsaved', 0);
+  migrate(db, READER.slice(0, 9));
+  const rows = db.prepare('SELECT guid, saved_at, note FROM articles ORDER BY guid').all();
+  assert.deepEqual(rows, [
+    { guid: 'saved', saved_at: '2026-10-01T00:00:00.000Z', note: null },
+    { guid: 'unsaved', saved_at: null, note: null },
+  ]);
+  assert.equal(db.pragma('user_version', { simple: true }), 9);
 });

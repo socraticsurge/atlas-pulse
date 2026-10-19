@@ -20,7 +20,7 @@ export function viewTitle(view) {
 }
 
 const EMPTY_BY_VIEW = {
-  saved: { title: 'Nothing saved yet', body: 'Bookmark articles to find them here' },
+  saved: { title: 'Nothing saved yet', body: 'Press b to save an article, or n to save it with a note' },
   today: { title: 'All caught up', body: 'No new articles published today' },
 };
 
@@ -78,16 +78,27 @@ export function dayGroup(dateStr, now = new Date()) {
   return 'Older';
 }
 
+const SAVED_HEADINGS = { Today: 'Saved today', Yesterday: 'Saved yesterday', 'Earlier this week': 'Saved this week', Older: 'Saved earlier' };
+
+/** Day headings by publication date (most lists). */
+export const BY_PUBLISHED = { dateOf: (a) => a.publishedAt, label: (group) => group };
+/** Day headings by when each article was saved (lists of saves, which are in that order). */
+export const BY_SAVED = { dateOf: (a) => a.savedAt, label: (group) => SAVED_HEADINGS[group] };
+
+const SAVE_ORDERED_VIEWS = new Set(['saved']);
+/** How a view's list is grouped under day headings; it matches the server's order for the view. */
+export const groupingFor = (viewType) => (SAVE_ORDERED_VIEWS.has(viewType) ? BY_SAVED : BY_PUBLISHED);
+
 /**
  * The list as rows for the Rows view: a heading before each run of articles
- * from the same day group. Assumes newest-first order; a group that recurs
- * later (unusual sort) simply gets another heading.
+ * from the same day group. Assumes newest-first order (by the grouping's
+ * date); a group that recurs later (unusual sort) simply gets another heading.
  */
-export function withDayHeaders(articles, now = new Date()) {
+export function withDayHeaders(articles, now = new Date(), grouping = BY_PUBLISHED) {
   const items = [];
   let current = null;
   for (const article of articles) {
-    const label = dayGroup(article.publishedAt, now);
+    const label = grouping.label(dayGroup(grouping.dateOf(article), now));
     if (label !== current) {
       items.push({ type: 'header', key: `h-${items.length}-${label}`, label });
       current = label;

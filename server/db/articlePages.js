@@ -52,11 +52,15 @@ function viewFacets(where) {
 
 const facetsToArrays = (facets) => Object.fromEntries(Object.entries(facets).map(([k, set]) => [k, [...set]]));
 
+// Saved articles list in the order they were saved; the rest by publication.
+const SAVE_ORDERED = new Set(['saved']);
+const orderOf = (view) => (SAVE_ORDERED.has(view) ? 'saved_at DESC, id DESC' : 'published_at DESC, id DESC');
+
 // Newest first, filtered in SQL.
 function browsePage(where, options) {
   const filtered = filteredWhere(where, options);
   const rows = db.prepare(
-    `SELECT ${LIST_COLUMNS} FROM articles WHERE ${filtered.sql} ORDER BY published_at DESC, id DESC LIMIT ? OFFSET ?`
+    `SELECT ${LIST_COLUMNS} FROM articles WHERE ${filtered.sql} ORDER BY ${orderOf(options.view)} LIMIT ? OFFSET ?`
   ).all(...filtered.params, options.limit, options.offset);
   return { articles: rows.map(toListItem), total: count(filtered), facets: viewFacets(where) };
 }
@@ -87,6 +91,7 @@ const clamp = (n, min, max, fallback) => (Number.isInteger(n) ? Math.min(Math.ma
 export function getArticlePage(view, id, options = {}) {
   const where = viewWhere(view, id);
   const opts = {
+    view,
     q: options.q || '',
     filters: options.filters || {},
     aiOnly: Boolean(options.aiOnly),

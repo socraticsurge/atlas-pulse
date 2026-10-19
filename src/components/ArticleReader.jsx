@@ -14,6 +14,7 @@ import { useAIRail } from './reader/useAIRail.js';
 import { useArticleExtraction } from './reader/useArticleExtraction.js';
 import { applyHighlights, useArticleHighlights } from './reader/useArticleHighlights.js';
 import { useLiveArticle } from './reader/useLiveArticle.js';
+import { useNoteEditing } from './reader/useNoteEditing.js';
 import { useReaderKeyboard } from './reader/useReaderKeyboard.js';
 import { useReaderScroll } from './reader/useReaderScroll.js';
 
@@ -56,13 +57,13 @@ function useArticleContent(current, extractedContent) {
 }
 
 // Focus ("zen") mode plus the reader's keyboard shortcuts, which depend on it.
-function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI }) {
+function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI, editNote }) {
   const [on, setOn] = useState(false);
   const keyboardActions = useMemo(() => ({
-    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI,
+    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote,
     toggleZen: () => setOn((z) => !z),
     escape: () => (on ? setOn(false) : onClose()),
-  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, on, onClose]);
+  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote, on, onClose]);
   useReaderKeyboard(isOpen, keyboardActions);
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
 }
@@ -83,7 +84,8 @@ export default function ArticleReader({
   const feedTitle = useFeedTitle(feedId);
   const progress = useReaderScroll(contentRef, articleId, isOpen, extraction.settled);
   const visible = useSlideIn(isOpen);
-  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle });
+  const note = useNoteEditing(articleId, live);
+  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle, editNote: note.edit });
   const { displayContent, html, previewHtml } = useArticleContent(current, extraction.content);
   const cssVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
 
@@ -108,7 +110,7 @@ export default function ArticleReader({
         <div className="reader-main">
           <ReaderToolbar
             article={article}
-            live={live}
+            live={live} onNote={note.edit}
             extraction={extraction}
             nav={{ onNavigate, onClose, hasPrev, hasNext, currentIndex, totalCount }}
             zen={zen}
@@ -118,7 +120,7 @@ export default function ArticleReader({
 
           <div className="reader-content" ref={contentRef} style={cssVars}>
             <ReaderBody
-              article={article}
+              article={article} note={{ article: current, focusRequest: note.request, onSave: live.saveNote }}
               brief={briefOf(current, article)}
               feedTitle={feedTitle}
               extracting={extraction.extracting}

@@ -191,4 +191,14 @@ export const MIGRATIONS = [
     description: 'Studio items remember their page design (null = the default design)',
     up: (db) => db.exec('ALTER TABLE studio_items ADD COLUMN template TEXT'),
   },
+  {
+    version: 9,
+    description: 'Saves remember when they were made and carry an optional note',
+    up: (db) => db.exec(`
+      ALTER TABLE articles ADD COLUMN saved_at TEXT;
+      ALTER TABLE articles ADD COLUMN note TEXT;
+      UPDATE articles SET saved_at = created_at WHERE is_bookmarked = 1;
+      CREATE INDEX idx_articles_saved_at ON articles(saved_at);
+    `),
+  },
 ];

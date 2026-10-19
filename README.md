@@ -107,7 +107,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | Feature | Details |
 |---------|---------|
 | **Folders** | Create folders, move feeds into them, right-click to rename or delete |
-| **Saved / Bookmarks** | Bookmark any article; find them under "Saved" in the sidebar |
+| **Saved** | Press `b` to save an article, or `n` to save it with a note on why it caught your eye. Saved lists your saves newest first, under "Saved today / this week" headings, with each note in place of the preview |
 | **Today view** | Shows only articles published today |
 | **Search** | AND-logic tokenized search — "cloud AI" matches articles containing both terms across the title, source, AI topics, and article excerpt; quoted phrases for exact match; results ranked by relevance (title › source › AI topics › excerpt). Full-text search is on the [roadmap](docs/TECH-DEBT.md) |
 | **Mark all read** | One-click button in the article list header |
@@ -241,7 +241,8 @@ Installed models appear in the model picker automatically.
 |-----|--------|
 | `j` / `↓` / `→` | Next article |
 | `k` / `↑` / `←` | Previous article |
-| `b` | Toggle bookmark |
+| `b` | Save or unsave the article |
+| `n` | Save the article and write a note on it |
 | `o` | Open article in original tab |
 | `f` | Toggle zen / focus mode |
 | `/` | Focus search box |

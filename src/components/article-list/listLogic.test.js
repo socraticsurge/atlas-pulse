@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articlesToCSV, chunkRows, dayGroup, emptyStateText, flattenPages, patchPages, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
+import { articlesToCSV, BY_PUBLISHED, BY_SAVED, chunkRows, dayGroup, emptyStateText, flattenPages, groupingFor, patchPages, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
 
 test('viewTitle and emptyStateText', () => {
   assert.equal(viewTitle({ type: 'all' }), 'All Articles');
@@ -78,4 +78,14 @@ test('patching cached pages updates the articles and the unread count', () => {
   assert.deepEqual(patched.pageParams, [0, 2]);
   assert.equal(patchPages(patched, new Set([2]), { isRead: 0 }).pages[0].unread, 2);
   assert.equal(patchPages(undefined, new Set([1]), { isRead: 1 }), undefined);
+});
+
+test('lists of saves group under save-date headings', () => {
+  const now = new Date(2026, 9, 19, 12);
+  const at = (day) => new Date(2026, 9, day, 9).toISOString();
+  const saves = [{ id: 1, savedAt: at(19), publishedAt: at(1) }, { id: 2, savedAt: at(16), publishedAt: at(18) }];
+  assert.equal(groupingFor('saved'), BY_SAVED);
+  assert.equal(groupingFor('all'), BY_PUBLISHED);
+  const labels = withDayHeaders(saves, now, BY_SAVED).filter((i) => i.type === 'header').map((i) => i.label);
+  assert.deepEqual(labels, ['Saved today', 'Saved this week']);
 });
