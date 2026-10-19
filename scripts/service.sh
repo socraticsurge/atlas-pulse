@@ -15,6 +15,16 @@ build() {
   (cd "$APP_DIR" && npm run build)
 }
 
+# After a pull that changed package-lock.json, install the dependencies it
+# names before building. npm writes node_modules/.package-lock.json on every
+# install, so a lockfile newer than it hasn't been installed yet.
+sync_deps() {
+  if [ "$APP_DIR/package-lock.json" -nt "$APP_DIR/node_modules/.package-lock.json" ]; then
+    echo "Dependencies changed: running npm ci"
+    (cd "$APP_DIR" && npm ci --no-audit --no-fund)
+  fi
+}
+
 write_plist() {
   mkdir -p "$LOG_DIR" "$(dirname "$PLIST")"
   cat > "$PLIST" <<PLIST
@@ -46,6 +56,7 @@ PLIST
 
 case "${1:-}" in
   install)
+    sync_deps
     build
     write_plist
     launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
@@ -58,6 +69,7 @@ case "${1:-}" in
     echo "Atlas Pulse service removed"
     ;;
   restart)
+    sync_deps
     build
     launchctl kickstart -k "$DOMAIN/$LABEL"
     echo "Rebuilt and restarted"

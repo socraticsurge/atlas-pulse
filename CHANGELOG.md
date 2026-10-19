@@ -7,6 +7,9 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ### Fixed
 
+- **A taken port stops the server with a clear message.** The API used to print that it was running and then serve nothing; Vite moved to another port while everything still said 5173. Both now stop, and the API names the port and how to pick another (#PR).
+- **`PORT` works with `npm run dev`.** Vite's proxy followed only 3001, so the app went blank under any other port. `npm start` builds the app and serves it from one process; the startup line says which address to open (#PR).
+- **The background service installs changed dependencies** on `npm run service restart`, so pulling an update that changes them no longer leaves the service on the old ones (#PR).
 - **A clear message on an unsupported Node.** `npm run dev` and `npm run build` now stop and say which Node to install, instead of failing inside Vite with `SyntaxError: … does not provide an export named 'styleText'`, and `npm install` refuses an unsupported Node. The minimum is now stated correctly as Node 22.13+ or 24+, since several dependencies no longer support Node 20. `.nvmrc` pins 24 LTS, and CI runs on it (#123).
 - **Images in Medium articles.** Full-text extraction dropped the inline images from Medium publications such as Towards AI; they now come through (#122).
 - **Delete all** in Settings → Data says that it also deletes your saves and their notes and empties collections, and AI errors point to Settings → AI engines (#121).

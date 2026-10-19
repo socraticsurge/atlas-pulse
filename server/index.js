@@ -12,6 +12,7 @@ import summariesRouter from './routes/summaries.js';
 import highlightsRouter from './routes/highlights.js';
 import studioRouter from './routes/studio.js';
 import { isLocalHostname } from './utils/loopback.js';
+import { appUrl, listenFailure, readyMessage } from './utils/startup.js';
 import collectionsRouter from './routes/collections.js';
 import ollamaRouter from './routes/ollama.js';
 import readerRouter from './routes/reader.js';
@@ -65,8 +66,13 @@ app.get('/api/health', (req, res) => {
 });
 
 // Serve the built frontend (npm run build) so one process hosts the whole app.
+// Not under `npm run dev` (--dev): Vite serves the app then, and a dist/ left
+// from an earlier build would be stale. Otherwise a page names the address to open.
+const DEV = process.argv.includes('--dev');
+const URL_SHOWN = appUrl(HOST, PORT);
 const DIST_DIR = join(dirname(fileURLToPath(import.meta.url)), '../dist');
-if (existsSync(join(DIST_DIR, 'index.html'))) {
+const BUILT = !DEV && existsSync(join(DIST_DIR, 'index.html'));
+if (BUILT) {
   // Generous cap — a single user loading the app never comes close — that
   // stops a runaway client from hammering the filesystem.
   const staticLimiter = rateLimit({
@@ -77,6 +83,8 @@ if (existsSync(join(DIST_DIR, 'index.html'))) {
   });
   app.use(staticLimiter, express.static(DIST_DIR));
   app.get(/^(?!\/api\/).*/, staticLimiter, (req, res) => res.sendFile(join(DIST_DIR, 'index.html')));
+} else {
+  app.get(/^(?!\/api\/).*/, (req, res) => res.type('text').send(readyMessage({ url: URL_SHOWN, dev: DEV, built: false })));
 }
 
 // Errors that escape a route (bad JSON, a body over the limit, anything
@@ -87,9 +95,12 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: status === 500 ? 'Internal server error' : err.message });
 });
 
-// Workaround for Node event loop exit issue
-setInterval(() => {}, 1000000);
-
-app.listen(PORT, HOST, () => {
-  console.log(`🚀 RSS Feed Reader API running on http://${HOST}:${PORT}`);
+// Express 5 hands a listen error (a taken port) to this callback rather than
+// throwing, so without the check the server would say it started and serve nothing.
+app.listen(PORT, HOST, (err) => {
+  if (err) {
+    console.error(listenFailure(err, PORT));
+    process.exit(1);
+  }
+  console.log(readyMessage({ url: URL_SHOWN, dev: DEV, built: BUILT }));
 });

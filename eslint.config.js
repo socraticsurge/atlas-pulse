@@ -35,8 +35,8 @@ export default defineConfig([
     },
   },
   {
-    // Server code and scripts run on Node, not in the browser.
-    files: ['server/**/*.js', 'scripts/**/*.js'],
+    // Server code, scripts and the Vite config run on Node, not in the browser.
+    files: ['server/**/*.js', 'scripts/**/*.js', 'vite.config.js'],
     languageOptions: {
       globals: globals.node,
     },

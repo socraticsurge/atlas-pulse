@@ -55,7 +55,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       'Install the current LTS from https://nodejs.org, or run `nvm install` in this folder.',
       'Then reinstall the dependencies, which are built for the Node that installed them:',
       '',
-      '  rm -rf node_modules && npm install',
+      '  npm ci',
       '',
     ].join('\n'));
     process.exit(1);

@@ -51,11 +51,13 @@ It runs entirely on your own machine. There is no account, no cloud and no track
 ```bash
 git clone https://github.com/socraticsurge/atlas-pulse.git
 cd atlas-pulse
-npm install
+npm ci
 npm run dev
 ```
 
-Open **http://localhost:5173** in Chrome. `npm run dev` starts the Vite frontend on port 5173 and the Express API on port 3001; Vite proxies `/api/*` to Express. Press `Ctrl + C` to stop.
+Open **http://localhost:5173** in Chrome. `npm run dev` starts the Vite frontend on port 5173 and the Express API on port 3001; Vite proxies `/api/*` to Express. Press `Ctrl + C` to stop. If 3001 is taken, use another port for the API: `PORT=3002 npm run dev`.
+
+To run it without the dev server, `npm start` builds the app and serves everything from **http://localhost:3001** (or your `PORT`).
 
 Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), search Google News, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
 
@@ -72,7 +74,7 @@ Then open **http://atlas-pulse.localhost:4317**. Chrome resolves every `*.localh
 | Command | What it does |
 |---------|--------------|
 | `npm run service install` | Build the app and register the background service |
-| `npm run service restart` | Rebuild and restart: run this after pulling updates |
+| `npm run service restart` | Install changed dependencies, rebuild and restart: run this after pulling updates |
 | `npm run service status` | Show whether the service is running |
 | `npm run service logs` | Follow the logs (`~/Library/Logs/atlas-pulse/`) |
 | `npm run service uninstall` | Stop the service and remove it |
@@ -286,10 +288,11 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start the frontend (Vite) and backend (Express) together |
+| `npm start` | Build the app and serve it, with the API, from one process on port 3001 |
 | `npm run dev:frontend` | Start only the Vite frontend |
 | `npm run dev:server` | Start only the Express backend |
 | `npm run build` | Build the production frontend to `dist/` |
-| `npm run preview` | Preview the production build |
+| `npm run preview` | Serve the production build with Vite (start the API too: `npm run dev:server`) |
 | `npm run lint` | Run ESLint |
 | `npm test` | Run the test suite (Node's test runner) |
 | `npm run service <command>` | Manage the macOS background service (see [Run it like an app](#run-it-like-an-app-macos)) |
@@ -298,16 +301,13 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 
 ## Troubleshooting
 
-**"Atlas Pulse needs Node.js …", or `SyntaxError: … does not provide an export named 'styleText'`.** Your Node is too old. Install the current LTS from [nodejs.org](https://nodejs.org) (or `nvm install`), then reinstall the dependencies, which are built for the Node that installed them: `rm -rf node_modules && npm install`.
+**"Atlas Pulse needs Node.js …", or `SyntaxError: … does not provide an export named 'styleText'`.** Your Node is too old. Install the current LTS from [nodejs.org](https://nodejs.org) (or `nvm install`), then reinstall the dependencies, which are built for the Node that installed them: `npm ci`.
 
-**The app won't load.** Check the terminal. `EADDRINUSE` means a port is taken:
+**`… was compiled against a different Node.js version … NODE_MODULE_VERSION …`.** You changed Node versions after installing. Run `npm ci`. With the background service, run `npm run service install` too, so it uses the new Node.
 
-```bash
-kill -9 $(lsof -ti:3001) $(lsof -ti:5173)
-npm run dev
-```
+**"Port 3001 is already in use" or "Port 5173 is already in use".** Another program has the port. See which with `lsof -i :3001` (or `:5173`) and quit it, or give the API another port: `PORT=3002 npm run dev`.
 
-With the background service, run `npm run service status` and `npm run service logs`. After pulling updates, run `npm run service restart`.
+**The app won't load, or it looks empty and adding a feed fails.** The local server isn't running or can't be reached. Check the terminal where you ran `npm run dev` for an error. With the background service, run `npm run service status` and `npm run service logs`. After pulling updates, run `npm run service restart`.
 
 **"No AI model available".** Use desktop Google Chrome 148+ for Gemini Nano (Chromium, Safari and Firefox don't include it) and check `chrome://on-device-internals`. Or set up Ollama in **Settings → AI engines**.
 
