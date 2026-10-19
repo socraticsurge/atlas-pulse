@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { batchStatus, batchUpdates, IDLE_PROGRESS, newestFirst, parseScope, pickBatchModel, progressAfter, progressStarted } from './batch.js';
+import { batchStatus, batchUpdates, hasManualSummary, IDLE_PROGRESS, newestFirst, parseScope, pickBatchModel, progressAfter, progressStarted } from './batch.js';
 
 const models = [{ name: 'gemini-nano' }, { name: 'llama3.2' }];
 
@@ -25,10 +25,21 @@ test('newestFirst sorts by publishedAt descending without mutating', () => {
 test('batchUpdates saves the fields the features setting asks for', () => {
   const parsed = { summary: 'S', sentiment: 'positive', topics: ['ai'] };
   const analysis = JSON.stringify({ sentiment: 'positive', topics: ['ai'] });
-  assert.deepEqual(batchUpdates(parsed, 'both'), { aiStatus: 'done', aiSummary: 'S', aiAnalysis: analysis });
-  assert.deepEqual(batchUpdates(parsed), { aiStatus: 'done', aiSummary: 'S', aiAnalysis: analysis });
-  assert.deepEqual(batchUpdates(parsed, 'summary'), { aiStatus: 'done', aiSummary: 'S' });
+  const fromBatch = { aiSummary: 'S', aiSummarySource: 'batch' };
+  assert.deepEqual(batchUpdates(parsed, 'both'), { aiStatus: 'done', ...fromBatch, aiAnalysis: analysis });
+  assert.deepEqual(batchUpdates(parsed), { aiStatus: 'done', ...fromBatch, aiAnalysis: analysis });
+  assert.deepEqual(batchUpdates(parsed, 'summary'), { aiStatus: 'done', ...fromBatch });
   assert.deepEqual(batchUpdates(parsed, 'analysis'), { aiStatus: 'done', aiAnalysis: analysis });
+});
+
+test('batchUpdates keeps a summary the reader asked for and adds only the analysis', () => {
+  const parsed = { summary: 'S', sentiment: 'positive' };
+  const mine = { aiSummary: 'Mine', aiSummarySource: 'manual' };
+  assert.deepEqual(batchUpdates(parsed, 'both', mine), { aiStatus: 'done', aiAnalysis: JSON.stringify({ sentiment: 'positive' }) });
+  assert.deepEqual(batchUpdates(parsed, 'summary', mine), { aiStatus: 'done' });
+  assert.equal(hasManualSummary(mine), true);
+  assert.equal(hasManualSummary({ aiSummarySource: 'batch' }), false);
+  assert.equal(hasManualSummary(undefined), false);
 });
 
 test('parseScope reads all, feed, and folder scopes', () => {

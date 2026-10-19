@@ -151,3 +151,16 @@ test('reader migration 10 adds collections whose items go with their article or 
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM collection_items').get().n, 0);
   assert.equal(db.pragma('user_version', { simple: true }), 10);
 });
+
+test('reader migration 11 marks existing summaries as written by the batch', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER.slice(0, 10));
+  db.prepare("INSERT INTO feeds (title, url, created_at) VALUES ('F', 'https://f.example/rss', 'now')").run();
+  const insert = db.prepare("INSERT INTO articles (feed_id, guid, ai_summary, created_at) VALUES (1, ?, ?, 'now')");
+  insert.run('a', 'A batch summary');
+  insert.run('b', null);
+  insert.run('c', '');
+  migrate(db, READER.slice(0, 11));
+  const sources = db.prepare('SELECT guid, ai_summary_source AS s FROM articles ORDER BY guid').all().map((r) => r.s);
+  assert.deepEqual(sources, ['batch', null, null]);
+});

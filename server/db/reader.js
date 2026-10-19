@@ -46,6 +46,7 @@ function toArticle(row) {
     description: row.description,
     aiStatus: row.ai_status,
     aiSummary: row.ai_summary,
+    aiSummarySource: row.ai_summary_source ?? null,
     aiAnalysis: row.ai_analysis,
     favicon: row.favicon,
     createdAt: row.created_at,
@@ -59,7 +60,7 @@ function toArticle(row) {
 // and the excerpt cut to what a preview line can show.
 export const LIST_EXCERPT_CHARS = 200;
 export const LIST_COLUMNS = `id, feed_id, title, link, published_at, is_read, is_bookmarked, saved_at, note, author,
-  image_url, ai_status, ai_summary, ai_analysis, substr(excerpt, 1, ${LIST_EXCERPT_CHARS}) AS excerpt`;
+  image_url, ai_status, ai_summary, ai_summary_source, ai_analysis, substr(excerpt, 1, ${LIST_EXCERPT_CHARS}) AS excerpt`;
 
 export function toListItem(row) {
   const { content: _content, summary: _summary, description: _description, ...item } = toArticle(row);
@@ -103,6 +104,7 @@ const stmts = {
     db.prepare(`DELETE FROM articles WHERE feed_id IN (${ids.map(() => '?').join(',')})`),
 
   getArticleById: db.prepare(`SELECT * FROM articles WHERE id = ?`),
+  getSummarySource: db.prepare(`SELECT ai_summary_source FROM articles WHERE id = ?`),
   getArticleByLink: db.prepare(`SELECT * FROM articles WHERE link = ? LIMIT 1`),
   getUnreadByFeed: db.prepare(
     `SELECT feed_id, COUNT(*) AS cnt FROM articles WHERE is_read = 0 GROUP BY feed_id`
@@ -353,6 +355,9 @@ const same = (value) => value;
 // A note is trimmed text; an empty one is no note.
 const NOTE_MAX_CHARS = 2000;
 const noteText = (value) => (typeof value === 'string' && value.trim().slice(0, NOTE_MAX_CHARS)) || null;
+// Who wrote a summary: 'manual' (asked for in the reader) or 'batch'.
+const SUMMARY_SOURCES = new Set(['manual', 'batch']);
+const summarySource = (value) => (SUMMARY_SOURCES.has(value) ? value : null);
 const BULK_CHUNK = 10000;
 
 // Fields a change can set: [client key, column, conversion].
@@ -360,6 +365,7 @@ const ARTICLE_FIELDS = [
   ['isRead', 'is_read', flag],
   ['aiStatus', 'ai_status', same],
   ['aiSummary', 'ai_summary', same],
+  ['aiSummarySource', 'ai_summary_source', summarySource],
   ['aiAnalysis', 'ai_analysis', same],
   ['note', 'note', noteText],
 ];
@@ -399,11 +405,20 @@ const leaveCollections = (ids) => db.prepare(
   `DELETE FROM collection_items WHERE article_id IN (${ids.map(() => '?').join(',')})`
 ).run(...ids);
 
-const SINGLE_KEYS = ['isRead', 'isBookmarked', 'aiStatus', 'aiSummary', 'aiAnalysis', 'note'];
+const SINGLE_KEYS = ['isRead', 'isBookmarked', 'aiStatus', 'aiSummary', 'aiSummarySource', 'aiAnalysis', 'note'];
 const BULK_KEYS = ['isRead', 'isBookmarked', 'aiStatus'];
 
+// A summary the reader asked for is theirs: only another manual summary
+// replaces it, so a batch result (even one already running) leaves it alone.
+function keepManualSummary(id, data) {
+  if (data.aiSummary === undefined || data.aiSummarySource === 'manual') return data;
+  if (stmts.getSummarySource.get(id)?.ai_summary_source !== 'manual') return data;
+  const { aiSummary: _summary, aiSummarySource: _source, ...rest } = data;
+  return rest;
+}
+
 export function updateArticle(id, data) {
-  const { fields, values, unsave } = articleChanges(data, SINGLE_KEYS);
+  const { fields, values, unsave } = articleChanges(keepManualSummary(id, data), SINGLE_KEYS);
   if (fields.length === 0) return getArticleById(id);
   db.transaction(() => {
     db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id = @id`).run({ ...values, id });

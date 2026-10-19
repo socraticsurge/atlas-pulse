@@ -221,4 +221,12 @@ export const MIGRATIONS = [
       CREATE INDEX idx_collection_items_article ON collection_items(article_id);
     `),
   },
+  {
+    version: 11,
+    description: "Remember who wrote an article's summary: 'manual' (asked for in the reader) or 'batch'; the batch never replaces a manual one",
+    up: (db) => db.exec(`
+      ALTER TABLE articles ADD COLUMN ai_summary_source TEXT;
+      UPDATE articles SET ai_summary_source = 'batch' WHERE ai_summary IS NOT NULL AND ai_summary <> '';
+    `),
+  },
 ];
