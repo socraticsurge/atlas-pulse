@@ -3,6 +3,7 @@ import {
   addToCollection, collectionsOfArticle, createCollection, deleteCollection, DuplicateNameError,
   listCollections, removeFromCollection, updateCollection,
 } from '../db/collections.js';
+import { collectionMarkdown } from '../db/collectionExport.js';
 import { parseArticleIds, parseCollection } from './collectionsInput.js';
 
 const router = Router();
@@ -29,6 +30,22 @@ router.get('/of/:articleId', (req, res) => {
   const articleId = idOf(req.params.articleId);
   if (!articleId) return res.status(400).json({ error: 'invalid id' });
   try { return res.json(collectionsOfArticle(articleId)); } catch (err) { return fail(res, err); }
+});
+
+// A file name from a collection name: letters, digits and dashes.
+const fileNameOf = (name) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'collection'}.md`;
+
+/** GET /api/collections/:id/export.md — the collection's articles as one Markdown file (for NotebookLM). */
+router.get('/:id/export.md', (req, res) => {
+  const id = idOf(req.params.id);
+  if (!id) return res.status(400).json({ error: 'invalid id' });
+  try {
+    const file = collectionMarkdown(id);
+    if (!file) return res.status(404).json({ error: 'Not found' });
+    res.set('Content-Type', 'text/markdown; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="${fileNameOf(file.name)}"`);
+    return res.send(file.markdown);
+  } catch (err) { return fail(res, err); }
 });
 
 /** POST /api/collections { name, description? } */
