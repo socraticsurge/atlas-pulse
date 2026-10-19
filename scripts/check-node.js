@@ -52,7 +52,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     console.error([
       '',
       `Atlas Pulse needs Node.js ${describe(range)} (you have ${process.version}).`,
-      'Install the current LTS from https://nodejs.org, or run `nvm install` in this folder.',
+      process.platform === 'win32'
+        ? 'Install the current LTS from https://nodejs.org, or with nvm-windows: `nvm install 24` and `nvm use 24`.'
+        : 'Install the current LTS from https://nodejs.org, or run `nvm install` in this folder.',
       'Then reinstall the dependencies, which are built for the Node that installed them:',
       '',
       '  npm ci',
