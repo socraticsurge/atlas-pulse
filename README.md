@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.0.0-f26b1d" alt="Version 2.0.0">
+  <img src="https://img.shields.io/badge/version-2.1.0-f26b1d" alt="Version 2.1.0">
   <img src="https://img.shields.io/badge/license-MIT-0b3b6f" alt="License: MIT">
   <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
   <img src="https://img.shields.io/badge/node-22.13%2B%20%7C%2024%2B-0b3b6f" alt="Node 22.13+ or 24+">
@@ -340,5 +340,7 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the proje
 [MIT](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 ## Changelog
+
+**2.1.0** makes setup and first use clearer: Atlas Pulse says what is wrong and how to fix it (an old Node, a taken port, a stopped server, an AI engine it can't use), Medium articles come through with their images and without page clutter, and installs no longer report security warnings. It needs Node.js 22.13+ or 24+.
 
 **2.0.0** is a new reader: a three-pane layout with dense Rows, a docked reader and an AI rail; saves with notes, collections and an Unsorted queue; NotebookLM export; Studio for editable, printable newsletters; full-text search; a command palette; and a single local database. See [CHANGELOG.md](CHANGELOG.md) for everything in this release and earlier ones.
