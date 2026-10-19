@@ -33,6 +33,49 @@ function hasPromptApi() {
   return typeof self !== 'undefined' && 'LanguageModel' in self;
 }
 
+const NANO_MIN_CHROME = 148;
+const AVAILABILITY_STATE = { available: 'ready', downloadable: 'downloadable', downloading: 'downloading', unavailable: 'unsupported-device' };
+
+// Google Chrome's major version, or null in any other browser (Safari and
+// Firefox have no userAgentData at all).
+function chromeMajor() {
+  const brand = navigator.userAgentData?.brands?.find((b) => b.brand === 'Google Chrome');
+  return brand ? Number.parseInt(brand.version, 10) : null;
+}
+
+/**
+ * Where Gemini Nano stands here, for setup guidance: 'ready', 'downloadable'
+ * or 'downloading'; 'unsupported-device' (Chrome can't run it on this
+ * computer: disk space, graphics or memory); 'old-chrome'; or 'not-chrome'.
+ */
+export async function nanoState() {
+  if (!hasPromptApi()) {
+    const major = chromeMajor();
+    if (major === null) return 'not-chrome';
+    return major < NANO_MIN_CHROME ? 'old-chrome' : 'unsupported-device';
+  }
+  if (!isGoogleChrome()) return 'not-chrome';
+  try {
+    return AVAILABILITY_STATE[await self.LanguageModel.availability()] ?? 'unsupported-device';
+  } catch {
+    return 'unsupported-device';
+  }
+}
+
+const SESSION_OPTIONS = { expectedInputs: [{ type: 'text' }], expectedOutputs: [{ type: 'text' }] };
+
+/**
+ * Downloads Gemini Nano, calling onProgress(0–1) as it goes. Call it straight
+ * from a click: Chrome starts the download only on a user gesture.
+ */
+export async function downloadNano(onProgress) {
+  const session = await self.LanguageModel.create({
+    ...SESSION_OPTIONS,
+    monitor(m) { m.addEventListener('downloadprogress', (e) => onProgress(e.loaded)); },
+  });
+  session.destroy();
+}
+
 /**
  * Returns a model entry shaped like the Ollama ones, or null when the browser
  * can't run Gemini Nano.
@@ -57,11 +100,7 @@ export async function getNanoModel() {
 }
 
 async function createSession(messages) {
-  return self.LanguageModel.create({
-    initialPrompts: messages,
-    expectedInputs: [{ type: 'text' }],
-    expectedOutputs: [{ type: 'text' }],
-  });
+  return self.LanguageModel.create({ initialPrompts: messages, ...SESSION_OPTIONS });
 }
 
 /**

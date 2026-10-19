@@ -1,6 +1,9 @@
 import { useRef, useState } from 'react';
 import { HiOutlineSparkles, HiOutlineXMark } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
+import { nanoNeedsDownload } from '../../ai/models.js';
+import { fetchAIModels } from '../../utils/api.js';
+import { NanoDownloadNotice } from '../ollama/NanoSetup.jsx';
 import { NoAIEngine } from '../ollama/NoAIEngine.jsx';
 import ResizableHandle from '../shell/ResizableHandle.jsx';
 import AIConfigStrip from './AIConfigStrip.jsx';
@@ -96,6 +99,9 @@ export default function AIRail({ isOpen, onClose, width, onResize, article, extr
   const chat = useArticleChat({ article, extractedContent, model });
 
   if (!isOpen) return <RailStrip onOpen={onClose} />;
+  // Gemini Nano picked but not downloaded yet: the download comes first.
+  const nanoPending = ai.ready && nanoNeedsDownload(ai.models.find((m) => m.name === model));
+  const reloadModels = () => fetchAIModels().then(({ models }) => ai.loadModels(models)).catch(() => {});
   const ask = () => { setTab('chat'); chat.send(); };
   const suggest = (text) => { chat.setInput(text); askRef.current?.focus(); };
   const ctx = { ai, article, summary, analysis, chat, highlights, onHighlightDeleted, suggest };
@@ -105,7 +111,8 @@ export default function AIRail({ isOpen, onClose, width, onResize, article, extr
       <ResizableHandle overlay className="left-0" onResize={onResize} />
       <Header ai={ai} onClose={onClose} />
       {ai.checked && !ai.ready && <div className="border-b border-border p-4"><NoAIEngine onReady={ai.loadModels} /></div>}
-      {ai.ready && (
+      {nanoPending && <div className="border-b border-border p-4"><NanoDownloadNotice onDone={reloadModels} /></div>}
+      {ai.ready && !nanoPending && (
         <>
           <TabBar tab={tab} onChange={setTab} highlightCount={highlights.length} />
           <AIConfigStrip />

@@ -4,7 +4,7 @@ import { batchStatus, batchUpdates, hasManualSummary, IDLE_PROGRESS, newestFirst
 
 const models = [{ name: 'gemini-nano' }, { name: 'llama3.2' }];
 
-test('pickBatchModel keeps an installed saved model, else falls back to the first', () => {
+test('pickBatchModel keeps an installed saved model, else makes the Auto choice', () => {
   assert.equal(pickBatchModel('llama3.2', models), 'llama3.2');
   assert.equal(pickBatchModel('gone', models), 'gemini-nano');
   assert.equal(pickBatchModel('', models), 'gemini-nano');

@@ -210,17 +210,17 @@ When Gemini Nano is available, Atlas Pulse uses it automatically. Switch to an O
 
 ### Ollama
 
-Open **Settings → AI engines** and click **Set up Ollama**; the wizard checks for Ollama only when you ask, then walks you through download → start → pull a model. Or set it up by hand:
+Open **Settings → AI engines** and click **Set up Ollama**; the wizard checks for Ollama only when you ask, then walks you through download → start → pull a model, and marks the suggested model that suits your computer's memory. Or set it up by hand:
 
 ```bash
 # Install from https://ollama.com, then pull a model:
-ollama pull qwen2.5:3b       # lightweight, good on older hardware
-ollama pull llama3.1:8b      # balanced quality and speed
+ollama pull llama3.2:3b      # fastest; fine with 8 GB of memory
+ollama pull gemma3:4b        # balanced; for 16 GB
 
 ollama serve                 # API on http://localhost:11434
 ```
 
-Installed models appear in the model picker automatically. If Ollama listens somewhere else (another port, or another machine), set `OLLAMA_HOST` the way Ollama reads it, for example `OLLAMA_HOST=gpu-box:11434 npm run dev`.
+Installed models appear in the model picker automatically. Models that reason before answering (DeepSeek R1, Qwen 3.5, Gemma 4) work too: Atlas Pulse asks them for the answer without the reasoning, which keeps summaries fast. If Ollama listens somewhere else (another port, or another machine), set `OLLAMA_HOST` the way Ollama reads it, for example `OLLAMA_HOST=gpu-box:11434 npm run dev`.
 
 ### Background processing
 
@@ -309,13 +309,13 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 
 **The app won't load, or it looks empty and adding a feed fails.** The local server isn't running or can't be reached. Check the terminal where you ran `npm run dev` for an error. With the background service, run `npm run service status` and `npm run service logs`. After pulling updates, run `npm run service restart`.
 
-**"No AI model available".** Use desktop Google Chrome 148+ for Gemini Nano (Chromium, Safari and Firefox don't include it) and check `chrome://on-device-internals`. Or set up Ollama in **Settings → AI engines**.
+**"No AI model available".** The card says why Gemini Nano isn't available: not Chrome (Chromium, Safari and Firefox don't include it), a Chrome older than 148, or a computer Chrome can't run it on (`chrome://on-device-internals` shows the reason). Or set up Ollama in **Settings → AI engines**.
 
-**The first summary takes a long time.** Chrome is downloading Gemini Nano. Later requests start immediately. If it never finishes, check that you have about 22 GB free.
+**"Gemini Nano needs a one-time download".** Chrome hasn't downloaded the model yet, and starts only when you click: use **Download Gemini Nano** in the AI panel or in **Settings → AI engines** to follow its progress. If it never finishes, check that you have about 22 GB free.
 
 **"Articles were shortened" or "too long for Gemini Nano".** Select fewer articles, or switch to an Ollama model.
 
-**No Ollama models in the picker.** Run `ollama serve`, check `curl http://localhost:11434` (or your `OLLAMA_HOST`), then pull a model (`ollama pull qwen2.5:3b`) or use **Pull** in the Ollama setup.
+**No Ollama models in the picker.** Run `ollama serve`, check `curl http://localhost:11434` (or your `OLLAMA_HOST`), then pull a model (`ollama pull llama3.2:3b`) or use **Pull** in the Ollama setup, which marks the one that suits your computer's memory.
 
 **A feed won't add.** Some sites block automated requests (403/429). Try the feed URL itself, for example `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`.
 
