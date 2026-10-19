@@ -9,7 +9,7 @@ import { batchMessages, collectResponse } from '../ai/tasks.js';
 import { getAISettings } from '../utils/aiSettings.js';
 import { parseBatchResult } from '../ai/parse.js';
 import {
-  IDLE_PROGRESS, batchStatus, batchUpdates, newestFirst, pickBatchModel, progressAfter, progressStarted,
+  IDLE_PROGRESS, batchStatus, batchUpdates, hasManualSummary, newestFirst, pickBatchModel, progressAfter, progressStarted,
 } from '../ai/batch.js';
 import { usePolling } from './usePolling.js';
 
@@ -27,8 +27,13 @@ async function processNext({ model, features, onStart, shouldStop }) {
     if (!article) return 'empty';
     articleId = article.id;
     onStart(queued);
+    // Summaries only, and the reader already wrote this one: nothing to do.
+    if (features === 'summary' && hasManualSummary(article)) {
+      await patchArticle(articleId, { aiStatus: 'done' });
+      return 'done';
+    }
     const response = await collectResponse(model, batchMessages(article, getAISettings()), shouldStop);
-    await patchArticle(articleId, batchUpdates(parseBatchResult(response), features));
+    await patchArticle(articleId, batchUpdates(parseBatchResult(response), features, article));
     return 'done';
   } catch (err) {
     if (!articleId) return 'unavailable';

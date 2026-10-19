@@ -13,10 +13,18 @@ export function newestFirst(articles) {
   return [...articles].sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 }
 
-/** Article fields to save from a parsed batch result, per the `features` setting. */
-export function batchUpdates(parsed, features = 'both') {
+/** True when the reader generated this article's summary (the batch must keep it). */
+export const hasManualSummary = (article) => article?.aiSummarySource === 'manual';
+
+/**
+ * Article fields to save from a parsed batch result, per the `features`
+ * setting; a summary the reader asked for (article.aiSummarySource 'manual')
+ * is kept.
+ */
+export function batchUpdates(parsed, features = 'both', article = {}) {
   const updates = { aiStatus: 'done' };
-  if (features !== 'analysis') updates.aiSummary = parsed.summary;
+  // A summary the reader asked for stays; the batch only adds its analysis.
+  if (features !== 'analysis' && !hasManualSummary(article)) Object.assign(updates, { aiSummary: parsed.summary, aiSummarySource: 'batch' });
   if (features !== 'summary') {
     const { summary: _summary, ...analysis } = parsed;
     updates.aiAnalysis = JSON.stringify(analysis);
