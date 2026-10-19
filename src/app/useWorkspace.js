@@ -7,8 +7,11 @@ import { on } from '../lib/appEvents.js';
 // its place: the next article has moved up into it.
 function useLastPosition(selected, found) {
   const [seen, setSeen] = useState({ id: null, index: -1 });
-  if (found >= 0 && (seen.id !== selected.id || seen.index !== found)) setSeen({ id: selected.id, index: found });
-  return selected && found < 0 && seen.id === selected.id ? seen.index : -1;
+  const id = selected?.id ?? null;
+  const moved = seen.id !== id || seen.index !== found;
+  if (found >= 0 && moved) setSeen({ id, index: found });
+  const left = found < 0 && seen.id === id;
+  return left && id !== null ? seen.index : -1;
 }
 
 // Target index for a step: from the open article, or from where it was.
