@@ -7,7 +7,7 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ### Fixed
 
-- **When the local server stops, the app says so.** It used to look like an empty library ("Your feed is empty"), and adding a feed failed with "Failed to discover feeds". Now a banner says the server isn't answering and how to start it, the list says it can't load articles, and requests fail with "Can't reach the Atlas Pulse server". The app keeps checking and reloads everything once the server is back (#PR).
+- **When the local server stops, the app says so.** It used to look like an empty library ("Your feed is empty"), and adding a feed failed with "Failed to discover feeds". Now a banner says the server isn't answering and how to start it, the list says it can't load articles, and requests fail with "Can't reach the Atlas Pulse server". The app keeps checking and reloads everything once the server is back (#126).
 - **A taken port stops the server with a clear message.** The API used to print that it was running and then serve nothing; Vite moved to another port while everything still said 5173. Both now stop, and the API names the port and how to pick another (#125).
 - **`PORT` works with `npm run dev`.** Vite's proxy followed only 3001, so the app went blank under any other port. `npm start` builds the app and serves it from one process; the startup line says which address to open (#125).
 - **The background service installs changed dependencies** on `npm run service restart`, so pulling an update that changes them no longer leaves the service on the old ones (#125).
