@@ -1,0 +1,61 @@
+/* Evening Edition: a tabloid in one reading column. */
+
+.nl-evening {
+  --ev-red: #b3121d;
+  --ev-ink: #111111;
+  --ev-paper: #ffffff;
+  --ev-muted: #444444;
+  --ev-banner: 'Anton', Impact, sans-serif;
+  --ev-label: 'Oswald', 'Arial Narrow', sans-serif;
+  --ev-text: 'Source Serif 4 Variable', Georgia, serif;
+  --nl-measure: 680px;
+  padding-top: 0;
+  background: var(--ev-paper);
+  color: var(--ev-ink);
+  font-family: var(--ev-text);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.nl-evening .nl-masthead { margin: 0 -52px; }
+.nl-evening .ev-banner { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; padding: 22px 52px 18px; background: var(--ev-red); color: #ffffff; }
+.nl-evening .ev-title { margin: 0; font-family: var(--ev-banner); font-weight: 400; font-size: 120px; line-height: 0.86; text-transform: uppercase; }
+.nl-evening .ev-ears { text-align: right; font-family: var(--ev-label); font-weight: 500; font-size: 14px; line-height: 1.5; letter-spacing: 0.1em; text-transform: uppercase; }
+.nl-evening .ev-edition { font-size: 20px; font-weight: 600; }
+.nl-evening .ev-bar { height: 8px; background: var(--ev-ink); }
+
+.nl-evening .nl-front { max-width: var(--nl-measure); margin-top: 30px; text-align: left; }
+.nl-evening .nl-headline { font-family: var(--ev-banner); font-weight: 400; line-height: 0.98; text-transform: uppercase; }
+.nl-evening .nl-headline-l { font-size: 76px; }
+.nl-evening .nl-headline-m { font-size: 60px; }
+.nl-evening .nl-headline-s { font-size: 46px; }
+.nl-evening .nl-standfirst { max-width: none; margin-left: 0; font-size: 21px; line-height: 1.45; font-weight: 700; }
+.nl-evening .nl-lede { font-size: 20px; font-weight: 600; }
+
+.nl-evening .nl-column { margin-top: 30px; border-top: 6px solid var(--ev-ink); }
+.nl-evening .nl-section + .nl-section { border-top: 2px solid var(--ev-ink); }
+.nl-evening .nl-section.nl-role-callout,
+.nl-evening .nl-section.nl-role-takeaways { border-top: 0; }
+.nl-evening .nl-section.nl-role-closing { margin-top: 18px; padding-top: 0; border-top: 0; font-weight: 600; }
+
+.nl-evening .nl-h { font-family: var(--ev-label); font-weight: 600; font-size: 30px; line-height: 1.1; text-transform: uppercase; }
+.nl-evening .nl-kicker { display: inline-block; margin-bottom: 10px; padding: 3px 10px; background: var(--ev-ink); color: #ffffff; font-family: var(--ev-label); font-weight: 600; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
+.nl-evening .nl-runin { font-family: var(--ev-label); font-weight: 600; font-size: 0.82em; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ev-red); }
+.nl-evening .nl-list li::marker { color: var(--ev-red); }
+.nl-evening .nl-quote { padding-left: 18px; border-left: 4px solid var(--ev-red); font-style: italic; }
+.nl-evening .nl-pullquote { padding: 18px 0; border-top: 6px solid var(--ev-ink); border-bottom: 2px solid var(--ev-ink); font-family: var(--ev-banner); font-size: 40px; line-height: 1.04; text-transform: uppercase; color: var(--ev-red); }
+
+.nl-evening .nl-panel { padding-top: 10px; border-top: 6px solid var(--ev-ink); }
+.nl-evening .nl-panel-title { font-family: var(--ev-banner); font-size: 28px; line-height: 1; text-transform: uppercase; }
+.nl-evening .nl-panel-items { font-size: 17px; line-height: 1.5; }
+.nl-evening .nl-panel-items li { padding: 10px 0; }
+.nl-evening .nl-numeral { width: 1em; font-family: var(--ev-banner); font-size: 40px; line-height: 0.9; color: var(--ev-red); }
+
+.nl-evening .nl-callout { padding: 18px 22px; background: var(--ev-ink); color: #ffffff; }
+.nl-evening .nl-callout-label { margin-bottom: 8px; font-family: var(--ev-label); font-weight: 600; font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase; color: #ff7a7a; }
+.nl-evening .nl-callout .nl-p { font-size: 18px; }
+.nl-evening .nl-intro .nl-p { font-weight: 600; }
+
+.nl-evening .nl-sources { padding-top: 14px; border-top: 6px solid var(--ev-red); font-family: var(--ev-label); font-weight: 500; font-size: 14px; line-height: 1.6; }
+.nl-evening .nl-sources .nl-panel-title { font-family: var(--ev-label); font-size: 14px; font-weight: 600; letter-spacing: 0.14em; }
+.nl-evening .nl-source-site { color: var(--ev-muted); }
