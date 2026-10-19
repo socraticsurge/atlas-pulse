@@ -71,7 +71,7 @@ function useLoadedDraft(item, onLoad) {
   const [loadedId, setLoadedId] = useState(null);
   if (item && loadedId !== item.id) {
     setLoadedId(item.id);
-    setDraft({ title: item.title, bodyMd: item.bodyMd });
+    setDraft({ title: item.title, bodyMd: item.bodyMd, template: item.template ?? null });
     onLoad();
   }
   return [draft, setDraft];
@@ -85,7 +85,7 @@ export function editToSave(changes) {
 }
 
 /**
- * The editable draft of an item ({ title, bodyMd }), saved automatically a
+ * The editable draft of an item ({ title, bodyMd, template }), saved automatically a
  * moment after typing stops. status: 'saved' | 'unsaved' | 'saving' | 'error'.
  */
 export function useStudioDraft(item) {

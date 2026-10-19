@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   HiOutlineArrowDownTray, HiOutlineCheck, HiOutlineClipboardDocument, HiOutlineExclamationCircle,
 } from 'react-icons/hi2';
@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils';
 import { readStored, writeStored } from '../../utils/storage.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../../utils/docx.js';
 import { DeleteButton } from '../library/ItemActions.jsx';
-import { renderMarkdown } from './markdown.js';
+import PagePreview from './PagePreview.jsx';
+import { DEFAULT_DESIGN, DESIGNS } from './templates/designs/index.js';
 import { styleLabel } from '../../ai/newsletter.js';
 import { wordCount } from './studioModel.js';
 import { useStudioDraft } from './useStudio.js';
@@ -39,8 +40,24 @@ function ModeToggle({ mode, onChange }) {
   return (
     <div role="tablist" aria-label="Editor layout" className="flex rounded-md bg-[var(--bg-tertiary)] p-0.5">
       {MODES.map(([id, label]) => (
-        <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => onChange(id)} className={cn(SEGMENT, mode === id ? 'bg-[var(--bg-active)] text-foreground' : 'bg-transparent text-muted-foreground hover:text-foreground')}>
+        <button key={id} type="button" role="tab" aria-selected={mode === id} onClick={() => onChange(id)} className={segmentClass(mode === id)}>
           {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const segmentClass = (on) => cn(SEGMENT, on ? 'bg-[var(--bg-active)] text-foreground' : 'bg-transparent text-muted-foreground hover:text-foreground');
+
+// The page design; saved with the newsletter like any other edit.
+function DesignPicker({ value, onChange }) {
+  const current = value ?? DEFAULT_DESIGN;
+  return (
+    <div role="radiogroup" aria-label="Page design" className="flex rounded-md bg-[var(--bg-tertiary)] p-0.5">
+      {DESIGNS.map((d) => (
+        <button key={d.id} type="button" role="radio" aria-checked={current === d.id} title={d.description} onClick={() => onChange(d.id)} className={segmentClass(current === d.id)}>
+          {d.label}
         </button>
       ))}
     </div>
@@ -73,6 +90,7 @@ function EditorBar({ draft, status, onEdit, onRetry, mode, onModeChange, onDelet
       />
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <ModeToggle mode={mode} onChange={onModeChange} />
+        <DesignPicker value={draft.template} onChange={(template) => onEdit({ template })} />
         <SaveStatus status={status} onRetry={onRetry} />
         <span className="font-mono text-[11px] text-[var(--text-tertiary)]">· {wordCount(draft.bodyMd).toLocaleString()} words</span>
         <div className="ml-auto flex flex-wrap gap-0.5">
@@ -84,11 +102,6 @@ function EditorBar({ draft, status, onEdit, onRetry, mode, onModeChange, onDelet
       </div>
     </div>
   );
-}
-
-function Preview({ markdown }) {
-  const html = useMemo(() => renderMarkdown(markdown), [markdown]);
-  return <div className="reader-article-content mx-auto max-w-[700px]" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
 // How the newsletter was made, and the articles it came from.
@@ -127,8 +140,8 @@ function Panes({ mode, draft, item, onEdit, onOpenSource }) {
         />
       )}
       {previewing && (
-        <div className="min-h-0 flex-1 overflow-y-auto px-8 py-6">
-          <Preview markdown={draft.bodyMd} />
+        <div className="min-h-0 flex-1 overflow-y-auto bg-[var(--bg-tertiary)] px-6 py-6">
+          <PagePreview item={item} draft={draft} />
           <Provenance item={item} onOpenSource={onOpenSource} />
         </div>
       )}
@@ -136,7 +149,7 @@ function Panes({ mode, draft, item, onEdit, onOpenSource }) {
   );
 }
 
-/** A saved newsletter: its title and Markdown, edited with a live preview and saved as you type. */
+/** A saved newsletter: its title and Markdown, edited beside the page in its chosen design, saved as you type. */
 export default function StudioEditor({ item, onDelete, onOpenSource }) {
   const { draft, status, edit, retry } = useStudioDraft(item);
   const [mode, setMode] = useEditorMode();

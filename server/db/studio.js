@@ -24,7 +24,8 @@ const stmts = {
     VALUES (@item_id, @position, @article_id, @article_url, @article_title, @article_source)
   `),
   update: db.prepare(`
-    UPDATE studio_items SET title = COALESCE(@title, title), body_md = COALESCE(@body_md, body_md), updated_at = @now
+    UPDATE studio_items
+    SET title = COALESCE(@title, title), body_md = COALESCE(@body_md, body_md), template = COALESCE(@template, template), updated_at = @now
     WHERE id = @id
   `),
   delete: db.prepare('DELETE FROM studio_items WHERE id = ?'),
@@ -68,6 +69,7 @@ export function getStudioItem(id) {
     title: row.title,
     bodyMd: row.body_md,
     style: row.style,
+    template: row.template,
     model: row.model,
     aiSettings: parseSettings(row.ai_settings),
     sources: stmts.sources.all(id).map(toSource),
@@ -100,9 +102,9 @@ export const createStudioItem = db.transaction((item) => {
   return getStudioItem(Number(id));
 });
 
-/** Changes an item's title and/or body; returns it, or null if it doesn't exist. */
-export function updateStudioItem(id, { title, bodyMd }) {
-  const { changes } = stmts.update.run({ id, title: optional(title), body_md: optional(bodyMd), now: new Date().toISOString() });
+/** Changes an item's title, body and/or page design; returns it, or null if it doesn't exist. */
+export function updateStudioItem(id, { title, bodyMd, template }) {
+  const { changes } = stmts.update.run({ id, title: optional(title), body_md: optional(bodyMd), template: optional(template), now: new Date().toISOString() });
   return changes ? getStudioItem(id) : null;
 }
 

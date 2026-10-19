@@ -70,7 +70,7 @@ Gemini Nano only exists in Google Chrome, so any packaging keeps the UI in Chrom
 | Core | `src/ai/`, models and parsers, all tested | Done; keep the rule |
 | Settings and prompt registries | `src/components/settings/registry.js`, `src/ai/promptRegistry.js`, Simple/Power switch | Done (#90) |
 | Engine port | `streamChat()` switches on the model name; `isNanoModel` is still checked in callers | With the newsletter work |
-| Template registry and Studio | `studio/templates/designs/` is the design-system registry; Studio saves and edits newsletters | Template picker in Studio, then exports |
+| Template registry and Studio | `studio/templates/designs/` is the design-system registry; Studio edits a newsletter beside its page and remembers the chosen design | Exports (PNG, PDF) next |
 | Store and Fetcher ports | `api.js` is the single seam, but it is the HTTP implementation | Only when a second backend is real |
 | Platform port | `scripts/service.sh` (macOS launchd) | With the installer |
 
@@ -125,7 +125,7 @@ All data is in one SQLite database, `data/reader.db` (or in `ATLAS_DATA_DIR` if 
 
 | Tables | Schema version |
 |---|---|
-| feeds, folders, articles, `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources` | 7 |
+| feeds, folders, articles, `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources` | 8 |
 
 Summaries and highlights had files of their own (`summaries.db`, `highlights.db`) until v6. On first start `server/db/legacyMerge.js` copies their rows in, keeping ids, and renames the old files `*.merged`. One database lets queries join articles with the summaries and highlights saved from them.
 
