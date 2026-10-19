@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../utils/api.js';
 import { on } from '../lib/appEvents.js';
 import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js';
@@ -14,6 +14,7 @@ import { useAIRail } from './reader/useAIRail.js';
 import { useArticleExtraction } from './reader/useArticleExtraction.js';
 import { applyHighlights, useArticleHighlights } from './reader/useArticleHighlights.js';
 import { useLiveArticle } from './reader/useLiveArticle.js';
+import { useNoteEditing } from './reader/useNoteEditing.js';
 import { useReaderKeyboard } from './reader/useReaderKeyboard.js';
 import { useReaderScroll } from './reader/useReaderScroll.js';
 
@@ -65,20 +66,6 @@ function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, 
   }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote, on, onClose]);
   useReaderKeyboard(isOpen, keyboardActions);
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
-}
-
-// n (or the note button) saves the article if it isn't yet and asks for its
-// note field. request counts the asks, so each refocuses it; each article starts at 0.
-function useNoteEditing(articleId, live) {
-  const [request, setRequest] = useState(0);
-  useOnKeyChange(articleId, () => setRequest(0));
-  const { toggleBookmark } = live;
-  const isSaved = Boolean(live.current?.isBookmarked);
-  const edit = useCallback(() => {
-    if (!isSaved) toggleBookmark();
-    setRequest((n) => n + 1);
-  }, [isSaved, toggleBookmark]);
-  return { request, edit };
 }
 
 export default function ArticleReader({

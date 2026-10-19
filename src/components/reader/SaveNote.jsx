@@ -29,6 +29,18 @@ function useNoteDraft(article, onSave) {
   return { draft, change, flush };
 }
 
+// Enter (without Shift) or Esc finishes the note.
+const isFinishKey = (e) => e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey);
+
+function finishOnKey(e) {
+  if (!isFinishKey(e)) return;
+  e.preventDefault();
+  e.currentTarget.blur();
+}
+
+// Shown on a saved article, one with a note, or once n has asked for it.
+const isShown = (article, draft, focusRequest) => [focusRequest > 0, article.isBookmarked, draft].some(Boolean);
+
 /**
  * The note on a saved article, under the headline. Shown once the article
  * is saved or has a note, and focused when n asks for it (focusRequest goes
@@ -38,7 +50,7 @@ function useNoteDraft(article, onSave) {
 export default function SaveNote({ article, focusRequest, onSave }) {
   const fieldRef = useRef(null);
   const { draft, change, flush } = useNoteDraft(article, onSave);
-  const shown = focusRequest > 0 || Boolean(article.isBookmarked) || Boolean(draft);
+  const shown = isShown(article, draft, focusRequest);
 
   useEffect(() => {
     if (focusRequest > 0 && shown) fieldRef.current?.focus();
@@ -46,12 +58,6 @@ export default function SaveNote({ article, focusRequest, onSave }) {
   useEffect(() => fitHeight(fieldRef.current), [draft, shown]);
 
   if (!shown) return null;
-  const finish = (e) => {
-    if (e.key === 'Escape' || (e.key === 'Enter' && !e.shiftKey)) {
-      e.preventDefault();
-      e.currentTarget.blur();
-    }
-  };
   return (
     <section aria-label="Your note" className="mb-8 border-l-2 border-primary py-0.5 pl-4">
       <label htmlFor={`note-${article.id}`} className="mb-1 block font-mono text-[11px] uppercase tracking-[0.08em] text-primary">
@@ -64,7 +70,7 @@ export default function SaveNote({ article, focusRequest, onSave }) {
         value={draft}
         onChange={(e) => change(e.target.value)}
         onBlur={() => flush(draft)}
-        onKeyDown={finish}
+        onKeyDown={finishOnKey}
         placeholder="What caught your eye? (n)"
         className="block w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[15px] leading-[1.55] text-foreground outline-none placeholder:text-[var(--text-tertiary)]"
       />
