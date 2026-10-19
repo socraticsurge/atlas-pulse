@@ -87,11 +87,14 @@ function takeHeadline(items, fallbackTitle) {
   return { headline: items[at].text, rest: [...items.slice(0, at), ...items.slice(at + 1)] };
 }
 
+// A "**Date:** …" style line at the top.
+const isMetaLine = (item) => item?.kind === 'paragraph' && META_LABELS.test(item.label ?? '');
+
 // Meta lines ("**Date:** …") and the opening paragraph, from the front.
 function takeOpening(items) {
   const meta = [];
   let i = 0;
-  while (items[i]?.kind === 'paragraph' && items[i].label && META_LABELS.test(items[i].label)) {
+  while (isMetaLine(items[i])) {
     meta.push({ label: items[i].label, md: items[i].md });
     i += 1;
   }
