@@ -73,7 +73,7 @@ if (existsSync(join(DIST_DIR, 'index.html'))) {
   // stops a runaway client from hammering the filesystem.
   const staticLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 600,
+    limit: 600,
     standardHeaders: true,
     legacyHeaders: false,
   });
