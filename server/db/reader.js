@@ -22,6 +22,7 @@ function toFeed(row) {
     lastRefreshed: row.last_refreshed,
     lastError: row.last_error ?? null,
     lastErrorAt: row.last_error_at ?? null,
+    removedAt: row.removed_at ?? null,
     createdAt: row.created_at,
   };
 }
@@ -67,6 +68,9 @@ export function toListItem(row) {
   return item;
 }
 
+/** SQL condition: the article's feed is subscribed (not removed and kept for its saves). */
+export const FROM_ACTIVE_FEED = 'feed_id IN (SELECT id FROM feeds WHERE removed_at IS NULL)';
+
 // ── Folders ───────────────────────────────────────────────────────────────────
 
 const stmts = {
@@ -83,7 +87,6 @@ const stmts = {
   maxFolderOrder: db.prepare(`SELECT COALESCE(MAX(sort_order), 0) AS m FROM folders`),
   unlinkFolderFeeds: db.prepare(`UPDATE feeds SET folder_id = NULL WHERE folder_id = ?`),
   getFeedsByFolder: db.prepare(`SELECT id FROM feeds WHERE folder_id = ?`),
-  deleteFeedsByFolder: db.prepare(`DELETE FROM feeds WHERE folder_id = ?`),
 
   insertFeed: db.prepare(
     `INSERT INTO feeds (folder_id, title, url, site_url, favicon, description, last_refreshed, created_at)
@@ -95,10 +98,20 @@ const stmts = {
      last_error = @last_error, last_error_at = @last_error_at WHERE id = @id`
   ),
   deleteFeed: db.prepare(`DELETE FROM feeds WHERE id = ?`),
-  getAllFeeds: db.prepare(`SELECT * FROM feeds ORDER BY id`),
+  getAllFeeds: db.prepare(`SELECT * FROM feeds WHERE removed_at IS NULL ORDER BY id`),
+  getRemovedFeeds: db.prepare(`SELECT * FROM feeds WHERE removed_at IS NOT NULL ORDER BY id`),
+  deleteUnsavedByFeed: db.prepare(`DELETE FROM articles WHERE feed_id = ? AND is_bookmarked = 0`),
+  countByFeed: db.prepare(`SELECT COUNT(*) AS n FROM articles WHERE feed_id = ?`),
+  retireFeed: db.prepare(
+    `UPDATE feeds SET removed_at = ?, folder_id = NULL, last_error = NULL, last_error_at = NULL WHERE id = ?`
+  ),
+  reviveFeed: db.prepare(
+    `UPDATE feeds SET removed_at = NULL, folder_id = @folder_id, title = @title, site_url = COALESCE(@site_url, site_url),
+     favicon = COALESCE(@favicon, favicon), description = COALESCE(@description, description) WHERE id = @id`
+  ),
   getFeedById: db.prepare(`SELECT * FROM feeds WHERE id = ?`),
   getFeedByUrl: db.prepare(`SELECT * FROM feeds WHERE url = ?`),
-  getFeedsByFolderId: db.prepare(`SELECT * FROM feeds WHERE folder_id = ?`),
+  getFeedsByFolderId: db.prepare(`SELECT * FROM feeds WHERE folder_id = ? AND removed_at IS NULL`),
   deleteArticlesByFeed: db.prepare(`DELETE FROM articles WHERE feed_id = ?`),
   deleteArticlesByFeedList: (ids) =>
     db.prepare(`DELETE FROM articles WHERE feed_id IN (${ids.map(() => '?').join(',')})`),
@@ -107,7 +120,8 @@ const stmts = {
   getSummarySource: db.prepare(`SELECT ai_summary_source FROM articles WHERE id = ?`),
   getArticleByLink: db.prepare(`SELECT * FROM articles WHERE link = ? LIMIT 1`),
   getUnreadByFeed: db.prepare(
-    `SELECT feed_id, COUNT(*) AS cnt FROM articles WHERE is_read = 0 GROUP BY feed_id`
+    `SELECT feed_id, COUNT(*) AS cnt FROM articles
+     WHERE is_read = 0 AND feed_id IN (SELECT id FROM feeds WHERE removed_at IS NULL) GROUP BY feed_id`
   ),
   getSavedCount: db.prepare(`SELECT COUNT(*) AS cnt FROM articles WHERE is_bookmarked = 1`),
   getUnsortedCount: db.prepare(
@@ -148,14 +162,14 @@ export function removeFolderById(id) {
   return stmts.deleteFolder.run(id).changes > 0;
 }
 
+/** Deletes a folder and its feeds (keeping their saves, see removeFeed); returns how many saves were kept. */
 export function removeFolderAndFeedsById(id) {
-  db.transaction(() => {
+  return db.transaction(() => {
     const feedIds = stmts.getFeedsByFolder.all(id).map(f => f.id);
-    for (const feedId of feedIds) stmts.deleteArticlesByFeed.run(feedId);
-    stmts.deleteFeedsByFolder.run(id);
+    const kept = feedIds.reduce((sum, feedId) => sum + retireOrDeleteFeed(feedId), 0);
     stmts.deleteFolder.run(id);
+    return kept;
   })();
-  return true;
 }
 
 export function findFolderByName(name) {
@@ -165,8 +179,24 @@ export function findFolderByName(name) {
 
 // ── Feed operations ───────────────────────────────────────────────────────────
 
+// Subscribing again to a removed feed brings it back (same id, so its kept
+// saves and the articles it already has line up with new ones).
+function reviveFeed(row, data) {
+  stmts.reviveFeed.run({
+    id: row.id,
+    folder_id: data.folderId ?? null,
+    title: data.title ?? row.title,
+    site_url: data.siteUrl ?? null,
+    favicon: data.favicon ?? null,
+    description: data.description ?? null,
+  });
+  return toFeed(stmts.getFeedById.get(row.id));
+}
+
 export function createFeed(data) {
-  if (stmts.getFeedByUrl.get(data.url)) throw new Error('Feed already exists');
+  const existing = stmts.getFeedByUrl.get(data.url);
+  if (existing?.removed_at) return reviveFeed(existing, data);
+  if (existing) throw new Error('Feed already exists');
   const info = stmts.insertFeed.run({
     folder_id: data.folderId ?? null,
     title: data.title,
@@ -178,6 +208,11 @@ export function createFeed(data) {
     created_at: new Date().toISOString(),
   });
   return toFeed(stmts.getFeedById.get(info.lastInsertRowid));
+}
+
+/** Removed feeds kept for their saved articles (their names label those saves). */
+export function listRemovedFeeds() {
+  return stmts.getRemovedFeeds.all().map(toFeed);
 }
 
 export function listFeeds(folderId) {
@@ -217,12 +252,21 @@ export function updateFeed(id, data) {
   return toFeed(stmts.getFeedById.get(id));
 }
 
+// Deletes the feed's unsaved articles. With saves left, the feed is kept,
+// marked removed (hidden from the sidebar, refresh and All/Today), so the
+// saves keep their notes, collections and source; without, it is deleted.
+// Returns how many saves were kept.
+function retireOrDeleteFeed(id) {
+  stmts.deleteUnsavedByFeed.run(id);
+  const kept = stmts.countByFeed.get(id).n;
+  if (kept > 0) stmts.retireFeed.run(new Date().toISOString(), id);
+  else stmts.deleteFeed.run(id);
+  return kept;
+}
+
+/** Removes a feed and its articles, except saved ones; returns how many saves were kept. */
 export function removeFeed(id) {
-  db.transaction(() => {
-    stmts.deleteArticlesByFeed.run(id);
-    stmts.deleteFeed.run(id);
-  })();
-  return true;
+  return db.transaction(() => retireOrDeleteFeed(id))();
 }
 
 // ── Article operations ────────────────────────────────────────────────────────
@@ -520,7 +564,7 @@ export function getCounts() {
   const savedCount = stmts.getSavedCount.get().cnt;
   const unsortedCount = stmts.getUnsortedCount.get().cnt;
   const todayCount = db.prepare(
-    `SELECT COUNT(*) AS cnt FROM articles WHERE published_at >= ?`
+    `SELECT COUNT(*) AS cnt FROM articles WHERE published_at >= ? AND ${FROM_ACTIVE_FEED}`
   ).get(start.toISOString()).cnt;
   return { unreadByFeed, total, savedCount, unsortedCount, todayCount };
 }

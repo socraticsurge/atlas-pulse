@@ -2,7 +2,7 @@ import { Router } from 'express';
 import {
   createFolder, listFolders, updateFolderById, removeFolderById, removeFolderAndFeedsById,
   findFolderByName,
-  createFeed, listFeeds, getFeed, updateFeed, removeFeed,
+  createFeed, listFeeds, listRemovedFeeds, getFeed, updateFeed, removeFeed,
   bulkInsertArticles, getArticleById, findArticleByLink,
   updateArticle, bulkUpdateArticles, getArticlesByAiStatus, getUnprocessedForFeed,
   getQueueCount, resetProcessingToQueued, claimNextQueued, getCounts, clearAll,
@@ -59,22 +59,20 @@ router.delete('/folders/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
   try {
-    if (req.query.withFeeds === 'true') {
-      removeFolderAndFeedsById(id);
-    } else {
-      removeFolderById(id);
-    }
-    res.json({ ok: true });
-  } catch (err) { sendDbError(res, err); }
+    if (req.query.withFeeds === 'true') return res.json({ ok: true, keptSaved: removeFolderAndFeedsById(id) });
+    removeFolderById(id);
+    return res.json({ ok: true, keptSaved: 0 });
+  } catch (err) { return sendDbError(res, err); }
 });
 
 // ── Feeds ─────────────────────────────────────────────────────────────────────
 
 router.get('/feeds', (req, res) => {
   try {
+    if (req.query.removed === '1') return res.json(listRemovedFeeds());
     const folderId = req.query.folder_id !== undefined ? Number(req.query.folder_id) : undefined;
-    res.json(listFeeds(folderId));
-  } catch (err) { sendDbError(res, err); }
+    return res.json(listFeeds(folderId));
+  } catch (err) { return sendDbError(res, err); }
 });
 
 router.get('/feeds/:id', (req, res) => {
@@ -110,7 +108,7 @@ router.put('/feeds/:id', (req, res) => {
 router.delete('/feeds/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' });
-  try { removeFeed(id); res.json({ ok: true }); }
+  try { res.json({ ok: true, keptSaved: removeFeed(id) }); }
   catch (err) { sendDbError(res, err); }
 });
 

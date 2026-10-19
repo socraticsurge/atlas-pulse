@@ -1,5 +1,5 @@
 import { db } from './database.js';
-import { LIST_COLUMNS, searchArticleBodies, toListItem } from './reader.js';
+import { FROM_ACTIVE_FEED, LIST_COLUMNS, searchArticleBodies, toListItem } from './reader.js';
 import { FILTER_KEYS, applyFilters, availableFilters } from '../../shared/aiFilters.js';
 import { rankArticles, tokenizeQuery } from '../../shared/search.js';
 
@@ -23,8 +23,9 @@ function viewWhere(view, id) {
     case 'saved': return { sql: 'is_bookmarked = 1', params: [] };
     case 'unsorted': return { sql: 'is_bookmarked = 1 AND id NOT IN (SELECT article_id FROM collection_items)', params: [] };
     case 'collection': return { sql: 'id IN (SELECT article_id FROM collection_items WHERE collection_id = ?)', params: [id] };
-    case 'today': return { sql: 'published_at >= ?', params: [startOfToday()] };
-    default: return { sql: '1 = 1', params: [] };
+    // All and Today show subscribed feeds; saves from removed feeds stay in the save lists.
+    case 'today': return { sql: `published_at >= ? AND ${FROM_ACTIVE_FEED}`, params: [startOfToday()] };
+    default: return { sql: FROM_ACTIVE_FEED, params: [] };
   }
 }
 

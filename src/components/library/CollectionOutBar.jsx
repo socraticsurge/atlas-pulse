@@ -72,7 +72,7 @@ function NotebookLMMenu({ id }) {
 
 // A Studio draft from the collection, opened in Studio once saved.
 function useStartDraft(collection) {
-  const { feeds } = useLibrary();
+  const { sourceFeeds: feeds } = useLibrary();
   const queryClient = useQueryClient();
   const showToast = useToast();
   const [busy, setBusy] = useState(false);
