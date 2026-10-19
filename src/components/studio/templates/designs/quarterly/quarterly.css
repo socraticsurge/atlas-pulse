@@ -1,0 +1,66 @@
+/* Quarterly: a mid-century magazine in one reading column. */
+
+.nl-quarterly {
+  --qt-paper: #efe8d8;
+  --qt-ink: #1b2a41;
+  --qt-muted: #4b5568;
+  --qt-accent: #9a5418;
+  --qt-display: 'Bodoni Moda Variable', 'Didot', Georgia, serif;
+  --qt-text: 'Libre Franklin', 'Helvetica Neue', sans-serif;
+  --nl-measure: 640px;
+  --nl-gap: 34px;
+  padding: 56px 64px 64px;
+  background: var(--qt-paper);
+  color: var(--qt-ink);
+  font-family: var(--qt-text);
+  font-size: 17px;
+  line-height: 1.72;
+}
+
+.nl-quarterly .qt-top { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 14px; border-bottom: 1px solid var(--qt-ink); }
+.nl-quarterly .qt-name { font-family: var(--qt-display); font-size: 24px; letter-spacing: 0.32em; text-transform: uppercase; }
+.nl-quarterly .qt-date { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; }
+.nl-quarterly .qt-issue { display: flex; align-items: flex-end; gap: 22px; margin-top: 26px; }
+.nl-quarterly .qt-number { font-family: var(--qt-display); font-size: 110px; line-height: 0.8; color: var(--qt-accent); }
+.nl-quarterly .qt-lines { display: flex; flex-direction: column; font-size: 12px; line-height: 1.7; letter-spacing: 0.08em; text-transform: uppercase; }
+
+.nl-quarterly .nl-front { max-width: var(--nl-measure); margin-top: 30px; text-align: left; }
+.nl-quarterly .nl-headline { font-family: var(--qt-display); font-weight: 400; font-style: italic; line-height: 1.04; }
+.nl-quarterly .nl-headline-l { font-size: 58px; }
+.nl-quarterly .nl-headline-m { font-size: 48px; }
+.nl-quarterly .nl-headline-s { font-size: 38px; }
+.nl-quarterly .nl-standfirst { margin-left: 0; font-family: var(--qt-display); font-size: 21px; line-height: 1.5; }
+.nl-quarterly .nl-lede { font-family: var(--qt-display); font-size: 20px; line-height: 1.6; }
+
+.nl-quarterly .nl-column { margin-top: 34px; border-top: 1px solid var(--qt-ink); }
+.nl-quarterly .nl-section + .nl-section { border-top: 1px solid rgba(27, 42, 65, 0.35); }
+.nl-quarterly .nl-section.nl-role-callout,
+.nl-quarterly .nl-section.nl-role-takeaways,
+.nl-quarterly .nl-section.nl-role-takeaways + .nl-section { border-top: 0; }
+.nl-quarterly .nl-section.nl-role-closing { margin-top: 18px; padding-top: 0; border-top: 0; font-family: var(--qt-display); font-style: italic; }
+.nl-quarterly .nl-section.nl-role-closing::before { content: '—'; display: block; margin-bottom: 6px; color: var(--qt-accent); }
+
+.nl-quarterly .nl-h { font-family: var(--qt-display); font-weight: 400; font-size: 34px; line-height: 1.12; }
+.nl-quarterly .nl-kicker { margin-bottom: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--qt-accent); }
+.nl-quarterly .nl-runin { font-family: var(--qt-display); font-style: italic; font-size: 1.08em; color: var(--qt-accent); }
+.nl-quarterly .nl-dropcap > span:last-child::first-letter { float: left; font-family: var(--qt-display); font-size: 4em; line-height: 0.8; padding: 6px 10px 0 0; color: var(--qt-accent); }
+.nl-quarterly .nl-list li::marker { color: var(--qt-accent); }
+.nl-quarterly .nl-quote { padding-left: 20px; border-left: 1px solid var(--qt-accent); font-family: var(--qt-display); font-style: italic; font-size: 19px; }
+.nl-quarterly .nl-pullquote { font-family: var(--qt-display); font-style: italic; font-size: 34px; line-height: 1.22; }
+.nl-quarterly .nl-pullquote::before { content: '“'; color: var(--qt-accent); }
+.nl-quarterly .nl-pullquote::after { content: '”'; color: var(--qt-accent); }
+
+.nl-quarterly .nl-panel { padding: 16px 0 6px; border-top: 1px solid var(--qt-ink); border-bottom: 1px solid var(--qt-ink); }
+.nl-quarterly .nl-panel-title { font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+.nl-quarterly .nl-panel-items { font-size: 16px; line-height: 1.65; }
+.nl-quarterly .nl-panel-items li { padding: 10px 0; }
+.nl-quarterly .nl-numeral { width: 1.3em; font-family: var(--qt-display); font-style: italic; font-size: 30px; line-height: 0.95; color: var(--qt-accent); }
+
+.nl-quarterly .nl-callout { padding: 22px 28px; background: var(--qt-ink); color: var(--qt-paper); }
+.nl-quarterly .nl-callout-label { margin-bottom: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #e6c79c; }
+.nl-quarterly .nl-callout .nl-p { font-family: var(--qt-display); font-size: 20px; line-height: 1.5; }
+.nl-quarterly .nl-intro .nl-p { font-family: var(--qt-display); font-style: italic; font-size: 19px; }
+
+.nl-quarterly .nl-sources { padding-top: 16px; border-top: 1px solid var(--qt-ink); font-size: 13px; line-height: 1.7; }
+.nl-quarterly .nl-sources .nl-panel-title { font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+.nl-quarterly .nl-source-site { font-style: italic; color: var(--qt-muted); }
