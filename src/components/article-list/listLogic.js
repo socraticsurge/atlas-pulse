@@ -28,7 +28,8 @@ const EMPTY_BY_VIEW = {
 };
 
 /** Title and body for the empty list, depending on why it is empty. */
-export function emptyStateText({ hasActiveFilters, searchQuery, viewType }) {
+export function emptyStateText({ serverDown, hasActiveFilters, searchQuery, viewType }) {
+  if (serverDown) return { title: "Can't load articles", body: "The Atlas Pulse server isn't answering" };
   if (hasActiveFilters) return { title: 'No matching articles', body: 'No articles match the active filters' };
   if (searchQuery) return { title: 'No matching articles', body: `No articles match "${searchQuery}"` };
   return EMPTY_BY_VIEW[viewType] || { title: 'Your feed is empty', body: 'Add feeds from the sidebar to start reading' };

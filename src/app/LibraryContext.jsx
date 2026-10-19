@@ -1,9 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFeeds } from '../hooks/useFeeds.js';
 import { useFolders } from '../hooks/useFolders.js';
 import * as api from '../utils/api.js';
 import { getAutoRefreshMinutes } from '../utils/constants.js';
 import { refreshSummary } from '../utils/feedSync.js';
+import { serverStatus } from './serverStatus.js';
 import { useToast } from './ToastContext.jsx';
 
 const LibraryContext = createContext(null);
@@ -86,6 +88,20 @@ function useDestructiveActions({
   return { deleteFolder, deleteFolderAndFeeds, clearAll };
 }
 
+// When the server answers again after being unreachable, everything shown was
+// loaded (or failed to load) without it, so load it all again. Queries are
+// reset, not just invalidated: a query still waiting to retry (React Query
+// holds retries while the tab is hidden) would otherwise keep waiting.
+function useReloadOnReconnect({ reloadFeeds, reloadFolders, reloadRemovedFeeds, bumpCounts }) {
+  const queryClient = useQueryClient();
+  useEffect(() => serverStatus.subscribe((down) => {
+    if (down) return;
+    Promise.all([reloadFeeds(), reloadFolders(), reloadRemovedFeeds()]).catch(() => {});
+    bumpCounts();
+    queryClient.resetQueries();
+  }), [reloadFeeds, reloadFolders, reloadRemovedFeeds, bumpCounts, queryClient]);
+}
+
 /**
  * Feeds, folders, and the actions on them (with toasts). onViewRemoved(type, id)
  * lets the app leave a view whose feed or folder was just deleted.
@@ -98,6 +114,7 @@ function useLibraryState(onViewRemoved) {
   const { removedFeeds, reloadRemovedFeeds } = useRemovedFeeds();
   const [refreshing, setRefreshing] = useState(false);
   const setAutoRefreshMinutes = useAutoRefresh(feeds.length, refreshAllFeeds);
+  useReloadOnReconnect({ reloadFeeds, reloadFolders, reloadRemovedFeeds, bumpCounts });
 
   // An OPML import can create folders, so reload them along with the feeds.
   const importFeedsFromOPML = useCallback(async (parsedFeeds) => {

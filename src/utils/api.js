@@ -1,13 +1,30 @@
 import { getNanoModel, isNanoModel, streamNanoChat } from './chromeAI.js';
+import { serverStatus } from '../app/serverStatus.js';
 
 const API_BASE = '/api';
+export const UNREACHABLE = "Can't reach the Atlas Pulse server";
+// What Vite's proxy answers, with an empty body, when the API isn't running.
+const GATEWAY = new Set([502, 503, 504]);
+
+async function fetchOrUnreachable(url, opts) {
+  try {
+    return await fetch(url, opts);
+  } catch (err) {
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') throw err;
+    serverStatus.reportFailure();
+    throw new Error(UNREACHABLE, { cause: err });
+  }
+}
 
 // Sends a request; on failure throws the server's error message, or `fallback`.
+// A failure without one (no answer, or the proxy's empty 502) may mean the
+// server is gone, so serverStatus checks.
 async function send(path, fallback, opts = {}) {
-  const res = await fetch(`${API_BASE}${path}`, opts);
+  const res = await fetchOrUnreachable(`${API_BASE}${path}`, opts);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || fallback);
+    if (!err.error && res.status >= 500) serverStatus.reportFailure();
+    throw new Error(err.error || (GATEWAY.has(res.status) ? UNREACHABLE : fallback));
   }
   return res;
 }

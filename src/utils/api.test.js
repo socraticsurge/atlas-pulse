@@ -48,8 +48,17 @@ test('fetchAIModels fails only when neither engine is reachable', async () => {
 test('requests surface the server error, or a fallback when the body has none', async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Feed not found' }), { status: 404 });
   await assert.rejects(parseFeed('https://x.example/rss'), /Feed not found/);
-  globalThis.fetch = async () => new Response('<html>Bad gateway</html>', { status: 502 });
+  globalThis.fetch = async () => new Response('<html>Oops</html>', { status: 500 });
   await assert.rejects(parseFeed('https://x.example/rss'), /Failed to parse feed/);
+});
+
+test('a request the server never answers says the server is unreachable', async () => {
+  globalThis.fetch = async () => new Response('', { status: 502 }); // Vite's proxy, API down
+  await assert.rejects(parseFeed('https://x.example/rss'), /Can't reach the Atlas Pulse server/);
+  globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(parseFeed('https://x.example/rss'), /Can't reach the Atlas Pulse server/);
+  globalThis.fetch = async () => { throw new DOMException('aborted', 'AbortError'); };
+  await assert.rejects(parseFeed('https://x.example/rss'), { name: 'AbortError' });
 });
 
 test('reader requests send JSON with the right method and path', async () => {

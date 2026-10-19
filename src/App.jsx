@@ -4,6 +4,7 @@ import ArticleReader from './components/ArticleReader.jsx';
 import ReaderErrorBoundary from './components/reader/ReaderErrorBoundary.jsx';
 import ReaderPlaceholder from './components/shell/ReaderPlaceholder.jsx';
 import ResizableHandle from './components/shell/ResizableHandle.jsx';
+import ServerBanner from './components/shell/ServerBanner.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import { AppearanceProvider } from './app/AppearanceContext.jsx';
 import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
@@ -203,6 +204,7 @@ export default function App() {
     <ToastProvider>
       <AppearanceProvider>
         <AppShell />
+        <ServerBanner />
       </AppearanceProvider>
     </ToastProvider>
   );
