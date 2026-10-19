@@ -1,6 +1,7 @@
 import { HiOutlineArrowTopRightOnSquare } from 'react-icons/hi2';
 import { Button } from '@/components/ui/button';
 import { estimateReadTime, formatDate } from '../../utils/helpers.js';
+import SaveNote from './SaveNote.jsx';
 
 // Kicker above the headline: source, then date, read time and author.
 function Kicker({ article, feedTitle, displayContent }) {
@@ -35,12 +36,13 @@ function NoContent({ link }) {
 }
 
 /**
- * Kicker, headline, the AI brief when there is one, and the body. While
+ * Kicker, headline, your note on a saved article, the AI brief when there
+ * is one, and the body. While
  * extraction runs, the feed's own HTML (if any) is shown; afterwards, the
  * best available content. The body's HTML is styled by reader.css
  * (.reader-article-content), since it is arbitrary article markup.
  */
-export default function ReaderBody({ article, brief, feedTitle, extracting, previewHtml, html, displayContent }) {
+export default function ReaderBody({ article, note, brief, feedTitle, extracting, previewHtml, html, displayContent }) {
   return (
     <>
       <Kicker article={article} feedTitle={feedTitle} displayContent={displayContent} />
@@ -50,6 +52,7 @@ export default function ReaderBody({ article, brief, feedTitle, extracting, prev
       >
         {article.title}
       </h1>
+      <SaveNote key={note.article.id} article={note.article} focusRequest={note.focusRequest} onSave={note.onSave} />
       {brief && <InBrief text={brief} />}
       {extracting && previewHtml && <div className="reader-article-content" dangerouslySetInnerHTML={{ __html: previewHtml }} />}
       {!extracting && <div className="reader-article-content" dangerouslySetInnerHTML={{ __html: html }} />}

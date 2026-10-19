@@ -37,6 +37,8 @@ function toArticle(row) {
     publishedAt: row.published_at,
     isRead: row.is_read,
     isBookmarked: row.is_bookmarked,
+    savedAt: row.saved_at ?? null,
+    note: row.note ?? null,
     content: row.content,
     summary: row.summary,
     author: row.author,
@@ -56,7 +58,7 @@ function toArticle(row) {
 // guid/canonical link/created-at/favicon (the list uses the feed's favicon),
 // and the excerpt cut to what a preview line can show.
 export const LIST_EXCERPT_CHARS = 200;
-export const LIST_COLUMNS = `id, feed_id, title, link, published_at, is_read, is_bookmarked, author,
+export const LIST_COLUMNS = `id, feed_id, title, link, published_at, is_read, is_bookmarked, saved_at, note, author,
   image_url, ai_status, ai_summary, ai_analysis, substr(excerpt, 1, ${LIST_EXCERPT_CHARS}) AS excerpt`;
 
 export function toListItem(row) {
@@ -347,28 +349,63 @@ export function findArticleByLink(link) {
 
 // Read/bookmark flags arrive as 0/1 or true/false; SQLite can't bind booleans.
 const flag = (value) => (value ? 1 : 0);
+const same = (value) => value;
+// A note is trimmed text; an empty one is no note.
+const NOTE_MAX_CHARS = 2000;
+const noteText = (value) => (typeof value === 'string' && value.trim().slice(0, NOTE_MAX_CHARS)) || null;
 const BULK_CHUNK = 10000;
 
-export function updateArticle(id, data) {
+// Fields a change can set: [client key, column, conversion].
+const ARTICLE_FIELDS = [
+  ['isRead', 'is_read', flag],
+  ['aiStatus', 'ai_status', same],
+  ['aiSummary', 'ai_summary', same],
+  ['aiAnalysis', 'ai_analysis', same],
+  ['note', 'note', noteText],
+];
+
+// Whether a change saves (true) or unsaves (false) the article, or neither
+// (undefined). Writing a note saves the article: one gesture, not two.
+function saveChange(data) {
+  if (data.isBookmarked !== undefined) return Boolean(flag(data.isBookmarked));
+  return noteText(data.note) ? true : undefined;
+}
+
+/**
+ * SET clauses and parameters for a change, limited to `keys`. Saving stamps
+ * saved_at once (saving again keeps the first time); unsaving clears it.
+ */
+function articleChanges(data, keys) {
   const fields = [];
-  const values = { id };
-  if (data.isRead !== undefined)      { fields.push('is_read = @is_read');           values.is_read = flag(data.isRead); }
-  if (data.isBookmarked !== undefined){ fields.push('is_bookmarked = @is_bookmarked'); values.is_bookmarked = flag(data.isBookmarked); }
-  if (data.aiStatus !== undefined)    { fields.push('ai_status = @ai_status');       values.ai_status = data.aiStatus; }
-  if (data.aiSummary !== undefined)   { fields.push('ai_summary = @ai_summary');     values.ai_summary = data.aiSummary; }
-  if (data.aiAnalysis !== undefined)  { fields.push('ai_analysis = @ai_analysis');   values.ai_analysis = data.aiAnalysis; }
+  const values = {};
+  for (const [key, column, convert] of ARTICLE_FIELDS) {
+    if (!keys.includes(key) || data[key] === undefined) continue;
+    fields.push(`${column} = @${column}`);
+    values[column] = convert(data[key]);
+  }
+  const save = keys.includes('isBookmarked') ? saveChange(data) : undefined;
+  if (save === true) {
+    fields.push('is_bookmarked = 1', 'saved_at = COALESCE(saved_at, @now)');
+    values.now = new Date().toISOString();
+  } else if (save === false) {
+    fields.push('is_bookmarked = 0', 'saved_at = NULL');
+  }
+  return { fields, values };
+}
+
+const SINGLE_KEYS = ['isRead', 'isBookmarked', 'aiStatus', 'aiSummary', 'aiAnalysis', 'note'];
+const BULK_KEYS = ['isRead', 'isBookmarked', 'aiStatus'];
+
+export function updateArticle(id, data) {
+  const { fields, values } = articleChanges(data, SINGLE_KEYS);
   if (fields.length === 0) return getArticleById(id);
-  db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id = @id`).run(values);
+  db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id = @id`).run({ ...values, id });
   return getArticleById(id);
 }
 
 export function bulkUpdateArticles(ids, data) {
   if (ids.length === 0) return;
-  const fields = [];
-  const values = {};
-  if (data.isRead !== undefined)      { fields.push('is_read = @is_read');           values.is_read = flag(data.isRead); }
-  if (data.isBookmarked !== undefined){ fields.push('is_bookmarked = @is_bookmarked'); values.is_bookmarked = flag(data.isBookmarked); }
-  if (data.aiStatus !== undefined)    { fields.push('ai_status = @ai_status');       values.ai_status = data.aiStatus; }
+  const { fields, values } = articleChanges(data, BULK_KEYS);
   if (fields.length === 0) return;
   // SQLite allows 32,766 bound variables per statement, so "mark all read" on
   // a large library is split into chunks, all in one transaction.

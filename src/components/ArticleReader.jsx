@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../utils/api.js';
 import { on } from '../lib/appEvents.js';
 import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js';
@@ -56,15 +56,29 @@ function useArticleContent(current, extractedContent) {
 }
 
 // Focus ("zen") mode plus the reader's keyboard shortcuts, which depend on it.
-function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI }) {
+function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark, toggleAI, editNote }) {
   const [on, setOn] = useState(false);
   const keyboardActions = useMemo(() => ({
-    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI,
+    isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote,
     toggleZen: () => setOn((z) => !z),
     escape: () => (on ? setOn(false) : onClose()),
-  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, on, onClose]);
+  }), [isModalOpen, hasPrev, hasNext, onNavigate, link, toggleBookmark, toggleAI, editNote, on, onClose]);
   useReaderKeyboard(isOpen, keyboardActions);
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
+}
+
+// n (or the note button) saves the article if it isn't yet and asks for its
+// note field. request counts the asks, so each refocuses it; each article starts at 0.
+function useNoteEditing(articleId, live) {
+  const [request, setRequest] = useState(0);
+  useOnKeyChange(articleId, () => setRequest(0));
+  const { toggleBookmark } = live;
+  const isSaved = Boolean(live.current?.isBookmarked);
+  const edit = useCallback(() => {
+    if (!isSaved) toggleBookmark();
+    setRequest((n) => n + 1);
+  }, [isSaved, toggleBookmark]);
+  return { request, edit };
 }
 
 export default function ArticleReader({
@@ -83,7 +97,8 @@ export default function ArticleReader({
   const feedTitle = useFeedTitle(feedId);
   const progress = useReaderScroll(contentRef, articleId, isOpen, extraction.settled);
   const visible = useSlideIn(isOpen);
-  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle });
+  const note = useNoteEditing(articleId, live);
+  const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle, editNote: note.edit });
   const { displayContent, html, previewHtml } = useArticleContent(current, extraction.content);
   const cssVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
 
@@ -108,7 +123,7 @@ export default function ArticleReader({
         <div className="reader-main">
           <ReaderToolbar
             article={article}
-            live={live}
+            live={live} onNote={note.edit}
             extraction={extraction}
             nav={{ onNavigate, onClose, hasPrev, hasNext, currentIndex, totalCount }}
             zen={zen}
@@ -118,7 +133,7 @@ export default function ArticleReader({
 
           <div className="reader-content" ref={contentRef} style={cssVars}>
             <ReaderBody
-              article={article}
+              article={article} note={{ article: current, focusRequest: note.request, onSave: live.saveNote }}
               brief={briefOf(current, article)}
               feedTitle={feedTitle}
               extracting={extraction.extracting}

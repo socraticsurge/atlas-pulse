@@ -38,7 +38,7 @@ function useMarkReadOnOpen(article, setLive, notify) {
 
 /**
  * The open article as stored on the server (full content, latest read and
- * bookmark state), plus actions that update it. Marks the article read on open.
+ * save state and note), plus actions that update it. Marks the article read on open.
  */
 export function useLiveArticle(article, onArticleChanged) {
   const articleId = article?.id;
@@ -56,6 +56,12 @@ export function useLiveArticle(article, onArticleChanged) {
 
   const toggleBookmark = useCallback(() => patch({ isBookmarked: flip(current?.isBookmarked) }), [patch, current]);
   const toggleRead = useCallback(() => patch({ isRead: flip(current?.isRead) }), [patch, current]);
+  // By id, since the note can finish saving after the reader has moved on.
+  const saveNote = useCallback(async (id, note) => {
+    const updated = await api.patchArticle(id, { note });
+    setLive(updated);
+    notify(updated);
+  }, [setLive, notify]);
 
-  return { current, toggleBookmark, toggleRead };
+  return { current, toggleBookmark, toggleRead, saveNote };
 }

@@ -8,7 +8,7 @@ import { EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
 import { FilterBar } from './article-list/FilterBar.jsx';
 import { ListHeader, SearchBar } from './article-list/ListHeader.jsx';
 import { SelectionBar } from './article-list/SelectionBar.jsx';
-import { articlesToCSV, downloadCSV, emptyStateText, viewTitle } from './article-list/listLogic.js';
+import { articlesToCSV, downloadCSV, emptyStateText, groupingFor, viewTitle } from './article-list/listLogic.js';
 import { useArticleListData } from './article-list/useArticleListData.js';
 import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
@@ -71,11 +71,12 @@ function useLiveViewTitle(activeView) {
   return viewTitle({ ...activeView, name: item?.title ?? item?.name ?? activeView.name });
 }
 
-// Applies read/bookmark changes made in the reader to the matching row.
+// Applies read, save and note changes made in the reader to the matching row.
 function useReaderChanges(changedArticle, updateLocal) {
   useEffect(() => {
     if (changedArticle) {
-      updateLocal([changedArticle.id], { isRead: changedArticle.isRead, isBookmarked: changedArticle.isBookmarked });
+      const { isRead, isBookmarked, savedAt, note } = changedArticle;
+      updateLocal([changedArticle.id], { isRead, isBookmarked, savedAt, note });
     }
   }, [changedArticle, updateLocal]);
 }
@@ -186,6 +187,7 @@ export default function ArticleList({
           onSelectArticle={onSelectArticle}
           onEndReached={data.loadMore}
           ranked={Boolean(q)}
+          grouping={groupingFor(activeView.type)}
         />
       </div>
       <ListKeyHints />

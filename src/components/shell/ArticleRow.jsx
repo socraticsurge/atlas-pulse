@@ -1,4 +1,5 @@
-import { HiOutlineCheck, HiOutlineSparkles } from 'react-icons/hi2';
+import { HiOutlineCheck, HiOutlinePencil, HiOutlineSparkles } from 'react-icons/hi2';
+import { BsBookmarkFill } from 'react-icons/bs';
 import { cn } from '@/lib/utils';
 import { stripHtml } from '../../utils/helpers.js';
 import { shortTime } from '../article-list/listLogic.js';
@@ -41,14 +42,27 @@ const rowClass = ({ read, active, selected }) => cn(
   selected && 'card-selected bg-[var(--accent-muted)]',
 );
 
-// Second line: source, the preview (the AI summary when there is one), and the AI mark.
+// Your note on a saved article, in place of the preview: it says why you kept it.
+function NoteText({ note }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1 text-[var(--text-secondary)]" title={note}>
+      · <HiOutlinePencil className="size-3 shrink-0 text-primary" /><span className="truncate italic">{note}</span>
+    </span>
+  );
+}
+
+// Second line: source, your note or else the preview (the AI summary when
+// there is one), then the saved and AI marks.
 function MetaLine({ article, feed, unread }) {
   const preview = previewOf(article);
   return (
     <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[12.5px] text-[var(--text-tertiary)]">
       <span className={cn('shrink-0', unread && 'text-[var(--text-secondary)]')}>{feed?.title || 'Unknown'}</span>
-      {preview && <span className="truncate">· {preview}</span>}
-      <span className="ml-auto shrink-0 pl-2"><AIMark article={article} /></span>
+      {article.note ? <NoteText note={article.note} /> : preview && <span className="truncate">· {preview}</span>}
+      <span className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+        {Boolean(article.isBookmarked) && <BsBookmarkFill className="size-2.5 text-primary" title="Saved" aria-label="Saved" />}
+        <AIMark article={article} />
+      </span>
     </div>
   );
 }

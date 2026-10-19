@@ -125,7 +125,7 @@ All data is in one SQLite database, `data/reader.db` (or in `ATLAS_DATA_DIR` if 
 
 | Tables | Schema version |
 |---|---|
-| feeds, folders, articles, `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources` | 8 |
+| feeds, folders, articles (with `saved_at` and `note` on saves), `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources` | 9 |
 
 Summaries and highlights had files of their own (`summaries.db`, `highlights.db`) until v6. On first start `server/db/legacyMerge.js` copies their rows in, keeping ids, and renames the old files `*.merged`. One database lets queries join articles with the summaries and highlights saved from them.
 

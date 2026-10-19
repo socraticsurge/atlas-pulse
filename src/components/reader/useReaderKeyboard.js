@@ -11,6 +11,7 @@ function actionFor(key, a) {
   if (NAV_NEXT.has(key)) return () => a.hasNext && a.onNavigate(1);
   const actions = {
     b: a.toggleBookmark,
+    n: a.editNote,
     o: () => safeHttpUrl(a.link) && window.open(safeHttpUrl(a.link), '_blank', 'noopener,noreferrer'),
     f: a.toggleZen,
     a: a.toggleAI,
@@ -20,7 +21,7 @@ function actionFor(key, a) {
 }
 
 /**
- * Reader shortcuts: j/k/arrows navigate, b bookmark, o open original,
+ * Reader shortcuts: j/k/arrows navigate, b save, n note, o open original,
  * f focus mode, a AI rail, Esc exit focus mode or close. Ignored while typing or when a
  * modal is open.
  */

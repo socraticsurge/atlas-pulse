@@ -15,9 +15,9 @@ const END_MARGIN = 15;
 // The virtualized items for a view mode. Rows: day headings (unless the list
 // is ranked by relevance, not date) and one article each. Grid: rows of three
 // cards. List and Compact: one card each.
-function listItems(articles, viewMode, ranked) {
+function listItems(articles, viewMode, ranked, grouping) {
   if (viewMode === 'rows' && ranked) return articles.map((article) => ({ type: 'article', key: article.id, article }));
-  if (viewMode === 'rows') return withDayHeaders(articles);
+  if (viewMode === 'rows') return withDayHeaders(articles, new Date(), grouping);
   const columns = viewMode === 'magazine' ? GRID_COLUMNS : 1;
   return chunkRows(articles, columns).map((cards) => ({ type: 'cards', key: cards[0].id, articles: cards }));
 }
@@ -96,8 +96,8 @@ function ItemContent({ item, viewMode, props }) {
  * Rows (default) shows day headings and dense two-line rows; Grid lays out
  * rows of three cards; List and Compact one card per row.
  */
-export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, onEndReached, ...props }) {
-  const items = useMemo(() => listItems(articles, viewMode, ranked), [articles, viewMode, ranked]);
+export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, grouping, onEndReached, ...props }) {
+  const items = useMemo(() => listItems(articles, viewMode, ranked, grouping), [articles, viewMode, ranked, grouping]);
   const indexById = useMemo(() => itemIndexById(items), [items]);
   const listRef = useRef(null);
   const scrollMargin = useListOffset(scrollRef, listRef, viewMode);
