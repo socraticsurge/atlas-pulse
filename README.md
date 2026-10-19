@@ -1,90 +1,83 @@
-# Atlas Pulse — Personal RSS Feed Reader
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/readme-banner-dark.png">
+    <img src="docs/brand/readme-banner-light.png" alt="Atlas Pulse: privacy-first RSS reader with on-device AI" width="640">
+  </picture>
+</p>
 
-![Version](https://img.shields.io/badge/version-1.4.0-blue)
-![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![React](https://img.shields.io/badge/React-19-61dafb)
-![On-device AI](https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-8A2BE2)
-![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
+<p align="center">
+  <img src="https://img.shields.io/badge/version-2.0.0-f26b1d" alt="Version 2.0.0">
+  <img src="https://img.shields.io/badge/license-MIT-0b3b6f" alt="License: MIT">
+  <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
+  <img src="https://img.shields.io/badge/node-%E2%89%A520.19-0b3b6f" alt="Node 20.19 or later">
+  <img src="https://img.shields.io/badge/PRs-welcome-f26b1d" alt="PRs welcome">
+</p>
 
-A modern, privacy-first RSS feed reader that runs entirely on your own machine. No cloud services, no subscriptions, no accounts — your feeds, articles, highlights, and summaries live in local SQLite files.
+Atlas Pulse is an RSS reader for people who read a lot and want to keep what matters. Scan hundreds of articles in dense rows, read in a calm docked reader, save the good ones with a note on why, and file them into collections you can send to NotebookLM or turn into a newsletter.
 
-AI summaries, content analysis, and article chat run **on-device**. By default Atlas Pulse uses **Gemini Nano**, the model built into desktop Google Chrome, so AI works with no installation or setup. **Ollama** remains available as an optional engine for larger local models.
+It runs entirely on your own machine. There is no account, no cloud and no tracking: your feeds, saves and notes live in one local SQLite file. AI summaries, analysis and chat run **on-device**, using **Gemini Nano** (built into desktop Google Chrome, no setup) or an optional local **Ollama** model.
 
-![Atlas Pulse — article grid in dark theme](docs/screenshots/01-grid-dark.png)
+![Atlas Pulse: saved articles with notes, and the reader showing your note and an AI summary](docs/screenshots/01-saved-reader-dark.png)
+
+## Why Atlas Pulse
+
+- **Fast to scan, calm to read.** Dense two-line rows with day headings on the left; a docked reader with good typography on the right. Everything has a key.
+- **Built for keeping, not just reading.** Press `b` to save, `n` to save with a note, `c` to file into collections. An Unsorted queue keeps filing quick.
+- **From reading to output.** Send a collection to NotebookLM as one Markdown source, or start a newsletter draft in Studio and export it as a PNG or an A4 PDF.
+- **AI that stays home.** Summaries, five-dimension analysis, article chat and multi-article briefings run on Gemini Nano in your browser or on Ollama on your machine. Article text never goes to a hosted AI service.
+- **Yours, on disk.** One SQLite database and one settings file. Copy the folder to back it up.
 
 <table>
   <tr>
-    <td width="50%">
-      <img src="docs/screenshots/02-reader-dark.png" alt="Reader with automatic full-text extraction" />
-      <p align="center"><em>Reader with automatic full-text extraction</em></p>
-    </td>
-    <td width="50%">
-      <img src="docs/screenshots/03-ai-dark.png" alt="AI Assistant — summary streamed from a local Ollama model" />
-      <p align="center"><em>AI summary, streamed from a local Ollama model</em></p>
-    </td>
+    <td width="50%"><img src="docs/screenshots/02-rows-reader-dark.png" alt="A folder in Rows view with an article open in the docked reader"><p align="center"><em>Rows view and the docked reader</em></p></td>
+    <td width="50%"><img src="docs/screenshots/03-collection-dark.png" alt="A collection with Send to NotebookLM and Start a Studio draft"><p align="center"><em>A collection, ready for NotebookLM or Studio</em></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/04-studio-dark.png" alt="Studio: a newsletter in Markdown beside its Evening Edition page"><p align="center"><em>Studio: edit a newsletter beside its printed page</em></p></td>
+    <td width="50%"><img src="docs/screenshots/05-palette-dark.png" alt="The command palette searching for articles"><p align="center"><em>⌘K: jump anywhere, run any command, search articles</em></p></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/06-grid-dark.png" alt="Grid view of a folder"><p align="center"><em>Grid view (also Rows, List and Compact)</em></p></td>
+    <td width="50%"><img src="docs/screenshots/07-saved-reader-light.png" alt="Saved articles and the reader in the light theme"><p align="center"><em>Light theme</em></p></td>
   </tr>
 </table>
 
-<details>
-<summary>Light theme</summary>
-
-![Atlas Pulse — light theme](docs/screenshots/04-light.png)
-
-</details>
-
 ---
 
-## Quick Start
+## Quick start
 
-### Prerequisites
-
-- **Node.js** v20.19 or later — `node -v`
-- **npm** (bundled with Node.js) — `npm -v`
-- **Google Chrome** 148 or later, desktop _(recommended — enables the built-in Gemini Nano AI)_
-- **Ollama** _(optional — only if you want larger local models)_ — [ollama.com](https://ollama.com)
-
-### Run the App
+**You need:** Node.js 20.19 or later, and desktop Google Chrome 148+ for the built-in Gemini Nano AI. Ollama is optional.
 
 ```bash
-# 1. Clone the repo
 git clone https://github.com/socraticsurge/atlas-pulse.git
 cd atlas-pulse
-
-# 2. Install dependencies (first time only, or after pulling updates)
 npm install
-
-# 3. Start frontend + backend together
 npm run dev
 ```
 
-Open **http://localhost:5173** in Google Chrome.
+Open **http://localhost:5173** in Chrome. `npm run dev` starts the Vite frontend on port 5173 and the Express API on port 3001; Vite proxies `/api/*` to Express. Press `Ctrl + C` to stop.
 
-> **What starts:**
-> - Vite dev server on **port 5173** (React frontend)
-> - Express API server on **port 3001** (feed proxy, article extraction, SQLite storage, optional Ollama bridge)
-> - Vite proxies all `/api/*` requests to Express automatically
+Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), search Google News, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
 
-Press `Ctrl + C` to stop everything.
+### Run it like an app (macOS)
 
-### Run in the Background (macOS)
-
-To keep Atlas Pulse available at a fixed address without a terminal open, install it as a login service. It starts when you log in and restarts automatically if it ever exits.
+Install Atlas Pulse as a login service so it is always at the same address, without a terminal:
 
 ```bash
 npm run service install
 ```
 
-Then open **http://atlas-pulse.localhost:4317**. Chrome resolves every `*.localhost` name to your own machine, so no DNS or hosts-file changes are needed.
+Then open **http://atlas-pulse.localhost:4317**. Chrome resolves every `*.localhost` name to your own machine, so no DNS or hosts-file changes are needed. Atlas Pulse ships a web app manifest and icons, so you can also install it from Chrome's menu to get its own window and dock icon.
 
 | Command | What it does |
 |---------|--------------|
 | `npm run service install` | Build the app and register the background service |
-| `npm run service restart` | Rebuild and restart — run this after pulling updates or changing code |
+| `npm run service restart` | Rebuild and restart: run this after pulling updates |
 | `npm run service status` | Show whether the service is running |
-| `npm run service logs` | Follow the service logs (`~/Library/Logs/atlas-pulse/`) |
+| `npm run service logs` | Follow the logs (`~/Library/Logs/atlas-pulse/`) |
 | `npm run service uninstall` | Stop the service and remove it |
 
-The service listens on `127.0.0.1` only and is not reachable from other devices. Set `PORT=<number>` before `install` to use a different port.
+The service listens on `127.0.0.1` only and is not reachable from other devices. Set `PORT=<number>` before `install` to use another port.
 
 ---
 
@@ -94,425 +87,254 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 
 | Feature | Details |
 |---------|---------|
-| **Three article views** | Grid (portrait thumbnail cards), List (title + excerpt + thumbnail), Compact (dense single-line rows) |
-| **Auto full-text extraction** | Full article pulled from source automatically on open |
-| **Reading progress bar** | Accent-colored bar at the top of the reader tracks scroll position |
-| **Zen / Focus mode** | Press `f` to expand the reader to full width, hiding all distractions |
-| **Keyboard shortcuts** | `j/k` next/prev · `b` bookmark · `o` open original · `f` zen · `Esc` close |
-| **Highlights** | Select text in the reader to save it as a highlight in one of four colors |
-| **Highlights library** | Browse and search every highlight across articles; export as CSV |
+| **Four list views** | **Rows** (default: dense two-line rows with day headings), Grid, List and Compact. Switch in the list header, in **Settings → Reading**, or with ⌘K |
+| **Docked reader** | A third pane on wide windows (1100 px and up); on narrower ones it slides over the list. Hide the sidebar with `[` and the list with `]` for more room |
+| **Full text, automatically** | The full article is extracted from the source when you open it; the reader shows whether you're reading the full article or the feed's text |
+| **Reading comfort** | Newsreader serif by default, with font, size, spacing and width in the **Aa** menu; a progress bar; focus mode (`f`); your scroll position is remembered |
+| **In brief** | When an article has an AI summary, it appears at the top of the reader |
+| **Highlights** | Select text to highlight it in one of four colours; browse and search them all in **Highlights**, and export as CSV |
+| **Command palette** | ⌘K / Ctrl+K: go to any view, folder or feed, run commands (add feed, refresh, theme, panes, list view), or search articles |
+| **Share** | LinkedIn, X, email, your system's share sheet, or copy the link |
 
-### Organization
-
-| Feature | Details |
-|---------|---------|
-| **Folders** | Create folders, move feeds into them, right-click to rename or delete |
-| **Collections** | Group your saves: press `c` on an article (or **Collect** on a selection) to add it to one or more collections, or type a new name to create one. An article can sit in several collections; adding it saves it, and unsaving takes it out of all of them. Collections are listed in the sidebar with their counts; right-click to rename or delete (the articles stay saved) |
-| **Collection → NotebookLM or Studio** | A collection's header has **Send to NotebookLM**: download its articles as one Markdown file (title, source, dates, your note and the stored text of each) to upload as a source, copy its links to paste as website sources, or open NotebookLM. **Start a Studio draft** makes a newsletter draft with one section per article and your note as "Why it matters", and opens it in Studio |
-| **Unsorted** | Saves that aren't in a collection yet, newest first: the filing queue. Open the first, press `c` to file it, and `j` moves on to the next; the footer shows the filing keys in lists of saves |
-| **Saved** | Press `b` to save an article, or `n` to save it with a note on why it caught your eye. Saved lists your saves newest first, under "Saved today / this week" headings, with each note in place of the preview |
-| **Today view** | Shows only articles published today |
-| **Search** | AND-logic tokenized search — "cloud AI" matches articles containing both terms across the title, source, AI topics, and article excerpt; quoted phrases for exact match; results ranked by relevance (title › source › AI topics › excerpt). Full-text search is on the [roadmap](docs/TECH-DEBT.md) |
-| **Mark all read** | One-click button in the article list header |
-| **AI Only filter** | Toggle in the article list header to show only AI-analyzed articles |
-| **Content filters** | Per-dimension dropdown pills (Sentiment · Urgency · Frame · Tone · Depth) — shown when AI analysis data is available |
-
-### Appearance
+### Saving and organizing
 
 | Feature | Details |
 |---------|---------|
-| **Dark / Light theme** | Toggle in sidebar header or settings |
-| **Collapsible sidebar** | Three states: expanded → icon-only (56 px) → fully hidden |
-| **Resizable panels** | Drag the handle between article list and reader to resize |
-| **Font picker** | Inter, Poppins, Lato, Nunito, Merriweather, Garamond, Times, Mono, System UI |
-| **Accent color** | 6 presets + full custom color picker |
-| **Text color** | 4 presets (Cool, Warm, Pure, Soft) + full custom color picker |
-| **Reader typography** | Adjustable font size, line width, line height in reader settings |
+| **Save with a note** | `b` saves an article; `n` saves it and opens a note on why it caught your eye. Saved lists your saves newest first under "today", "yesterday", "this week" and "earlier", with each note in place of the preview |
+| **Collections** | `c` opens the collection picker: add the article to one or more collections, or type a name to create one. Adding an article saves it; unsaving removes it from every collection. Rename or delete from the sidebar (deleting a collection keeps its saves) |
+| **Unsorted** | Saves that aren't in any collection yet: a filing queue. Press `c` to file one, and `j` moves on to the next |
+| **Send to NotebookLM** | From a collection: download its articles as one Markdown file (title, source, dates, your note and the text of each) to upload as a source, copy the links to paste as website sources, or open NotebookLM |
+| **Start a Studio draft** | Turns a collection into a newsletter draft, one section per article with your note as "Why it matters" |
+| **Folders** | Group feeds into folders; right-click a feed to refresh it, move it or remove it |
+| **Search** | Full-text search over everything you've fetched, ranked title › source › AI topics › body. Words match as prefixes; "quoted phrases" match exactly. Press `/` |
+| **Filters** | The **Filters** button reveals AI-analyzed-only and content filters (sentiment, urgency, frame, tone, depth) |
+| **Removing a feed keeps your saves** | Its other articles go, but saved ones stay in Saved and your collections with their notes. Subscribe again and they rejoin the feed |
 
-### Feed Management
-
-| Feature | Details |
-|---------|---------|
-| **URL discovery** | Paste any URL — feeds auto-discovered from `<link>` tags and common paths |
-| **Google News search** | Type a keyword to subscribe to a Google News RSS feed |
-| **Popular feeds catalog** | Curated feeds across Technology, AI, Business, Science, and more |
-| **OPML import / export** | Move your feeds to/from any other RSS reader |
-| **Removing a feed keeps your saves** | Removing a feed (or a folder with its feeds) deletes its articles except the ones you saved: those stay in Saved and your collections, with their notes and the feed's name, and leave All and Today. Subscribe to the feed again and it comes back with them |
-| **Configurable auto-refresh** | Off, 15 min, 30 min, 1 hr, or 2 hr — set in Settings → Reading |
-
-### AI Features
+### Studio
 
 | Feature | Details |
 |---------|---------|
-| **Gemini Nano by default** | Uses the on-device model built into Google Chrome — no install, no API key, nothing to configure |
-| **Optional Ollama engine** | Connect Ollama for larger local models; a built-in wizard detects, starts, and pulls models |
-| **AI Summary** | On-demand 3–4 sentence summary of the current article, streamed in real time |
-| **Content Analysis** | On-demand classification across 5 dimensions: Sentiment, Urgency, Frame, Tone, Depth — with topic tags |
-| **Article Chat** | Ask any question about the article; streamed responses with full context |
-| **Personas & tone** | Choose reading personas, voice, energy, and angle, plus custom instructions applied to every response |
-| **Background Batch Processing** | Automatically summarizes and classifies new articles in the background as you read |
-| **On-demand batch trigger** | `✨` button in the article list header queues the latest N articles for immediate processing |
-| **AI processing indicator** | Spinner with remaining count appears in the header while batch is running |
-| **AI Summaries Library** | Save any AI summary to a persistent SQLite library; search, browse, and export as CSV |
-| **Studio** | Save a generated newsletter to Studio, then edit its title and Markdown beside a live page in one of three newspaper designs (Broadsheet, Evening Edition, Quarterly); changes save as you type, each newsletter lists the articles it came from, and the page exports as a PNG (for sharing) or an A4 PDF with real text, rendered by your installed Chrome |
-| **Model selector** | Gemini Nano plus any installed Ollama models, switchable per session |
-| **AI processed badge** | Sparkle icon appears on analyzed articles in all three list views |
+| **Newsletters you can edit** | Save any generated newsletter to Studio, or start one from a collection. Edit the title and Markdown in Write, Split or Preview mode; changes save as you type |
+| **Three designs** | Broadsheet, Evening Edition and Quarterly: a real newspaper page laid out from your Markdown |
+| **Export** | Copy, Markdown, Word, PNG (for sharing) or an A4 PDF with real text. PNG and PDF are rendered by your installed Chrome or Edge (set `CHROME_PATH` if it's somewhere unusual) |
+| **Sources** | Each newsletter lists the articles it came from; open any of them in the reader |
 
-### Multi-Article AI Actions
+### AI, on your device
 
 | Feature | Details |
 |---------|---------|
-| **Multi-select** | Click the checkbox on any article card to select it (or click blank space); `Escape` clears selection |
-| **Floating action bar** | Appears at the bottom of the article list when ≥1 article is selected — Mark Read, Bookmark, CSV export, AI Actions |
-| **Compare Sources** | 2–5 articles → AI side-by-side analysis of angle, framing, key claims, what's missing, tone, and evidence |
-| **Generate Newsletter** | 3–15 articles → AI-written Daily Digest, Weekly Roundup, or Executive Brief in Markdown |
-| **AI Briefing** | 2–15 articles → free-form prompt answered using only the selected articles as context |
-| **Streaming output** | All multi-article AI operations stream token by token with a live cursor |
-| **Active config strip** | Shows the active AI personas, tone settings, and custom instructions before generating |
-| **Export** | Copy, download as Markdown (`.md`), download as Word (`.docx`), or open in email client |
+| **Gemini Nano by default** | Uses the model built into desktop Google Chrome: no install, no API key, nothing to configure |
+| **Ollama, optional** | Connect Ollama for larger local models; a built-in wizard detects it, starts it and pulls models |
+| **AI rail** | Press `a` for the side rail: Summary, Analysis, Chat and Highlights tabs, the model picker, and an "Ask AI about this article" bar |
+| **Summary and analysis** | A 3–4 sentence summary, and a classification across sentiment, urgency, frame, tone and depth with topic tags. A summary you ask for is kept; background runs never overwrite it |
+| **Your voice** | Nine reading personas, tone (voice, energy, angle) and custom instructions, applied to every response, including background runs |
+| **Background processing** | Summarizes and analyzes new articles after each refresh while the app is open. The ✨ button runs it on recent articles any time, and the queue can be cleared |
+| **Multi-article actions** | Select articles and choose **AI**: Compare Sources (2–5), Generate Newsletter (3–15, as a Daily Digest, Weekly Roundup or Executive Brief) or Briefing (2–15, any question answered from just those articles). Export to Markdown or Word, email it, or save it to Studio |
+| **Editable prompts** | In **Power** mode, **Settings → Prompts** lets you read and change every prompt and character budget the app uses |
+
+### Feeds
+
+| Feature | Details |
+|---------|---------|
+| **Add a feed four ways** | Paste a URL (feeds are discovered from the page), search Google News, browse the Popular catalog, or follow the Google Alerts steps |
+| **OPML** | Import and export your feeds and folders in **Settings → Data**; imported feeds fetch right away |
+| **Feed health** | A feed that fails shows a warning with the reason; refresh it on its own from its menu |
+| **Auto-refresh** | Off, 15 min, 30 min, 1 h or 2 h. A refresh fetches only what's new |
+
+### Appearance and settings
+
+| Feature | Details |
+|---------|---------|
+| **Themes** | Dark and light, from the rail, ⌘K or **Settings → Appearance** |
+| **Fonts** | 15 self-hosted fonts for the app and the reader, including IBM Plex Sans (default), Newsreader (reader default), Inter, Merriweather, Source Serif and JetBrains Mono |
+| **Accent and text colour** | Six accent presets (Amber is the default) or any custom colour; text colour presets for comfort |
+| **Simple and Power modes** | Simple shows the settings most people need; Power shows everything, including prompts. Search finds any setting |
+| **A settings file** | Settings live in `data/settings.json`: back it up, edit it, or copy it to another machine |
 
 ---
 
-## Setting Up AI Features
+## Keyboard shortcuts
 
-Atlas Pulse supports two on-device AI engines. Both run entirely on your machine — no API keys, no usage costs, and no article content sent to a hosted AI service.
+| Key | Action |
+|-----|--------|
+| `⌘K` / `Ctrl+K` | Command palette |
+| `/` | Search |
+| `[` | Show or hide the sidebar |
+| `]` | Show or hide the article list |
+| `j` / `↓` / `→` | Next article |
+| `k` / `↑` / `←` | Previous article |
+| `b` | Save or unsave |
+| `n` | Save with a note |
+| `c` | Add to collections |
+| `o` | Open the original |
+| `f` | Focus mode |
+| `a` | AI rail |
+| `Esc` | Clear the selection or search; in the reader, leave focus mode, then close the article |
+
+The article keys work while an article is open. None of them fire while you're typing. In a note, `Enter` or `Esc` finishes and `Shift+Enter` adds a line.
+
+---
+
+## Setting up AI
+
+Both engines run on your machine: no API keys, no usage costs, and no article text sent to a hosted AI service.
 
 | | Gemini Nano (default) | Ollama (optional) |
 |---|---|---|
-| **Setup** | None — built into Google Chrome | Install Ollama and pull a model |
+| **Setup** | None: built into Google Chrome | Install Ollama and pull a model |
 | **Where it runs** | In the browser tab, on your device | In the Ollama service on your machine |
-| **Browsers** | Desktop Google Chrome 148+ only | Any browser |
+| **Browsers** | Desktop Google Chrome 148+ | Any browser |
 | **Models** | Gemini Nano, managed and updated by Chrome | Any model from the Ollama library |
-| **Best for** | Summaries, classification, short chats | Longer inputs and higher-quality analysis |
+| **Best for** | Summaries, analysis, short chats | Longer inputs and higher-quality analysis |
 
-When Gemini Nano is available, Atlas Pulse selects it automatically. You can switch to any Ollama model from the model picker in the AI drawer or in **Settings → AI Processing**.
+When Gemini Nano is available, Atlas Pulse uses it automatically. Switch to an Ollama model from the model picker in the AI rail, or in **Settings → AI engines**.
 
-### Option A: Gemini Nano in Google Chrome (recommended)
+### Gemini Nano in Google Chrome (recommended)
 
 1. Open Atlas Pulse in desktop **Google Chrome 148 or later**.
-2. Open any article and click **✦ AI** in the reader toolbar.
-3. Click **Generate Summary**. On first use, Chrome downloads Gemini Nano once (a few GB) and reuses it from then on.
+2. Open an article and press `a` (or click the sparkle button in the reader toolbar).
+3. Click **Generate Summary**. The first time, Chrome downloads Gemini Nano once (a few GB) and reuses it from then on.
 
-**Requirements** (set by Chrome): Windows 10/11, macOS 13+, Linux, or ChromeOS on Chromebook Plus; roughly 22 GB of free disk space; and either a GPU with more than 4 GB of VRAM or 16 GB of RAM. To inspect the model's state, open `chrome://on-device-internals`.
+**Requirements** (set by Chrome): Windows 10/11, macOS 13+, Linux, or ChromeOS on Chromebook Plus; about 22 GB of free disk space; and either a GPU with more than 4 GB of VRAM or 16 GB of RAM. Check the model's state at `chrome://on-device-internals`.
 
-> **Chromium and other browsers.** Plain Chromium, embedded browsers, and Chromium-based browsers without Google's model expose the same API but contain no model. Atlas Pulse detects this and hides Gemini Nano rather than returning placeholder output. Safari and Firefox do not support the API. Use Ollama in those browsers.
+> **Other browsers.** Plain Chromium, embedded browsers and Chromium-based browsers without Google's model expose the same API but contain no model; Atlas Pulse detects this and hides Gemini Nano instead of returning placeholder output. Safari and Firefox don't support the API. Use Ollama in those browsers.
 
-**Known limitations**
+**Limits to know**
 
-- **Smaller context.** Gemini Nano accepts less input than most Ollama models. Single-article features fit comfortably. For multi-article actions, Atlas Pulse measures the available context and shortens every selected article evenly so the whole selection fits; the panel tells you when this happens. For full-length comparisons of many articles, switch to an Ollama model.
-- **The tab must stay open.** Gemini Nano runs inside the page, so background batch processing pauses when the tab is closed.
-- **No model choice.** Chrome manages and updates the model; output can change between Chrome versions.
-- **Terms.** Use of Gemini Nano is governed by Google Chrome's terms, including Google's [Generative AI Prohibited Use Policy](https://policies.google.com/terms/generative-ai/use-policy).
+- **Smaller context.** Single-article features fit comfortably. For multi-article actions, Atlas Pulse shortens every selected article evenly so the selection fits, and tells you when it does. For long comparisons, use an Ollama model.
+- **The tab must stay open.** Gemini Nano runs inside the page, so background processing pauses when the tab is closed.
+- **No model choice.** Chrome manages the model, and output can change between Chrome versions.
+- **Terms.** Gemini Nano is governed by Google Chrome's terms, including Google's [Generative AI Prohibited Use Policy](https://policies.google.com/terms/generative-ai/use-policy).
 
-### Option B: Ollama
+### Ollama
 
-**Built-in wizard**
-
-1. Open **Settings → AI Processing**.
-2. Under **Ollama (optional)**, click **Set up Ollama**. The app checks for Ollama only after you ask it to.
-3. Follow the prompts: download → start → pull a model.
-
-**Manual setup**
+Open **Settings → AI engines** and click **Set up Ollama**; the wizard checks for Ollama only when you ask, then walks you through download → start → pull a model. Or set it up by hand:
 
 ```bash
 # Install from https://ollama.com, then pull a model:
-ollama pull qwen2.5:3b       # lightweight — best for older hardware
-ollama pull llama3.1:8b      # balanced quality/speed
-ollama pull deepseek-r1:7b   # stronger reasoning
+ollama pull qwen2.5:3b       # lightweight, good on older hardware
+ollama pull llama3.1:8b      # balanced quality and speed
 
-# Make sure Ollama is running
 ollama serve                 # API on http://localhost:11434
-curl http://localhost:11434  # should print "Ollama is running"
 ```
 
 Installed models appear in the model picker automatically.
 
-### Using Background Batch Processing
+### Background processing
 
-1. Open **Settings → AI Processing**.
-2. Choose a model (**Auto** uses Gemini Nano when available), what to generate (Summary / Analysis / Both), and articles-per-cycle.
-3. Enable **Background batch processing**.
-4. New articles are analyzed automatically after each feed refresh while the app is open.
-5. To process existing articles immediately, click the `✨` button in the article list header.
-
-> AI requests go only to Gemini Nano in your browser or to your local Ollama instance. No article content is sent to any hosted AI service.
+In **Settings → AI engines**, choose a model (**Auto** uses Gemini Nano when available), what to generate (summary, analysis or both) and how many articles per run, then turn on **Background processing**. New articles are processed after each refresh while the app is open. Click ✨ in the list header to process recent articles now.
 
 ---
 
-## Keyboard Shortcuts
+## Data and privacy
 
-| Key | Action |
-|-----|--------|
-| `j` / `↓` / `→` | Next article |
-| `k` / `↑` / `←` | Previous article |
-| `b` | Save or unsave the article |
-| `n` | Save the article and write a note on it |
-| `c` | Add the article to collections (or create one) |
-| `o` | Open article in original tab |
-| `f` | Toggle zen / focus mode |
-| `/` | Focus search box |
-| `Esc` | Clear selection · clear search · exit zen mode · close reader |
+| Data | Where it lives |
+|------|----------------|
+| Feeds, folders, articles, saves and notes, collections, highlights, AI summaries, Studio newsletters, search index | `data/reader.db` (one SQLite database) |
+| Settings | `data/settings.json` |
+| Pane widths, scroll positions and other per-device layout | Your browser's `localStorage` |
+| Gemini Nano model | Managed by Google Chrome on your device |
 
----
-
-## Project Structure
-
-The component boundaries and dependency rules are described in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-```
-atlas-pulse/
-├── package.json                  # Dependencies & npm scripts
-├── vite.config.js                # Vite config + /api proxy to port 3001
-├── scripts/service.sh            # macOS background service (launchd) — npm run service
-├── docs/                         # ARCHITECTURE.md, TECH-DEBT.md, screenshots
-├── data/                         # Local SQLite databases (created on first run, git-ignored)
-├── shared/searchQuery.js         # Search query tokenizer used by client and server
-│
-├── server/                       # ── EXPRESS BACKEND (port 3001) ──
-│   ├── index.js                  # Entry — mounts routes, serves dist/ when built
-│   ├── db/                       # SQLite access: reader, summaries, highlights
-│   │   ├── connection.js         # Opens a database and runs its migrations
-│   │   ├── migrate.js            # Migration runner (PRAGMA user_version)
-│   │   └── migrations/           # Numbered schema migrations per database
-│   ├── routes/                   # reader · feeds · discover · articles · summaries ·
-│   │                             # highlights · ai (Ollama proxy) · ollama (setup)
-│   └── utils/                    # feedParser · feedDiscovery · articleExtractor ·
-│                                 # urlGuard (SSRF) · text · stream
-│
-└── src/                          # ── REACT FRONTEND (port 5173) ──
-    ├── main.jsx · App.jsx        # Entry and app shell (composition only)
-    ├── index.css                 # Imports src/styles/*.css in cascade order
-    ├── styles/                   # Vanilla CSS, one file per feature area
-    ├── app/                      # Appearance, Toast and Library contexts; layout hooks
-    ├── ai/                       # AI tasks: prompts, context, parsing, batch helpers
-    ├── hooks/                    # Shared hooks: feeds, folders, batch processor, polling…
-    ├── utils/                    # api.js (HTTP + streamChat), chromeAI.js (Gemini Nano),
-    │                             # settings stores, helpers, OPML, DOCX export
-    └── components/
-        ├── Sidebar.jsx           + sidebar/        # Navigation, folder tree, context menu
-        ├── ArticleList.jsx       + article-list/   # List, filters, search, multi-select
-        ├── ArticleReader.jsx     + reader/         # Reader, toolbar, share, highlights
-        ├── AIDrawer.jsx          + ai-drawer/      # Summary · Analysis · Chat · Highlights
-        ├── MultiArticlePanel.jsx + multi-article/  # Compare · Newsletter · Briefing
-        ├── AddFeedModal.jsx      + add-feed/       # URL · search · catalog · OPML
-        ├── SettingsPanel.jsx     + settings/       # One component per section
-        ├── LibraryView.jsx · HighlightsLibrary.jsx + library/
-        ├── HighlightToolbar.jsx  + highlights/
-        └── OllamaSetup.jsx       + ollama/         # Optional Ollama wizard
-```
+- **Private by design.** Feeds are fetched directly from their publishers; site icons are fetched and cached by your local server, not a third party; AI runs on your device. Nothing is sent to an Atlas Pulse server, because there isn't one.
+- **Shared across browsers.** Data lives on disk, not in the browser, so every browser on the machine sees the same library.
+- **Backup.** Copy the `data/` folder (set `ATLAS_DATA_DIR` to keep it elsewhere). For just your feed list, use **Settings → Data → Export feeds and folders**.
 
 ---
 
-## Architecture Overview
+## How it works
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                        BROWSER (Chrome)                          │
+┌──────────────────────── Browser (Chrome) ────────────────────────┐
 │                                                                  │
-│  ┌──────────┐  ┌───────────────────────┐  ┌──────────────────┐  │
-│  │ Sidebar  │  │     ArticleList       │  │  ArticleReader   │  │
-│  │ 3 states │  │  Grid/List/Compact    │  │  + AI Drawer     │  │
-│  │ libraries│  │  AI filters + trigger │  │  Sum/Anal/Chat   │  │
-│  └──────────┘  └───────────────────────┘  └──────────────────┘  │
-│                              │                                   │
-│   ┌───────────────────────────┐   ┌───────────────────────────┐  │
-│   │   useAIBatchProcessor     │   │  streamChat()             │  │
-│   │   background queue        │──►│  ├─ Gemini Nano ──────────┼──┼──► Chrome on-device model
-│   │   newest articles first   │   │  └─ Ollama ──┐            │  │    (Prompt API)
-│   └───────────────────────────┘   └──────────────┼────────────┘  │
-│                                                  │               │
-└──────────────────────────────┬───────────────────┼───────────────┘
-                               │ /api/*            │
-                    ┌──────────────────────┐       │
-                    │      Express.js      │◄──────┘
-                    │  ┌────────────────┐  │
-                    │  │ feeds/discover │──┼──► Remote RSS feeds & articles
-                    │  │ articles       │  │    (SSRF-guarded)
-                    │  │ reader         │──┼──► SQLite: feeds · folders · articles
-                    │  │ summaries      │──┼──► SQLite: summaries library
-                    │  │ highlights     │──┼──► SQLite: highlights
-                    │  │ ai / ollama    │──┼──► Ollama :11434 (optional)
-                    │  └────────────────┘  │
-                    └──────────────────────┘
+│  Rail + Sidebar   Article list            Reader + AI rail       │
+│  views, folders,  Rows · Grid · List ·    In brief, notes,       │
+│  collections, ⌘K  Compact (virtualized)   Studio editor          │
+│                                                                  │
+│  streamChat() ──┬── Gemini Nano (Chrome Prompt API, on-device)   │
+│                 └── Ollama (through the local server)            │
+└────────────────────────────────┬─────────────────────────────────┘
+                                 │  /api/*
+┌────────────────────────────────▼─────────────────────────────────┐
+│  Express on 127.0.0.1                                            │
+│                                                                  │
+│  feeds · discover · articles ──► publishers (SSRF-guarded)       │
+│  reader · collections · studio ──► data/reader.db (SQLite, FTS5) │
+│  page export ──► your installed Chrome (PNG, PDF)                │
+│  ai · ollama ──► Ollama on :11434 (optional)                     │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-### Why a Local Backend?
+Browsers block cross-origin requests, so a small local Express server fetches feeds and full articles for the page, checking every user-supplied URL (and every redirect and DNS answer) against SSRF before connecting. It also owns the SQLite database, renders Studio exports through your installed Chrome, and bridges to Ollama when you use it. Gemini Nano needs no server: it runs inside the page. The server binds to `127.0.0.1` and only admits requests from local origins.
 
-Browsers block direct cross-origin requests (CORS), so the Express server fetches RSS feeds and full article text on the browser's behalf, validating every user-supplied URL against SSRF before fetching it. It also owns the local SQLite databases and, when Ollama is in use, bridges requests to it. Gemini Nano needs no backend — it runs inside the browser. The server binds to `127.0.0.1`, and its CORS policy only admits browser requests from local origins.
+The code is a modular monolith: feature folders under `src/components/` and `server/`, with the boundaries and dependency rules in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
----
+### Technology
 
-## Technology Stack
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 19, Vite 8, Tailwind CSS 4, shadcn/ui (Radix, cmdk) |
+| Client data | TanStack Query, TanStack Virtual |
+| Backend | Express 5, express-rate-limit |
+| Storage | SQLite via better-sqlite3, with FTS5 full-text search |
+| AI | Gemini Nano (Chrome Prompt API); Ollama, optional |
+| Feeds and extraction | rss-parser, @extractus/article-extractor, cheerio, undici |
+| Rendering and export | DOMPurify, marked, docx, puppeteer-core (drives your installed Chrome) |
+| Fonts | Self-hosted with Fontsource |
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | React 19 + Vite 8 | UI + fast HMR dev server |
-| Styling | Vanilla CSS | Full design system, dark/light themes |
-| Storage | SQLite (better-sqlite3) | Feeds, articles, folders, summaries, highlights |
-| Backend | Express.js 5 | Feed proxy, extraction, storage, optional Ollama bridge |
-| AI (default) | Gemini Nano via Chrome Prompt API | On-device inference — no install, private |
-| AI (optional) | Ollama | Local LLM inference with any open model |
-| Feed Parsing | rss-parser | RSS/Atom XML parsing |
-| Article Extraction | @extractus/article-extractor | Full-text extraction from any URL |
-| HTML Sanitization | DOMPurify | Safe HTML rendering in reader |
-| Icons | react-icons (hi2) | UI iconography |
-| Dev Runner | concurrently | Frontend + backend in one command |
-
----
-
-## npm Scripts
+### npm scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start frontend (Vite) + backend (Express) concurrently |
+| `npm run dev` | Start the frontend (Vite) and backend (Express) together |
 | `npm run dev:frontend` | Start only the Vite frontend |
 | `npm run dev:server` | Start only the Express backend |
-| `npm run build` | Build production frontend bundle to `dist/` |
-| `npm run preview` | Preview the production build locally |
+| `npm run build` | Build the production frontend to `dist/` |
+| `npm run preview` | Preview the production build |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run the test suite (Node test runner) |
-| `npm run service <command>` | Manage the macOS background service — see [Run in the Background](#run-in-the-background-macos) |
-
----
-
-## Data & Privacy
-
-| Data | Where stored |
-|------|-------------|
-| Feeds, articles, folders, bookmarks, read state, batch AI results, saved AI summaries, highlights, Studio newsletters | `data/reader.db` (SQLite, local) |
-| Settings | `data/settings.json` |
-| Pane widths and other per-device layout | `localStorage` in your browser |
-| Gemini Nano model | Managed by Google Chrome on your device |
-
-- **Private by design** — feeds are fetched directly from their publishers; AI runs on your device through Chrome or Ollama; nothing is sent to an Atlas Pulse server, because there isn't one
-- **Shared across browsers** — data lives on disk, not in the browser, so every browser on the machine sees the same library
-- **Backup** — copy the `data/` folder, or use **Settings → Export OPML** for your feed list
+| `npm test` | Run the test suite (Node's test runner) |
+| `npm run service <command>` | Manage the macOS background service (see [Run it like an app](#run-it-like-an-app-macos)) |
 
 ---
 
 ## Troubleshooting
 
-### App won't load / blank page
-Check the terminal for errors. `EADDRINUSE` means a port is in use:
+**The app won't load.** Check the terminal. `EADDRINUSE` means a port is taken:
+
 ```bash
-kill -9 $(lsof -ti:3001) && kill -9 $(lsof -ti:5173)
+kill -9 $(lsof -ti:3001) $(lsof -ti:5173)
 npm run dev
 ```
-If you use the background service, check `npm run service status` and `npm run service logs`. After pulling updates, run `npm run service restart` to rebuild.
 
-### AI drawer says "No AI model available"
-- Open Atlas Pulse in desktop **Google Chrome 148+** to use Gemini Nano — Chromium, Safari, and Firefox do not include it
-- Check the model's state at `chrome://on-device-internals`
-- Or set up Ollama: **Settings → AI Processing → Set up Ollama**
+With the background service, run `npm run service status` and `npm run service logs`. After pulling updates, run `npm run service restart`.
 
-### Gemini Nano: the first summary takes a long time
-- Chrome is downloading the model on first use. Later requests start immediately
-- If it never finishes, confirm you have about 22 GB of free disk space
+**"No AI model available".** Use desktop Google Chrome 148+ for Gemini Nano (Chromium, Safari and Firefox don't include it) and check `chrome://on-device-internals`. Or set up Ollama in **Settings → AI engines**.
 
-### Gemini Nano: "articles were shortened" or "too long for Gemini Nano"
-- Multi-article actions shorten each article evenly to fit Gemini Nano's context window. If even shortened articles don't fit, the request is too long: select fewer articles, or choose an Ollama model in **Settings → AI Processing**
+**The first summary takes a long time.** Chrome is downloading Gemini Nano. Later requests start immediately. If it never finishes, check that you have about 22 GB free.
 
-### No Ollama models in the model dropdown
-- Make sure Ollama is running: `ollama serve`, then verify with `curl http://localhost:11434`
-- Pull a model: `ollama pull qwen2.5:3b`, or use the **Pull** button in the Ollama setup section of Settings
+**"Articles were shortened" or "too long for Gemini Nano".** Select fewer articles, or switch to an Ollama model.
 
-### Batch processing isn't analyzing the latest articles
-- Click the `✨` button in the article list header to trigger an on-demand run
-- This queues the N most recent unprocessed articles (N = Articles per cycle setting)
+**No Ollama models in the picker.** Run `ollama serve`, check `curl http://localhost:11434`, then pull a model (`ollama pull qwen2.5:3b`) or use **Pull** in the Ollama setup.
 
-### AI responses are slow
-- Gemini Nano speed depends on your GPU; close other GPU-heavy tabs
-- With Ollama, use a smaller model (3B–7B parameters); larger models (14B+) need significant RAM
+**A feed won't add.** Some sites block automated requests (403/429). Try the feed URL itself, for example `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`.
 
-### Feeds show an error when adding
-- Some sites block automated requests (403/429). Try the direct RSS URL instead of the homepage
-- Example: `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`
+**The full article doesn't load.** The site blocked extraction. Press `o` to read it on the site.
 
-### Full article doesn't load
-- The source site blocked extraction. Click **Open** in the toolbar to read in a new tab
-
-### Reset everything
-- **Settings → Clear All Data** deletes all feeds, articles, and folders from the local database
+**Studio PNG or PDF export fails.** It needs Google Chrome or Microsoft Edge installed. If yours is in an unusual place, start the server with `CHROME_PATH=/path/to/chrome`.
 
 ---
 
 ## Contributing
 
-Contributions are welcome! See [docs/TECH-DEBT.md](docs/TECH-DEBT.md) for the current maintainability assessment and planned work packages, and read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, on-device AI only), development setup, and pull request guidelines. By participating you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, on-device AI only), setup and pull request guidelines; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is organized; and [docs/TECH-DEBT.md](docs/TECH-DEBT.md) for open maintenance work. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 - **Found a bug?** [Open a bug report](https://github.com/socraticsurge/atlas-pulse/issues/new?template=bug_report.yml)
 - **Have an idea?** [Open a feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) or start a [discussion](https://github.com/socraticsurge/atlas-pulse/discussions)
-- **Security issue?** Please report privately — see [SECURITY.md](SECURITY.md)
-
----
+- **Security issue?** Report it privately: see [SECURITY.md](SECURITY.md)
 
 ## License
 
-Released under the [MIT License](LICENSE). Copyright (c) 2026 Vinay Chaganti.
-
----
+[MIT](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 ## Changelog
 
-### v1.4.0
-**On-device AI with zero setup**
-- **Gemini Nano support** — AI summaries, analysis, chat, batch processing, and multi-article actions run on the model built into desktop Google Chrome (148+), with no installation or API key
-- **Gemini Nano is the default engine** — selected automatically when available; Ollama models remain one click away in the model picker
-- **Ollama is now optional** — the app no longer polls for Ollama in the background; its setup wizard runs only when you open **Settings → AI Processing → Set up Ollama**
-- **Chromium detection** — browsers that expose the Prompt API without a model (plain Chromium, embedded browsers) are detected, so they never return placeholder output
-
-**Run it like an app**
-- **Background service for macOS** — `npm run service install` keeps Atlas Pulse running at `http://atlas-pulse.localhost:4317`, starting at login and restarting automatically
-- **Single-process production mode** — the Express server now serves the built frontend, and its port is configurable via `PORT`
-
-**Fixes**
-- Multi-article actions (Compare, Newsletter, Briefing) no longer fail with "No AI model selected" when the model is set to **Auto**
-- Multi-article actions on Gemini Nano fit the selection to the model's context window by shortening every article evenly, instead of failing on large selections
-- A missing Ollama installation is treated as a normal state instead of logging server errors
-- **AI now reads the whole article.** A text helper silently cut every article to its first 160 characters, so summaries, analysis, chat, batch processing, and multi-article actions were working from little more than the headline. AI features now receive the full text (up to 6,000 characters for summaries and chat, 4,000 for analysis, 1,200 per article for multi-article actions)
-- Corrected the minimum Node.js version to 20.19 (required by Vite 8)
-
-**Security & maintenance** (since v1.3.0)
-- SSRF guard on every user-supplied URL the server fetches, loopback-only server binding, CORS restricted to local origins, and an iframe allowlist
-- Resolved all CodeQL code-scanning findings; added SSRF and OPML regression tests to CI
-- Patched all known dependency vulnerabilities (`npm audit`: 0), including `proxy-addr`, `dompurify`, and `undici`; upgraded to ESLint 10 and concurrently 10; Dependabot updates for dependencies and GitHub Actions
-
-**Documentation**
-- README, CONTRIBUTING, and SECURITY now reflect the SQLite storage model, the Highlights feature, and both AI engines
-
-### v1.3.0
-- **Multi-select with AI Actions** — Select 2–15 articles via checkboxes; floating action bar appears with Mark Read, Bookmark, CSV, and AI Actions menu
-- **Compare Sources** — AI side-by-side comparison of 2–5 articles across angle, framing, key claims, omissions, tone, and evidence
-- **Generate Newsletter** — AI-written Daily Digest, Weekly Roundup, or Executive Brief from 3–15 articles
-- **AI Briefing** — Free-form prompt answered using 2–15 selected articles as grounded context
-- **Multi-article export** — Copy, download as Markdown (`.md`), download as Word (`.docx`), or email from the AI panel
-- **Active AI config strip** — MultiArticlePanel shows the currently active personas, tone presets, and custom instructions before generating
-- **Improved search** — AND-logic tokenized search: "cloud AI" finds both terms anywhere in the article; "quoted phrases" for exact match; results ranked by title › source › AI topics › body weight
-- **Cross-feed deduplication** — Wire stories appearing in multiple feeds are stored only once; canonical URL normalization strips tracking params (`utm_*`, `fbclid`, etc.), `www.` prefix, fragments, and sorts query params (DB v6 migration with backfill)
-- **`/` shortcut** — Press `/` anywhere to focus the search box
-- **`Escape` improvements** — Clears multi-select → clears search → exits zen mode, in priority order
-
-### v1.2.0
-- **Background AI batch processing** — Automatically summarizes and classifies new articles using a local Ollama model; configurable in Settings
-- **Content Analysis** — 5-dimension article classification (Sentiment, Urgency, Frame, Tone, Depth) + topic tags; available on-demand in the AI drawer's Analysis tab
-- **On-demand batch trigger** — `✨` button in the article list header queues the latest N articles for immediate analysis; shows live progress indicator while running
-- **AI Summaries Library** — Full-panel view for browsing, searching, and exporting manually saved summaries (SQLite-backed)
-- **Per-dimension filter pills** — Content filters organized by dimension with dropdown selectors; replaces flat chip list
-- **AI Only filter** — Toggle in article list header to show only AI-analyzed articles
-- **AI processed badge** — Sparkle indicator on analyzed articles; own column in compact view, badge pill in list view, image overlay in grid view
-- **Guided Ollama setup wizard** — Built-in UI for detecting, starting, and pulling models; no terminal required
-- **Model dropdown** — Settings shows a live dropdown of installed Ollama models instead of a text field
-- **Configurable auto-refresh** — Off / 15 min / 30 min / 1 hr / 2 hr (previously fixed at 30 min)
-- **Custom text color picker** — Full color picker for text color alongside the 4 presets
-
-### v1.1.0
-- **AI Assistant** — Summary and chat powered by local Ollama models; streaming responses; model picker; LinkedIn/X sharing from summary
-- **Excerpt view** — Article list view with title, snippet, and thumbnail
-- **Sidebar collapse** — Three-state sidebar: expanded → icon-only → hidden
-- **Settings expansion** — Font picker (9 options), accent color wheel (6 presets + custom hex), text color variants
-- **Reader enhancements** — Reading progress bar, zen/focus mode, expanded keyboard shortcuts
-- **Share popover** — LinkedIn, X/Twitter, Email, Web Share API, Copy Link
-- **OPML import/export** — Full feed portability
-
-### v1.0.0
-- Initial release: RSS reading, full-text extraction, folders, bookmarks, dark/light theme, resizable panels
+**2.0.0** is a new reader: a three-pane layout with dense Rows, a docked reader and an AI rail; saves with notes, collections and an Unsorted queue; NotebookLM export; Studio for editable, printable newsletters; full-text search; a command palette; and a single local database. See [CHANGELOG.md](CHANGELOG.md) for everything in this release and earlier ones.
