@@ -8,7 +8,7 @@ Before proposing a change, keep the project's core promises in mind. Contributio
 
 1. **Local-first, always.** All user data stays on the user's machine. No cloud services, no telemetry, no accounts, no external analytics.
 2. **AI is optional and on-device.** AI features must run on the user's own machine — through Gemini Nano built into Chrome (the default) or the user's local Ollama instance. No hosted LLM APIs, no API keys, no usage costs. New AI features must work with both engines.
-3. **No heavy frameworks for styling.** The design system is vanilla CSS in `src/styles/` (one file per feature area, imported in order by `src/index.css`). Please do not introduce Tailwind, CSS-in-JS, or component libraries.
+3. **One styling system.** The UI is built with Tailwind CSS 4 utilities and shadcn/ui components (`src/components/ui/`), on the design tokens in `src/styles/tokens.css`. Use those rather than adding another CSS framework, CSS-in-JS, or a second component library.
 4. **Privacy over convenience.** When a feature trades privacy for convenience, privacy wins.
 
 ## Getting started
@@ -23,7 +23,7 @@ npm run dev
 
 Open http://localhost:5173. The Vite dev server (5173) and Express API server (3001) start together.
 
-To work on AI features, open the app in desktop Google Chrome 148+ so Gemini Nano is available (the first request downloads the model). Plain Chromium and embedded browsers have no model. To test the Ollama path as well, run [Ollama](https://ollama.com) with at least one small model pulled (for example `qwen2.5:3b`); the wizard under Settings → AI Processing → Set up Ollama can handle this for you.
+To work on AI features, open the app in desktop Google Chrome 148+ so Gemini Nano is available (the first request downloads the model). Plain Chromium and embedded browsers have no model. To test the Ollama path as well, run [Ollama](https://ollama.com) with at least one small model pulled (for example `qwen2.5:3b`); the wizard under Settings → AI engines → Set up Ollama can handle this for you.
 
 ## Project layout
 
@@ -53,7 +53,7 @@ Open a [feature request](https://github.com/socraticsurge/atlas-pulse/issues/new
 2. Keep PRs focused: one feature or fix per PR.
 3. Run `npm run lint` and `npm test`, and make sure the app starts cleanly with `npm run dev`.
 4. Test the affected flows manually, and add tests where practical (`node --test`; see `server/utils/urlGuard.test.js`).
-5. If you change user-facing behavior, update the README (features table, shortcuts, changelog).
+5. If you change user-facing behavior, update the README (features tables, shortcuts) and add a line to `CHANGELOG.md`.
 6. If you change a SQLite schema, add a new numbered migration in `server/db/migrations/`. Never edit a released migration, and never require users to delete their data.
 7. Keep `npm run lint` at zero warnings. The complexity rules (complexity 9, 70 lines per function, nesting depth 3, 4 parameters) are there to keep components small. Split the code rather than raising the limit.
 

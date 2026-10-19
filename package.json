@@ -1,7 +1,7 @@
 {
   "name": "atlas-pulse",
   "private": true,
-  "version": "1.4.0",
+  "version": "2.0.0",
   "description": "Privacy-first RSS feed reader with on-device AI: Gemini Nano built into Chrome, or optional local Ollama models. No cloud, no accounts, your data never leaves your machine.",
   "license": "MIT",
   "author": "Vinay Chaganti",
