@@ -64,28 +64,40 @@ function useSaveEdits(id, setStatus) {
   return { queue, flush };
 }
 
+// The draft of the open item: replaced when another item opens (during
+// render, so there's no stale paint), changed by edits in between.
+function useLoadedDraft(item, onLoad) {
+  const [draft, setDraft] = useState(null);
+  const [loadedId, setLoadedId] = useState(null);
+  if (item && loadedId !== item.id) {
+    setLoadedId(item.id);
+    setDraft({ title: item.title, bodyMd: item.bodyMd });
+    onLoad();
+  }
+  return [draft, setDraft];
+}
+
+/** The part of an edit to send: a blank title isn't saved (the last saved one stays). */
+export function editToSave(changes) {
+  if (!('title' in changes)) return changes;
+  const title = changes.title.trim();
+  return title ? { ...changes, title } : null;
+}
+
 /**
  * The editable draft of an item ({ title, bodyMd }), saved automatically a
  * moment after typing stops. status: 'saved' | 'unsaved' | 'saving' | 'error'.
  */
 export function useStudioDraft(item) {
-  const [draft, setDraft] = useState(null);
   const [status, setStatus] = useState('saved');
-  const [loadedId, setLoadedId] = useState(null);
-  // A newly opened item replaces the draft (during render, so there's no stale paint).
-  if (item && loadedId !== item.id) {
-    setLoadedId(item.id);
-    setDraft({ title: item.title, bodyMd: item.bodyMd });
-    setStatus('saved');
-  }
+  const [draft, setDraft] = useLoadedDraft(item, () => setStatus('saved'));
   const { queue, flush } = useSaveEdits(item?.id, setStatus);
 
   const edit = useCallback((changes) => {
     setDraft((d) => ({ ...d, ...changes }));
-    const title = changes.title?.trim();
-    if ('title' in changes && !title) return; // a title can't be empty; keep the last saved one
-    queue(title ? { ...changes, title } : changes);
-  }, [queue]);
+    const toSave = editToSave(changes);
+    if (toSave) queue(toSave);
+  }, [queue, setDraft]);
 
   return { draft: item && draft, status, edit, retry: flush };
 }
