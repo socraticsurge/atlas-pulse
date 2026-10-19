@@ -154,7 +154,7 @@ router.get('/articles/by-link', (req, res) => {
 });
 
 // Each view, and whether it needs the id of a feed or folder.
-const VIEWS = { all: false, today: false, saved: false, feed: true, folder: true, collection: true };
+const VIEWS = { all: false, today: false, saved: false, unsorted: false, feed: true, folder: true, collection: true };
 const text = (value) => (typeof value === 'string' ? value : '');
 
 // The view a request names, or null if it isn't one.

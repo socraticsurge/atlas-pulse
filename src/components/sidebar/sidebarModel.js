@@ -40,14 +40,14 @@ export function folderUnread(folderFeeds = [], byFeed) {
   return folderFeeds.reduce((sum, f) => sum + (byFeed[f.id] || 0), 0);
 }
 
-/** Unread/saved/today/highlights counts, reloaded when refreshKey changes, and the Studio count. */
+/** Unread/saved/unsorted/today/highlights counts, reloaded when refreshKey changes, and the Studio count. */
 export function useSidebarCounts(refreshKey, librarySummaryCount) {
   const [counts, setCounts] = useState({ byFeed: {}, total: 0, saved: 0, today: 0, highlights: 0 });
 
   useEffect(() => {
     fetchCounts()
-      .then(({ unreadByFeed, total, savedCount, todayCount }) =>
-        setCounts((c) => ({ ...c, byFeed: unreadByFeed, total, saved: savedCount, today: todayCount })))
+      .then(({ unreadByFeed, total, savedCount, unsortedCount, todayCount }) =>
+        setCounts((c) => ({ ...c, byFeed: unreadByFeed, total, saved: savedCount, unsorted: unsortedCount, today: todayCount })))
       .catch(() => {});
     fetchHighlightsCount()
       .then(({ count }) => setCounts((c) => ({ ...c, highlights: count })))

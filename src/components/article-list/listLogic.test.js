@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articlesToCSV, BY_PUBLISHED, BY_SAVED, chunkRows, dayGroup, emptyStateText, flattenPages, groupingFor, patchPages, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
+import { articlesToCSV, BY_PUBLISHED, BY_SAVED, chunkRows, dayGroup, emptyStateText, flattenPages, groupingFor, isSaveList, patchPages, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
 
 test('viewTitle and emptyStateText', () => {
   assert.equal(viewTitle({ type: 'all' }), 'All Articles');
@@ -95,4 +95,11 @@ test('collections have their own title, empty state and save-date headings', () 
   assert.equal(viewTitle({ type: 'collection' }), 'Collection');
   assert.equal(emptyStateText({ viewType: 'collection' }).title, 'Nothing in this collection yet');
   assert.equal(groupingFor('collection'), BY_SAVED);
+});
+
+test('Unsorted is a list of saves with its own title and empty state', () => {
+  assert.equal(isSaveList('unsorted'), true);
+  assert.equal(isSaveList('today'), false);
+  assert.equal(viewTitle({ type: 'unsorted' }), 'Unsorted saves');
+  assert.equal(emptyStateText({ viewType: 'unsorted' }).title, 'All sorted');
 });

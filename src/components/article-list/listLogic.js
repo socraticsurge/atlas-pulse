@@ -10,7 +10,7 @@ export const FILTER_DIMS = [
   { key: 'depth',     label: 'Depth',     values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
 ];
 
-const VIEW_TITLES = { all: 'All Articles', today: 'Today', saved: 'Saved' };
+const VIEW_TITLES = { all: 'All Articles', today: 'Today', saved: 'Saved', unsorted: 'Unsorted saves' };
 
 export function viewTitle(view) {
   if (VIEW_TITLES[view.type]) return VIEW_TITLES[view.type];
@@ -24,6 +24,7 @@ const EMPTY_BY_VIEW = {
   saved: { title: 'Nothing saved yet', body: 'Press b to save an article, or n to save it with a note' },
   today: { title: 'All caught up', body: 'No new articles published today' },
   collection: { title: 'Nothing in this collection yet', body: 'Press c on an article to add it here' },
+  unsorted: { title: 'All sorted', body: 'Every save is in a collection. New saves land here until you file them' },
 };
 
 /** Title and body for the empty list, depending on why it is empty. */
@@ -87,9 +88,11 @@ export const BY_PUBLISHED = { dateOf: (a) => a.publishedAt, label: (group) => gr
 /** Day headings by when each article was saved (lists of saves, which are in that order). */
 export const BY_SAVED = { dateOf: (a) => a.savedAt, label: (group) => SAVED_HEADINGS[group] };
 
-const SAVE_ORDERED_VIEWS = new Set(['saved', 'collection']);
+const SAVE_ORDERED_VIEWS = new Set(['saved', 'unsorted', 'collection']);
+/** Whether a view lists saves (in save order), where filing shortcuts matter most. */
+export const isSaveList = (viewType) => SAVE_ORDERED_VIEWS.has(viewType);
 /** How a view's list is grouped under day headings; it matches the server's order for the view. */
-export const groupingFor = (viewType) => (SAVE_ORDERED_VIEWS.has(viewType) ? BY_SAVED : BY_PUBLISHED);
+export const groupingFor = (viewType) => (isSaveList(viewType) ? BY_SAVED : BY_PUBLISHED);
 
 /**
  * The list as rows for the Rows view: a heading before each run of articles

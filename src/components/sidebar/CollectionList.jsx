@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HiOutlinePlus, HiOutlineRectangleStack } from 'react-icons/hi2';
+import { HiOutlineInboxArrowDown, HiOutlinePlus, HiOutlineRectangleStack } from 'react-icons/hi2';
 import { IconButton } from '@/components/ui/icon-button';
 import { useCollectionActions, useCollections } from '../library/useCollections.js';
 import { ContextMenu } from './ContextMenu.jsx';
@@ -57,8 +57,12 @@ function useCollectionListState(activeView, onViewChange) {
   };
 }
 
-/** The sidebar's Collections: one row each (opens its articles), plus new, rename and delete. */
-export function CollectionList({ activeView, onViewChange }) {
+/**
+ * The sidebar's Collections: Unsorted (saves in no collection yet, the
+ * filing queue), one row per collection (opens its articles), plus new,
+ * rename and delete.
+ */
+export function CollectionList({ activeView, onViewChange, unsorted }) {
   const collections = useCollections();
   const state = useCollectionListState(activeView, onViewChange);
   return (
@@ -67,6 +71,13 @@ export function CollectionList({ activeView, onViewChange }) {
         <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Collections</span>
         <IconButton onClick={state.startAdding} title="New collection" className="size-6"><HiOutlinePlus /></IconButton>
       </div>
+      <NavRow
+        active={isActive(activeView, 'unsorted')}
+        onClick={() => onViewChange({ type: 'unsorted' })}
+        icon={<HiOutlineInboxArrowDown />}
+        label="Unsorted"
+        count={unsorted}
+      />
       {state.adding && (
         <div className="flex h-8 items-center px-2">
           <RenameInput initial="" label="New collection name" onSubmit={state.finishAdding} onCancel={state.cancelAdding} />
