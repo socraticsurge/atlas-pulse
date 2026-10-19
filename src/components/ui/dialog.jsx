@@ -63,6 +63,8 @@ function DialogContent({ className, children, showCloseButton = true, ...props }
   )
 }
 
+// Every export is a component; the plugin can't see that through slotted().
+/* eslint-disable react-refresh/only-export-components */
 export {
   Dialog,
   DialogClose,
@@ -75,3 +77,4 @@ export {
   DialogTitle,
   DialogTrigger,
 }
+/* eslint-enable react-refresh/only-export-components */

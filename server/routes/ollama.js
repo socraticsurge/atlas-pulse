@@ -13,7 +13,7 @@ const router = Router();
 // runaway client (or a script) can't hammer them.
 const processLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 20,
+  limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please slow down.' },
