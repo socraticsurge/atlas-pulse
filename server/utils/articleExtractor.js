@@ -41,18 +41,47 @@ export function largestInSrcset(srcset = '') {
  * tags of its <picture>, leaving the <img> with no src. Readability takes
  * such an <img> for a placeholder and deletes it, and the emptied <picture>
  * goes with it. Giving the <img> its picture's largest source keeps it.
- * Pages that need no change come back as they were.
+ * Returns how many it filled.
  */
-export function fillPictureImageSrc(html) {
-  if (!/<picture/i.test(html)) return html;
-  const $ = cheerio.load(html);
+function fillPictureImages($) {
   let filled = 0;
   $('picture img:not([src]):not([srcset])').each((_, el) => {
     const img = $(el);
     const src = largestInSrcset(img.closest('picture').find('source[srcset]').first().attr('srcset'));
     if (src) { img.attr('src', src); filled += 1; }
   });
-  return filled ? $.html() : html;
+  return filled;
+}
+
+// Page furniture the extractor would otherwise keep as article text. Inside a
+// figure, text marked speechify-ignore (not for reading aloud) is a control:
+// on Medium, "Press enter or click to view image in full size" over every
+// image. From Medium's byline only the read time, date and clap count ("--")
+// go. Removing the whole byline, or its author photo, leaves the block above
+// the article too light, and Readability drops the article's subtitle with it.
+const PAGE_FURNITURE = [
+  'figure .speechify-ignore',
+  '[data-testid="storyReadTime"]',
+  '[data-testid="storyPublishDate"]',
+  '.pw-multi-vote-count',
+].join(', ');
+
+// Returns how many elements it removed.
+function dropPageFurniture($) {
+  const found = $(PAGE_FURNITURE);
+  found.remove();
+  return found.length;
+}
+
+/**
+ * Prepares a page for extraction: fills in <picture> images and drops page
+ * furniture (see above). Pages that need neither come back as they were.
+ */
+export function prepareForExtraction(html) {
+  if (!/<picture|speechify-ignore|data-testid="story|pw-multi-vote-count/i.test(html)) return html;
+  const $ = cheerio.load(html);
+  const changed = fillPictureImages($) + dropPageFurniture($);
+  return changed ? $.html() : html;
 }
 
 // The page is fetched by fetchText (SSRF-guarded on every redirect, with our
@@ -60,7 +89,7 @@ export function fillPictureImageSrc(html) {
 export async function extractArticle(url) {
   try {
     const page = await fetchText(url, { headers: { 'User-Agent': USER_AGENT }, timeoutMs: EXTRACTION_TIMEOUT_MS });
-    const article = await extractFromHtml(fillPictureImageSrc(page.text), page.url);
+    const article = await extractFromHtml(prepareForExtraction(page.text), page.url);
     if (!article) throw new Error('Could not extract article content');
     return toExtracted(article, url);
   } catch (error) {
