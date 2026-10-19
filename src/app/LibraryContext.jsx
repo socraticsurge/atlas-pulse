@@ -10,6 +10,18 @@ const LibraryContext = createContext(null);
 
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
 
+// Removing feeds keeps their saved articles (with notes and collections).
+const KEEPS_SAVES = 'Saved articles stay in Saved and your collections; the rest are deleted.';
+const removedMessage = (what, kept) => (kept > 0 ? `${what}; kept ${plural(kept, 'saved article')}` : what);
+
+// Feeds removed but kept for their saves: their names still label those saves.
+function useRemovedFeeds() {
+  const [removedFeeds, setRemovedFeeds] = useState([]);
+  const reloadRemovedFeeds = useCallback(() => api.fetchRemovedFeeds().then(setRemovedFeeds).catch(() => {}), []);
+  useEffect(() => { reloadRemovedFeeds(); }, [reloadRemovedFeeds]);
+  return { removedFeeds, reloadRemovedFeeds };
+}
+
 
 // Keys bumped after mutations so lists and counts re-fetch.
 function useRefreshKeys() {
@@ -40,7 +52,7 @@ function useAutoRefresh(feedCount, refreshAllFeeds) {
 // side effect, so each reloads the feed list (and Clear All the folders too).
 function useDestructiveActions({
   feeds, folders, reloadFeeds, reloadFolders, deleteFolderRaw, deleteFolderAndFeedsRaw,
-  bumpArticles, bumpCounts, onViewRemoved, showToast,
+  bumpArticles, bumpCounts, onViewRemoved, showToast, reloadRemovedFeeds,
 }) {
   const deleteFolder = useCallback(async (folderId) => {
     await deleteFolderRaw(folderId);
@@ -52,24 +64,24 @@ function useDestructiveActions({
   const deleteFolderAndFeeds = useCallback(async (folderId) => {
     const folder = folders.find((f) => f.id === folderId);
     const count = feeds.filter((f) => f.folderId === folderId).length;
-    if (!window.confirm(`Delete "${folder?.name || 'this folder'}" and its ${plural(count, 'feed')}? All their articles will be deleted.`)) return;
-    await deleteFolderAndFeedsRaw(folderId);
-    await reloadFeeds();
-    showToast('Folder and all its feeds deleted');
+    if (!window.confirm(`Delete "${folder?.name || 'this folder'}" and its ${plural(count, 'feed')}? ${KEEPS_SAVES}`)) return;
+    const kept = await deleteFolderAndFeedsRaw(folderId);
+    await Promise.all([reloadFeeds(), reloadRemovedFeeds()]);
+    showToast(removedMessage('Folder and its feeds deleted', kept));
     bumpArticles();
     onViewRemoved('folder', folderId);
-  }, [folders, feeds, deleteFolderAndFeedsRaw, reloadFeeds, showToast, bumpArticles, onViewRemoved]);
+  }, [folders, feeds, deleteFolderAndFeedsRaw, reloadFeeds, reloadRemovedFeeds, showToast, bumpArticles, onViewRemoved]);
 
   // Settings → Danger Zone. Everything is gone, so reload it all and leave
   // any feed or folder view.
   const clearAll = useCallback(async () => {
     await api.clearAllData();
-    await Promise.all([reloadFeeds(), reloadFolders()]);
+    await Promise.all([reloadFeeds(), reloadFolders(), reloadRemovedFeeds()]);
     bumpArticles();
     bumpCounts();
     onViewRemoved(null);
     showToast('All feeds, folders and articles deleted');
-  }, [reloadFeeds, reloadFolders, bumpArticles, bumpCounts, onViewRemoved, showToast]);
+  }, [reloadFeeds, reloadFolders, reloadRemovedFeeds, bumpArticles, bumpCounts, onViewRemoved, showToast]);
 
   return { deleteFolder, deleteFolderAndFeeds, clearAll };
 }
@@ -83,6 +95,7 @@ function useLibraryState(onViewRemoved) {
   const { articlesKey, countsKey, bumpArticles, bumpCounts } = useRefreshKeys();
   const { feeds, reloadFeeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshFeed, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
   const { folders, reloadFolders, addFolder, renameFolder, deleteFolder: deleteFolderRaw, deleteFolderAndFeeds: deleteFolderAndFeedsRaw } = useFolders();
+  const { removedFeeds, reloadRemovedFeeds } = useRemovedFeeds();
   const [refreshing, setRefreshing] = useState(false);
   const setAutoRefreshMinutes = useAutoRefresh(feeds.length, refreshAllFeeds);
 
@@ -105,12 +118,13 @@ function useLibraryState(onViewRemoved) {
 
   const removeFeed = useCallback(async (feedId) => {
     const feed = feeds.find((f) => f.id === feedId);
-    if (!window.confirm(`Remove "${feed?.title || 'this feed'}"? All its articles will be deleted.`)) return;
-    await removeFeedRaw(feedId);
-    showToast('Feed removed');
+    if (!window.confirm(`Remove "${feed?.title || 'this feed'}"? ${KEEPS_SAVES}`)) return;
+    const kept = await removeFeedRaw(feedId);
+    if (kept > 0) reloadRemovedFeeds();
+    showToast(removedMessage('Feed removed', kept));
     bumpArticles();
     onViewRemoved('feed', feedId);
-  }, [feeds, removeFeedRaw, showToast, bumpArticles, onViewRemoved]);
+  }, [feeds, removeFeedRaw, reloadRemovedFeeds, showToast, bumpArticles, onViewRemoved]);
 
   const moveFeed = useCallback(async (feedId, folderId) => {
     await updateFeedFolder(feedId, folderId);
@@ -139,19 +153,21 @@ function useLibraryState(onViewRemoved) {
 
   const { deleteFolder, deleteFolderAndFeeds, clearAll } = useDestructiveActions({
     feeds, folders, reloadFeeds, reloadFolders, deleteFolderRaw, deleteFolderAndFeedsRaw,
-    bumpArticles, bumpCounts, onViewRemoved, showToast,
+    bumpArticles, bumpCounts, onViewRemoved, showToast, reloadRemovedFeeds,
   });
 
   const existingFeedUrls = useMemo(() => feeds.map((f) => f.url), [feeds]);
+  // Every feed an article can come from: subscribed, then removed but kept for saves.
+  const sourceFeeds = useMemo(() => [...feeds, ...removedFeeds], [feeds, removedFeeds]);
 
   return useMemo(() => ({
-    feeds, folders, existingFeedUrls, refreshing,
+    feeds, sourceFeeds, folders, existingFeedUrls, refreshing,
     articlesRefreshKey: articlesKey, countsRefreshKey: countsKey, bumpCounts,
     setAutoRefreshMinutes, importFeedsFromOPML,
     onAddFeed: addFeed, onRemoveFeed: removeFeed, onMoveFeed: moveFeed, onRefreshAll: refreshAll, onRefreshFeed: refreshOneFeed,
     onAddFolder: addFolder, onRenameFolder: renameFolder,
     onDeleteFolder: deleteFolder, onDeleteFolderAndFeeds: deleteFolderAndFeeds, onClearAll: clearAll,
-  }), [feeds, folders, existingFeedUrls, refreshing, articlesKey, countsKey, bumpCounts, setAutoRefreshMinutes,
+  }), [feeds, sourceFeeds, folders, existingFeedUrls, refreshing, articlesKey, countsKey, bumpCounts, setAutoRefreshMinutes,
     importFeedsFromOPML, addFeed, removeFeed, moveFeed, refreshAll, refreshOneFeed, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds, clearAll]);
 }
 

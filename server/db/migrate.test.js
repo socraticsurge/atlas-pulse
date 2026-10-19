@@ -164,3 +164,11 @@ test('reader migration 11 marks existing summaries as written by the batch', () 
   const sources = db.prepare('SELECT guid, ai_summary_source AS s FROM articles ORDER BY guid').all().map((r) => r.s);
   assert.deepEqual(sources, ['batch', null, null]);
 });
+
+test('reader migration 12 lets a feed be marked removed', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER.slice(0, 12));
+  db.prepare("INSERT INTO feeds (title, url, created_at, removed_at) VALUES ('F', 'u', 'now', 'then')").run();
+  assert.equal(db.prepare('SELECT removed_at FROM feeds').get().removed_at, 'then');
+  assert.equal(db.pragma('user_version', { simple: true }), 12);
+});

@@ -76,10 +76,12 @@ export function useFeeds(onDataChanged) {
     return saved.id;
   }, [feeds, setFeeds, onDataChanged]);
 
+  // Resolves to how many of its saved articles were kept.
   const removeFeed = useCallback(async (feedId) => {
-    await api.removeFeed(feedId);
+    const { keptSaved = 0 } = await api.removeFeed(feedId);
     setFeeds((prev) => prev.filter((f) => f.id !== feedId));
     onDataChanged?.();
+    return keptSaved;
   }, [setFeeds, onDataChanged]);
 
   const updateFeedFolder = useCallback(async (feedId, folderId) => {

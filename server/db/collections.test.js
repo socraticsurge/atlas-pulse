@@ -61,7 +61,7 @@ test('removing keeps the save; unsaving leaves every collection', () => {
   assert.equal(collections.getCollection(c.id).count, 0);
 });
 
-test('deleting a collection keeps its articles saved; removing a feed empties collections', () => {
+test('deleting a collection keeps its articles saved; removing their feed keeps them in collections', () => {
   const { feedId, ids: [one, two] } = addArticles(2);
   const d = collections.createCollection({ name: 'D' });
   const e = collections.createCollection({ name: 'E' });
@@ -70,7 +70,7 @@ test('deleting a collection keeps its articles saved; removing a feed empties co
   assert.equal(collections.deleteCollection(d.id), true);
   assert.equal(reader.getArticleById(one).isBookmarked, 1);
   reader.removeFeed(feedId);
-  assert.equal(collections.getCollection(e.id).count, 0);
+  assert.equal(collections.getCollection(e.id).count, 1);
 });
 
 test('Unsorted lists saves that are in no collection, latest save first', async () => {

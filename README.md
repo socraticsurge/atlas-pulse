@@ -137,6 +137,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **Google News search** | Type a keyword to subscribe to a Google News RSS feed |
 | **Popular feeds catalog** | Curated feeds across Technology, AI, Business, Science, and more |
 | **OPML import / export** | Move your feeds to/from any other RSS reader |
+| **Removing a feed keeps your saves** | Removing a feed (or a folder with its feeds) deletes its articles except the ones you saved: those stay in Saved and your collections, with their notes and the feed's name, and leave All and Today. Subscribe to the feed again and it comes back with them |
 | **Configurable auto-refresh** | Off, 15 min, 30 min, 1 hr, or 2 hr — set in Settings → Reading |
 
 ### AI Features

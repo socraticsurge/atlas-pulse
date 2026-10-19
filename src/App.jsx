@@ -74,9 +74,9 @@ function useBatchActions(batch) {
 
 // The ⌘K palette with the workspace's commands and the current list's articles.
 function PaletteHost({ open, onOpenChange, view, onOpenArticle, commands }) {
-  const { feeds } = useLibrary();
+  const { sourceFeeds } = useLibrary();
   const groups = usePaletteCommands(commands);
-  const sourceOf = useCallback((article) => feeds.find((f) => f.id === article.feedId)?.title || '', [feeds]);
+  const sourceOf = useCallback((article) => sourceFeeds.find((f) => f.id === article.feedId)?.title || '', [sourceFeeds]);
   return <CommandPalette open={open} onOpenChange={onOpenChange} groups={groups} view={view} sourceOf={sourceOf} onOpenArticle={onOpenArticle} />;
 }
 

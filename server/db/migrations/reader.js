@@ -229,4 +229,9 @@ export const MIGRATIONS = [
       UPDATE articles SET ai_summary_source = 'batch' WHERE ai_summary IS NOT NULL AND ai_summary <> '';
     `),
   },
+  {
+    version: 12,
+    description: 'A removed feed with saved articles is kept, hidden, so its saves keep their source',
+    up: (db) => db.exec('ALTER TABLE feeds ADD COLUMN removed_at TEXT'),
+  },
 ];

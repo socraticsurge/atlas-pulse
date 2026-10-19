@@ -24,9 +24,11 @@ export function useFolders() {
     setFolders(prev => prev.filter(f => f.id !== folderId));
   }, []);
 
+  // Resolves to how many saved articles of its feeds were kept.
   const deleteFolderAndFeeds = useCallback(async (folderId) => {
-    await api.deleteFolder(folderId, true);
+    const { keptSaved = 0 } = await api.deleteFolder(folderId, true);
     setFolders(prev => prev.filter(f => f.id !== folderId));
+    return keptSaved;
   }, []);
 
   return { folders, reloadFolders, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds };

@@ -186,6 +186,8 @@ export async function deleteFolder(id, withFeeds = false) {
 
 // Feeds
 export async function fetchFeeds() { return readerFetch('/feeds'); }
+/** Removed feeds kept for their saved articles (their names label those saves). */
+export async function fetchRemovedFeeds() { return readerFetch('/feeds?removed=1'); }
 export async function fetchFeed(id) { return readerFetch(`/feeds/${id}`); }
 export async function storeFeed(data) { return readerFetch('/feeds', json(data)); }
 export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, json(data, 'PUT')); }

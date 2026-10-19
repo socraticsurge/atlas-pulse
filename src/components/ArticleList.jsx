@@ -139,7 +139,7 @@ export default function ArticleList({
   const [activeFilters, setActiveFilters] = useState({});
   const [aiOnly, setAiOnly] = useState(false);
   const q = useDebouncedValue(search.query.trim(), SEARCH_DEBOUNCE_MS);
-  const data = useArticleListData(activeView, refreshKey, library.feeds, { q, filters: activeFilters, aiOnly });
+  const data = useArticleListData(activeView, refreshKey, library.sourceFeeds, { q, filters: activeFilters, aiOnly });
   useReaderChanges(changedArticle, data.updateLocal);
   const title = useLiveViewTitle(activeView);
   const [viewMode, setViewMode] = useViewMode();
