@@ -15,6 +15,7 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 - **Images in Medium articles.** Full-text extraction dropped the inline images from Medium publications such as Towards AI; they now come through (#122).
 - **Delete all** in Settings → Data says that it also deletes your saves and their notes and empties collections, and AI errors point to Settings → AI engines (#121).
 - **Ollama somewhere else.** `OLLAMA_HOST` (the variable Ollama reads) now points Atlas Pulse at an Ollama on another port or machine; it was fixed at `localhost:11434`. Finding Ollama also works on Windows (`where`, `%LOCALAPPDATA%\Programs\Ollama`) and with the macOS app's own copy. The background service keeps `CHROME_PATH`, `ATLAS_DATA_DIR` and `OLLAMA_HOST` if they are set at `install` (#127).
+- **Getting AI set up.** The AI panel and Settings → AI engines now say why Gemini Nano isn't available (not Chrome, a Chrome older than 148, or a computer Chrome can't run it on) instead of always "needs Chrome". When Chrome hasn't downloaded Nano yet, **Download Gemini Nano** starts the download with progress; before, the first summary sat silent. Ollama setup suggests current models (Llama 3.2 3B, Gemma 3 4B, Qwen 3.5 4B, Gemma 3 12B) and marks the one that fits your computer's memory, also after models are installed. Reasoning models answer without their reasoning, and "Auto" no longer prefers DeepSeek R1 or picks an embedding model (#128).
 
 ### Security
 

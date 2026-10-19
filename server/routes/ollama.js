@@ -3,6 +3,7 @@ import { pipeBody, setStreamHeaders } from '../utils/stream.js';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
+import { totalmem } from 'os';
 import rateLimit from 'express-rate-limit';
 import { installPaths, ollamaBase, whichCommand } from '../utils/ollamaHost.js';
 
@@ -69,17 +70,19 @@ async function getOllamaStatus() {
 
 /**
  * GET /api/ollama/status
- * Returns { installed, running, models[] }
+ * Returns { installed, running, models[], memoryGB }. memoryGB, this computer's
+ * memory, lets setup suggest a model that fits.
  */
 router.get('/status', async (req, res) => {
+  const memoryGB = Math.round(totalmem() / 2 ** 30);
   // Fast path: if Ollama is already responding, skip the slow `which ollama` check entirely
   const { running, models } = await getOllamaStatus();
   if (running) {
-    return res.json({ installed: true, running: true, models });
+    return res.json({ installed: true, running: true, models, memoryGB });
   }
   // Slow path: only exec when Ollama isn't responding
   const installed = await isOllamaInstalled();
-  res.json({ installed, running: false, models: [] });
+  res.json({ installed, running: false, models: [], memoryGB });
 });
 
 /**

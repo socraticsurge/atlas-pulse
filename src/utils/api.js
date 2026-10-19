@@ -1,5 +1,6 @@
 import { getNanoModel, isNanoModel, streamNanoChat } from './chromeAI.js';
 import { serverStatus } from '../app/serverStatus.js';
+import { withoutThinking } from '../ai/thinking.js';
 
 const API_BASE = '/api';
 export const UNREACHABLE = "Can't reach the Atlas Pulse server";
@@ -293,12 +294,18 @@ export function streamChat(model, messages, signal) {
   return isNanoModel(model) ? streamNanoChat(messages, signal) : streamOllamaChat(model, messages, signal);
 }
 
-async function* streamOllamaChat(model, messages, signal) {
-  const res = await send('/ai/chat', 'AI request failed', { ...json({ model, messages, stream: true }), signal });
-  for await (const chunk of readNdjson(res.body)) {
+async function* ollamaContent(body) {
+  for await (const chunk of readNdjson(body)) {
     if (chunk.message?.content) yield chunk.message.content;
     if (chunk.done) return;
   }
+}
+
+// The answer text only: a reasoning model's <think> block (older Ollama
+// versions put it in the content) is dropped.
+async function* streamOllamaChat(model, messages, signal) {
+  const res = await send('/ai/chat', 'AI request failed', { ...json({ model, messages, stream: true }), signal });
+  yield* withoutThinking(ollamaContent(res.body));
 }
 
 // Parses a newline-delimited JSON stream, skipping blank or malformed lines.

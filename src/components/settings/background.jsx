@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { getBatchSettings, saveBatchSettings } from '../../utils/batchSettings.js';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { isNanoModel } from '../../utils/chromeAI.js';
+import { NanoStatusLine } from '../ollama/NanoSetup.jsx';
 import OllamaSetup from '../ollama/OllamaSetup.jsx';
 import { useSettingsEnv } from './env.js';
 import { BATCH_FEATURES, BATCH_SIZES } from './settingsModel.js';
@@ -30,16 +29,11 @@ function EngineLine({ name, children }) {
 
 // Gemini Nano (built into Chrome) and Ollama (optional, checked only when opened).
 export function EngineControl() {
-  const { availableModels } = useSettingsEnv();
   const [showOllama, setShowOllama] = useState(false);
-  const nano = availableModels.some((m) => isNanoModel(m.name));
   return (
     <div className="flex flex-col gap-2">
       <EngineLine name="Gemini Nano">
-        <span className="flex items-center gap-2 text-[13px] text-muted-foreground">
-          <span className={cn('size-2 rounded-full', nano ? 'bg-[var(--success,#3fb950)]' : 'bg-[var(--text-tertiary)]')} />
-          {nano ? 'Built into Chrome · runs on your device' : 'Not available in this browser. Needs desktop Google Chrome 148+.'}
-        </span>
+        <NanoStatusLine />
       </EngineLine>
       <EngineLine name="Ollama · optional, for larger local models">
         {showOllama ? <OllamaSetup compact showReady /> : <Button variant="outline" size="sm" className="self-start" onClick={() => setShowOllama(true)}>Set up Ollama</Button>}

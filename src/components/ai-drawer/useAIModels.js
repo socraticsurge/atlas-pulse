@@ -1,18 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchAIModels } from '../../utils/api.js';
-import { isNanoModel } from '../../utils/chromeAI.js';
-
-const PREFERRED_MODELS = ['deepseek-r1', 'deepseek', 'phi4', 'qwen', 'llama'];
-
-export function pickDefaultModel(models) {
-  const nano = models.find((m) => isNanoModel(m.name));
-  if (nano) return nano.name;
-  for (const pref of PREFERRED_MODELS) {
-    const found = models.find((m) => m.name.toLowerCase().includes(pref));
-    if (found) return found.name;
-  }
-  return models[0]?.name || '';
-}
+import { pickDefaultModel } from '../../ai/models.js';
 
 /** Available AI models and the drawer's current selection. */
 export function useAIModels() {

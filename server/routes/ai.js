@@ -47,6 +47,17 @@ async function postOllamaChat(body) {
   }
 }
 
+// Atlas Pulse asks for the answer without the model's reasoning (think:
+// false): reasoning models are much slower otherwise, and the reasoning isn't
+// shown. An Ollama that refuses the field for a model gets the plain request.
+export async function postChatWithoutThinking(body, post = postOllamaChat) {
+  const res = await post({ ...body, think: false });
+  if (res.status !== 400) return res;
+  const text = await res.text();
+  if (/think/i.test(text)) return post(body);
+  return new Response(text, { status: 400 });
+}
+
 function sendOllamaError(res, err) {
   if (res.headersSent) return;
   if (err.name === 'AbortError') {
@@ -73,7 +84,7 @@ router.post('/chat', async (req, res) => {
   }
 
   try {
-    const ollamaRes = await postOllamaChat({ model, messages, stream });
+    const ollamaRes = await postChatWithoutThinking({ model, messages, stream });
     if (!ollamaRes.ok) {
       return res.status(ollamaRes.status).json({ error: await ollamaRes.text() });
     }

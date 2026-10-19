@@ -1,11 +1,13 @@
 // Pure helpers for background batch AI processing.
 
+import { pickDefaultModel } from './models.js';
+
 export const IDLE_PROGRESS = { total: 0, done: 0, failed: 0, running: false };
 
-/** The saved batch model if it is still installed, else the first available one. */
+/** The saved batch model if it is still installed, else the Auto choice (see models.js). */
 export function pickBatchModel(savedModel, availableModels) {
   if (savedModel && availableModels?.some((m) => m.name === savedModel)) return savedModel;
-  return availableModels?.[0]?.name || '';
+  return pickDefaultModel(availableModels ?? []);
 }
 
 /** Copy of `articles` sorted newest-published first. */
