@@ -1,0 +1,60 @@
+/* Broadsheet: a newspaper in one reading column. */
+
+.nl-broadsheet {
+  --bs-paper: #f3efe6;
+  --bs-ink: #1b1b1b;
+  --bs-muted: #4a4640;
+  --bs-accent: #7a1e12;
+  --bs-tint: rgba(27, 27, 27, 0.045);
+  --bs-display: 'Libre Caslon Display', Georgia, serif;
+  --bs-text: 'Libre Caslon Text', Georgia, serif;
+  background: var(--bs-paper);
+  color: var(--bs-ink);
+  font-family: var(--bs-text);
+  font-size: 18px;
+  line-height: 1.62;
+}
+
+.nl-broadsheet .bs-ears { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.nl-broadsheet .bs-title { margin: 12px 0 6px; text-align: center; font-family: 'UnifrakturMaguntia', var(--bs-display); font-weight: 400; font-size: 92px; line-height: 1; }
+.nl-broadsheet .bs-dateline { display: flex; justify-content: space-between; border-top: 3px solid var(--bs-ink); border-bottom: 1px solid var(--bs-ink); padding: 6px 0; font-size: 13px; font-style: italic; }
+
+.nl-broadsheet .nl-headline { font-family: var(--bs-display); font-weight: 400; line-height: 1.06; }
+.nl-broadsheet .nl-headline-l { font-size: 58px; }
+.nl-broadsheet .nl-headline-m { font-size: 48px; }
+.nl-broadsheet .nl-headline-s { font-size: 38px; }
+.nl-broadsheet .nl-standfirst { font-size: 20px; line-height: 1.55; font-style: italic; color: var(--bs-muted); }
+.nl-broadsheet .nl-lede { font-size: 20px; line-height: 1.6; }
+
+.nl-broadsheet .nl-column { border-top: 1px solid var(--bs-ink); }
+.nl-broadsheet .nl-section + .nl-section { border-top: 1px solid var(--bs-ink); }
+.nl-broadsheet .nl-section.nl-role-callout,
+.nl-broadsheet .nl-section.nl-role-takeaways { border-top: 0; }
+.nl-broadsheet .nl-section.nl-role-closing { margin-top: 18px; padding-top: 0; border-top: 0; text-align: center; }
+.nl-broadsheet .nl-section.nl-role-closing::before { content: '⁂'; display: block; margin-bottom: 8px; font-size: 20px; line-height: 1; color: var(--bs-muted); }
+
+.nl-broadsheet .nl-runin { font-weight: 700; font-size: 0.78em; letter-spacing: 0.08em; text-transform: uppercase; }
+.nl-broadsheet .nl-dropcap > span:last-child::first-letter { float: left; font-family: var(--bs-display); font-size: 4.1em; line-height: 0.78; padding: 7px 10px 0 0; color: var(--bs-accent); }
+.nl-broadsheet .nl-kicker { margin-bottom: 6px; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--bs-accent); }
+.nl-broadsheet .nl-h { font-family: var(--bs-display); font-weight: 400; font-size: 32px; line-height: 1.12; }
+.nl-broadsheet .nl-list li::marker { color: var(--bs-accent); }
+.nl-broadsheet .nl-quote { padding-left: 18px; border-left: 2px solid var(--bs-ink); font-style: italic; }
+.nl-broadsheet .nl-pullquote { padding: 18px 0; border-top: 2px solid var(--bs-ink); border-bottom: 2px solid var(--bs-ink); font-family: var(--bs-display); font-size: 28px; line-height: 1.25; text-align: center; }
+
+.nl-broadsheet .nl-panel { padding: 20px 24px; border: 2px solid var(--bs-ink); }
+.nl-broadsheet .nl-panel-title { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; }
+.nl-broadsheet .nl-panel-items { font-size: 17px; line-height: 1.55; }
+.nl-broadsheet .nl-panel-items li { padding: 12px 0; border-top: 1px dotted var(--bs-ink); }
+.nl-broadsheet .nl-panel-items li:first-child { border-top: 0; padding-top: 4px; }
+.nl-broadsheet .nl-numeral { width: 1.2em; font-family: var(--bs-display); font-size: 30px; line-height: 0.95; color: var(--bs-accent); }
+
+.nl-broadsheet .nl-callout { padding: 18px 24px; background: var(--bs-ink); color: var(--bs-paper); }
+.nl-broadsheet .nl-callout-label { margin-bottom: 8px; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; color: #f2b8a8; }
+.nl-broadsheet .nl-callout .nl-p { font-size: 19px; }
+
+.nl-broadsheet .nl-intro .nl-p,
+.nl-broadsheet .nl-closing .nl-p { font-style: italic; }
+
+.nl-broadsheet .nl-sources { padding-top: 14px; border-top: 3px double var(--bs-ink); font-size: 14px; line-height: 1.5; }
+.nl-broadsheet .nl-sources .nl-panel-title { font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700; }
+.nl-broadsheet .nl-source-site { font-style: italic; color: var(--bs-muted); }

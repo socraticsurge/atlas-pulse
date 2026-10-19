@@ -15,3 +15,8 @@ purify.addHook('afterSanitizeAttributes', (node) => {
 export function renderMarkdown(md) {
   return purify.sanitize(marked.parse(md || '', { gfm: true, async: false }));
 }
+
+/** One line of inline Markdown (bold, italics, links, code) as sanitized HTML. */
+export function renderInline(md) {
+  return purify.sanitize(marked.parseInline(md || ''));
+}
