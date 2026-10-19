@@ -104,10 +104,18 @@ test('reader migration 6 adds the summaries and highlights tables', () => {
 test('reader migration 7 adds Studio items whose sources are deleted with them', () => {
   const db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
-  migrate(db, READER);
+  migrate(db, READER.slice(0, 7));
   const { lastInsertRowid: id } = db.prepare("INSERT INTO studio_items (kind, title, body_md, created_at, updated_at) VALUES ('newsletter', 'T', 'B', 'now', 'now')").run();
   db.prepare("INSERT INTO studio_item_sources (item_id, position, article_url) VALUES (?, 0, 'u')").run(id);
   db.prepare('DELETE FROM studio_items WHERE id = ?').run(id);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM studio_item_sources').get().n, 0);
   assert.equal(db.pragma('user_version', { simple: true }), 7);
+});
+
+test('reader migration 8 lets a Studio item remember its design', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER);
+  db.prepare("INSERT INTO studio_items (kind, title, body_md, created_at, updated_at, template) VALUES ('newsletter', 'T', 'B', 'now', 'now', 'evening')").run();
+  assert.equal(db.prepare('SELECT template FROM studio_items').get().template, 'evening');
+  assert.equal(db.pragma('user_version', { simple: true }), 8);
 });

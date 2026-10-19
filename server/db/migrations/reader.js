@@ -186,4 +186,9 @@ export const MIGRATIONS = [
       );
     `),
   },
+  {
+    version: 8,
+    description: 'Studio items remember their page design (null = the default design)',
+    up: (db) => db.exec('ALTER TABLE studio_items ADD COLUMN template TEXT'),
+  },
 ];

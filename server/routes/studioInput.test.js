@@ -32,6 +32,12 @@ test('sources and settings must have the right shape', () => {
 test('an edit needs a title or a body, each valid', () => {
   assert.match(parseEdit({}).error, /nothing/);
   assert.match(parseEdit({ title: '' }).error, /title/);
-  assert.deepEqual(parseEdit({ bodyMd: '' }).value, { title: undefined, bodyMd: '' });
-  assert.deepEqual(parseEdit({ title: ' New ' }).value, { title: 'New', bodyMd: undefined });
+  assert.deepEqual(parseEdit({ bodyMd: '' }).value, { title: undefined, bodyMd: '', template: undefined });
+  assert.deepEqual(parseEdit({ title: ' New ' }).value, { title: 'New', bodyMd: undefined, template: undefined });
+});
+
+test('an edit can set the page design to a design id', () => {
+  assert.deepEqual(parseEdit({ template: 'evening' }).value, { title: undefined, bodyMd: undefined, template: 'evening' });
+  assert.match(parseEdit({ template: 'Evening Edition' }).error, /design id/);
+  assert.match(parseEdit({ template: 42 }).error, /design id/);
 });

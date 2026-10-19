@@ -51,11 +51,26 @@ export function parseNewItem(body = {}) {
   return bad ? { error: `invalid ${bad[0]}` } : { value };
 }
 
-/** An edit: { title?, bodyMd? }, at least one of them. */
+// A design id: lower-case letters, digits and dashes. The client knows the designs.
+const isDesignId = (value) => typeof value === 'string' && /^[a-z0-9-]{1,40}$/.test(value);
+
+// Each editable field: its check and the message when the check fails.
+const EDIT_FIELDS = {
+  title: [titleOk, `title must be 1–${LIMITS.title} characters`],
+  bodyMd: [(v) => isText(v, LIMITS.body), 'bodyMd must be text (at most 500 KB)'],
+  template: [isDesignId, 'template must be a design id'],
+};
+
+function editProblem(body) {
+  const given = Object.keys(EDIT_FIELDS).filter((key) => body[key] !== undefined);
+  if (given.length === 0) return 'nothing to change';
+  const bad = given.find((key) => !EDIT_FIELDS[key][0](body[key]));
+  return bad ? EDIT_FIELDS[bad][1] : null;
+}
+
+/** An edit: { title?, bodyMd?, template? }, at least one of them. */
 export function parseEdit(body = {}) {
-  const { title, bodyMd } = body;
-  if (title === undefined && bodyMd === undefined) return { error: 'nothing to change' };
-  if (title !== undefined && !titleOk(title)) return { error: `title must be 1–${LIMITS.title} characters` };
-  if (bodyMd !== undefined && !isText(bodyMd, LIMITS.body)) return { error: 'bodyMd must be text (at most 500 KB)' };
-  return { value: { title: title?.trim(), bodyMd } };
+  const error = editProblem(body);
+  if (error) return { error };
+  return { value: { title: body.title?.trim(), bodyMd: body.bodyMd, template: body.template } };
 }

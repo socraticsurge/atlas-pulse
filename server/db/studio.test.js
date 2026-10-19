@@ -53,6 +53,9 @@ test('edits keep fields that were not sent and bump updatedAt', async () => {
   assert.equal(edited.title, 'Renamed');
   assert.equal(edited.bodyMd, item.bodyMd);
   assert.ok(edited.updatedAt > item.updatedAt);
+  assert.equal(edited.template, null);
+  assert.equal(studio.updateStudioItem(item.id, { template: 'quarterly' }).template, 'quarterly');
+  assert.equal(studio.updateStudioItem(item.id, { title: 'Again' }).template, 'quarterly', 'other edits keep the design');
   assert.equal(studio.updateStudioItem(999_999, { title: 'x' }), null);
 });
 
