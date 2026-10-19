@@ -85,7 +85,7 @@ The boundaries and rules in this document are decided up front. The abstractions
 
 ## Components
 
-These are also the architectural components in CodeScene (project 86144), so its hotspot, change-coupling and Code Health views can be read per component. Every tracked file belongs to exactly one component; the patterns don't overlap. When you add a file outside these patterns, or move one, update this table and CodeScene together.
+These are also the architectural components in CodeScene (project 86144, which also runs the pull-request checks), so its hotspot, change-coupling and Code Health views can be read per component. Every tracked file belongs to exactly one component; the patterns don't overlap. When you add a file outside these patterns, or move one, update this table and CodeScene together.
 
 | Layer | Component | Paths | Owns |
 |---|---|---|---|
@@ -93,13 +93,13 @@ These are also the architectural components in CodeScene (project 86144), so its
 | | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
 | | **AI bridge** | `server/routes/{ai,ollama}.js`, `server/utils/stream.js` | Optional proxy to a local Ollama, plus its install and start helpers. |
 | | **Platform** | `server/index.js`, `scripts/**`, `.github/**`, `vite.config.js`, `eslint.config.js`, `jsconfig.json`, `package.json`, `index.html`, `.gitignore` | Server wiring, the background service, build and CI. The installer goes here. |
-| Shared | **Shared** | `shared/{searchQuery,csv}.js` | Query tokenizing (server FTS and client ranking) and CSV export. |
-| Client | **API client** | `src/utils/api.js` | The only place the client talks to the server. Every feature touches it, so it is a hotspot by design. |
+| Shared | **Shared** | `shared/{searchQuery,search,aiFilters,csv}.js` | Search tokenizing and ranking, the AI-analysis filters, and CSV export: pure rules the server applies when it pages the list. |
+| Client | **API client** | `src/utils/api.js`, `src/lib/queryClient.js` | The only place the client talks to the server, and the TanStack Query client that caches its results. Every feature touches it, so it is a hotspot by design. |
 | | **Shell** | `src/App.jsx`, `src/main.jsx`, `src/app/**`, `src/lib/appEvents.js`, `src/components/Sidebar.jsx`, `src/components/{shell,sidebar}/**`, `src/utils/{helpers,constants}.js` | Layout, panes, the app rail, the ⌘K palette, navigation, and the app-wide contexts (Appearance, Toast, Library). |
-| | **Design system** | `src/components/ui/**`, `src/lib/utils.js`, `components.json`, `src/index.css`, `src/styles/{tokens,base,fonts,tailwind}.css`, `src/hooks/{useClickOutside,useConfirmAction,useOnKeyChange,usePolling,keys}.js`, `public/**` | Tailwind v4 and shadcn/ui primitives, tokens, fonts, the page frame, and generic hooks. |
+| | **Design system** | `src/components/ui/**`, `src/lib/utils.js`, `components.json`, `src/index.css`, `src/styles/{tokens,base,fonts,tailwind}.css`, `src/hooks/{useClickOutside,useConfirmAction,useDebouncedValue,useOnKeyChange,usePolling,keys}.js`, `public/**` | Tailwind v4 and shadcn/ui primitives, tokens, fonts, the page frame, and generic hooks. |
 | | **Settings** | `src/components/settings/**`, `src/settings/**`, `src/utils/{aiSettings,batchSettings,readerSettings,storage}.js`, `shared/settingsKeys.js`, `server/settings.js`, `server/routes/settings.js` | The settings registry and screen (Simple/Power), the `data/settings.json` sync, and safe `localStorage`. |
 | | **Feeds** | `src/components/FeedFavicon.jsx`, `src/components/add-feed/**`, `src/hooks/{useFeeds,useFolders}.js`, `src/utils/{feedSync,opml}.js` | Subscriptions, folders, refresh, OPML import and export. `feedSync.js` holds the operations; `useFeeds` wraps them in React state. |
-| | **Reading** | `src/components/{ArticleList,ArticleReader}.jsx`, `src/components/{article-list,reader,highlights}/**`, `shared/{search,aiFilters}.js`, `server/db/articlePages.js`, `src/styles/{article-list,reader}.css` | The list, the reader, highlights and search. |
+| | **Reading** | `src/components/{ArticleList,ArticleReader}.jsx`, `src/components/{article-list,reader,highlights}/**`, `src/styles/{article-list,reader}.css` | The list, the reader, highlights and search. |
 | | **AI engines** | `src/utils/chromeAI.js`, `src/components/ollama/**` | Gemini Nano and the Ollama setup. `streamChat()` is still in `api.js`; it moves here with the Engine port. |
 | | **AI tasks** | `src/ai/**` | Prompts, the prompt registry, article context, output parsing and the batch helpers. One module per concern; no React. |
 | | **AI surfaces** | `src/components/{ai-drawer,multi-article}/**`, `src/hooks/{useAIBatchProcessor,useStreamRun,useTokenBuffer}.js` | The AI rail, the multi-article panel and background batch processing. |

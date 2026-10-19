@@ -33,7 +33,7 @@ Packages 1–6 below were carried out as a series of behavior-preserving pull re
 | 3 Component decomposition | Done. `AIDrawer`, `ArticleReader`, `ArticleList`, `AddFeedModal`, `Sidebar`, `SettingsPanel`, `MultiArticlePanel`, the libraries, `HighlightToolbar`, `ReaderSettings` and `OllamaSetup` are split into feature folders. |
 | 4 State contexts | Done. Appearance, Toast and Library contexts replace prop drilling from `App.jsx`. |
 | 5 Ingestion and server cleanup | Done. Parsers, discovery, the URL guard, OPML, the AI and Ollama routes, `saveSummary` and `bulkInsertArticles`. Batch processor and feed hooks too. |
-| 6 Guardrails | CSS split into `src/styles/` (24 files, built output unchanged). The ESLint complexity ratchet went from 58 warnings to **0**. CodeScene components and PR integration still need configuring by a maintainer. |
+| 6 Guardrails | CSS split into `src/styles/` (24 files, built output unchanged). The ESLint complexity ratchet went from 58 warnings to **0**. CodeScene components and PR integration are configured on project 86144 (2026-10-19). |
 
 The test suite grew from 20 to 83 tests. The architecture is documented in [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -61,9 +61,6 @@ The second round fixed the items left open by the first, plus issues found while
 - `api.js` routes every request through one `send()`/`request()` pair, and `docx.js` uses a rule table for markdown lines. These were the last two files below 10.0, at 9.1 and 9.69.
 - Removed the unused batch endpoint `POST /api/feeds/refresh`, the third file below 10.0 (9.69).
 
-### Still open
-
-- **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 
 ## 1. File-level Code Health (CodeScene)
 
@@ -105,7 +102,7 @@ Ranked by impact.
 ### 3.2 Performance: the article list loads the entire library
 `GET /api/reader/articles` returns every article **with full content**, with no pagination. On the maintainer's library (9,447 articles, an 81 MB database) that is **78 MB of JSON**. It is re-fetched on every view switch, every feed refresh (automatic every 30 minutes by default), and every feed add or remove. Filtering and search then run in the browser over all of it, which is why search uses a 160-character excerpt: full-text search in the browser would be too slow. The cost grows with every article fetched.
 
-_Status:_ list views stopped sending full content in round 1 (78 MB → 7.8 MB), and in round 2 the list renders only the visible rows. The payload itself is still unpaginated; see "Still open".
+_Status:_ list views stopped sending full content in round 1 (78 MB → 7.8 MB), and in round 2 the list renders only the visible rows. Since #106–#107 the list is paged on the server (150 rows, 93 KB per page).
 
 ### 3.3 Data layer
 - **No migrations.** Schemas use `CREATE TABLE IF NOT EXISTS` only. Existing databases cannot be changed safely.
@@ -130,7 +127,7 @@ Only utilities are tested: the SSRF guard, OPML URLs, the Gemini Nano adapter, t
 At baseline, `src/index.css` was a single 5,067-line file, organized by comment banners. It is now split by feature into `src/styles/`.
 
 ### 3.7 Tooling
-- CodeScene PR checks currently run through a different CodeScene project's PR integration. The `atlas-pulse` project has PR integration unset and **no architectural components defined**.
+- ~~CodeScene PR checks currently run through a different CodeScene project's PR integration. The `atlas-pulse` project has PR integration unset and no architectural components defined.~~ Done 2026-10-19: project 86144 has the 17 components from ARCHITECTURE.md and runs the PR checks.
 - Local lint does not enforce complexity limits, so new debt is caught only when CodeScene reviews a pull request.
 
 ## 4. Target architecture
