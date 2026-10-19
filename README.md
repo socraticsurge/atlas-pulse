@@ -107,6 +107,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | Feature | Details |
 |---------|---------|
 | **Folders** | Create folders, move feeds into them, right-click to rename or delete |
+| **Collections** | Group your saves: press `c` on an article (or **Collect** on a selection) to add it to one or more collections, or type a new name to create one. An article can sit in several collections; adding it saves it, and unsaving takes it out of all of them. Collections are listed in the sidebar with their counts; right-click to rename or delete (the articles stay saved) |
 | **Saved** | Press `b` to save an article, or `n` to save it with a note on why it caught your eye. Saved lists your saves newest first, under "Saved today / this week" headings, with each note in place of the preview |
 | **Today view** | Shows only articles published today |
 | **Search** | AND-logic tokenized search — "cloud AI" matches articles containing both terms across the title, source, AI topics, and article excerpt; quoted phrases for exact match; results ranked by relevance (title › source › AI topics › excerpt). Full-text search is on the [roadmap](docs/TECH-DEBT.md) |
@@ -243,6 +244,7 @@ Installed models appear in the model picker automatically.
 | `k` / `↑` / `←` | Previous article |
 | `b` | Save or unsave the article |
 | `n` | Save the article and write a note on it |
+| `c` | Add the article to collections (or create one) |
 | `o` | Open article in original tab |
 | `f` | Toggle zen / focus mode |
 | `/` | Focus search box |

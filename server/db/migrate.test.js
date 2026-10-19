@@ -135,3 +135,19 @@ test('reader migration 9 dates existing saves and adds notes', () => {
   ]);
   assert.equal(db.pragma('user_version', { simple: true }), 9);
 });
+
+test('reader migration 10 adds collections whose items go with their article or collection', () => {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  migrate(db, READER.slice(0, 10));
+  db.prepare("INSERT INTO feeds (title, url, created_at) VALUES ('F', 'u', 'now')").run();
+  db.prepare("INSERT INTO articles (feed_id, guid, created_at) VALUES (1, 'a', 'now'), (1, 'b', 'now')").run();
+  db.prepare("INSERT INTO collections (name, created_at, updated_at) VALUES ('Evals', 'now', 'now')").run();
+  assert.throws(() => db.prepare("INSERT INTO collections (name, created_at, updated_at) VALUES ('evals', 'now', 'now')").run());
+  db.prepare("INSERT INTO collection_items (collection_id, article_id, added_at) VALUES (1, 1, 'now'), (1, 2, 'now')").run();
+  db.prepare('DELETE FROM articles WHERE id = 1').run();
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM collection_items').get().n, 1);
+  db.prepare('DELETE FROM collections WHERE id = 1').run();
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM collection_items').get().n, 0);
+  assert.equal(db.pragma('user_version', { simple: true }), 10);
+});

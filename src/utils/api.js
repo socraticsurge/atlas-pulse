@@ -104,6 +104,27 @@ export async function exportStudioItem(id, { format, design }) {
   return { blob: await res.blob(), filename };
 }
 
+// ── Collections ──────────────────────────────────────────────────────────────
+// Named groups of saved articles; an article can be in several.
+
+export async function fetchCollections() { return request('/collections', 'Failed to load collections'); }
+export async function fetchArticleCollections(articleId) {
+  return request(`/collections/of/${articleId}`, 'Failed to load the article’s collections');
+}
+export async function createCollection(data) { return request('/collections', 'Failed to create the collection', json(data)); }
+export async function updateCollection(id, changes) {
+  return request(`/collections/${id}`, 'Failed to update the collection', json(changes, 'PUT'));
+}
+export async function deleteCollection(id) {
+  return request(`/collections/${id}`, 'Failed to delete the collection', { method: 'DELETE' });
+}
+export async function addToCollection(id, articleIds) {
+  return request(`/collections/${id}/add`, 'Failed to add to the collection', json({ articleIds }));
+}
+export async function removeFromCollection(id, articleIds) {
+  return request(`/collections/${id}/remove`, 'Failed to remove from the collection', json({ articleIds }));
+}
+
 // ── Highlights ───────────────────────────────────────────────────────────────
 
 export async function saveHighlight(data) {

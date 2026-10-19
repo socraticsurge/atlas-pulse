@@ -16,12 +16,14 @@ export function viewTitle(view) {
   if (VIEW_TITLES[view.type]) return VIEW_TITLES[view.type];
   if (view.type === 'feed') return view.name || 'Feed';
   if (view.type === 'folder') return view.name || 'Folder';
+  if (view.type === 'collection') return view.name || 'Collection';
   return 'Articles';
 }
 
 const EMPTY_BY_VIEW = {
   saved: { title: 'Nothing saved yet', body: 'Press b to save an article, or n to save it with a note' },
   today: { title: 'All caught up', body: 'No new articles published today' },
+  collection: { title: 'Nothing in this collection yet', body: 'Press c on an article to add it here' },
 };
 
 /** Title and body for the empty list, depending on why it is empty. */
@@ -85,7 +87,7 @@ export const BY_PUBLISHED = { dateOf: (a) => a.publishedAt, label: (group) => gr
 /** Day headings by when each article was saved (lists of saves, which are in that order). */
 export const BY_SAVED = { dateOf: (a) => a.savedAt, label: (group) => SAVED_HEADINGS[group] };
 
-const SAVE_ORDERED_VIEWS = new Set(['saved']);
+const SAVE_ORDERED_VIEWS = new Set(['saved', 'collection']);
 /** How a view's list is grouped under day headings; it matches the server's order for the view. */
 export const groupingFor = (viewType) => (SAVE_ORDERED_VIEWS.has(viewType) ? BY_SAVED : BY_PUBLISHED);
 

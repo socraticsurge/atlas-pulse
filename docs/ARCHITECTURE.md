@@ -90,7 +90,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | Layer | Component | Paths | Owns |
 |---|---|---|---|
 | Server | **Ingestion** | `server/routes/{feeds,discover,articles,favicon}.js`, `server/utils/{articleExtractor,articleFields,favicon,feedDiscovery,feedParser,feedText,fetchText,text,urlGuard}.js` | Fetching, parsing and extracting feeds and articles, and favicons. Every outbound URL passes `assertPublicHttpUrl` / `safeFetch` (SSRF guard). |
-| | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js`, `server/routes/studio*.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
+| | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js`, `server/routes/{studio,collections}*.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
 | | **AI bridge** | `server/routes/{ai,ollama}.js`, `server/utils/stream.js` | Optional proxy to a local Ollama, plus its install and start helpers. |
 | | **Platform** | `server/index.js`, `scripts/**`, `experiments/**`, `.github/**`, `vite.config.js`, `eslint.config.js`, `jsconfig.json`, `package.json`, `index.html`, `print.html`, `server/utils/loopback.js`, `.gitignore` | Server wiring, the background service, build and CI. The installer goes here. |
 | Shared | **Shared** | `shared/{searchQuery,search,aiFilters,csv}.js` | Search tokenizing and ranking, the AI-analysis filters, and CSV export: pure rules the server applies when it pages the list. |
@@ -103,7 +103,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | | **AI engines** | `src/utils/chromeAI.js`, `src/components/ollama/**` | Gemini Nano and the Ollama setup. `streamChat()` is still in `api.js`; it moves here with the Engine port. |
 | | **AI tasks** | `src/ai/**` | Prompts, the prompt registry, article context, output parsing and the batch helpers. One module per concern; no React. |
 | | **AI surfaces** | `src/components/{ai-drawer,multi-article}/**`, `src/hooks/{useAIBatchProcessor,useStreamRun,useTokenBuffer}.js` | The AI rail, the multi-article panel and background batch processing. |
-| | **Library** | `src/components/library/**` | The Summaries and Highlights screens. |
+| | **Library** | `src/components/library/**` | The Summaries and Highlights screens, and collections: the picker (`c`) and their data hooks. |
 | | **Export** | `src/utils/{docx,share,download}.js`, `src/print/**`, `server/utils/pageRenderer.js`, `server/routes/pageExport.js` | Word export and sharing; newsletter PNG and PDF. `POST /api/studio/:id/export` opens `print.html` (one page, drawn by `src/print/`) in a headless copy of the installed Chrome via puppeteer-core and returns the capture. |
 | | **Studio** | `src/components/studio/**` | Saved, editable AI outputs (newsletters first): the list, the Markdown editor with live preview, and the newsletter templates (`studio/templates/`: parser, presentation rules, page renderer, design systems, checks). |
 
@@ -125,7 +125,7 @@ All data is in one SQLite database, `data/reader.db` (or in `ATLAS_DATA_DIR` if 
 
 | Tables | Schema version |
 |---|---|
-| feeds, folders, articles (with `saved_at` and `note` on saves), `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources` | 9 |
+| feeds, folders, articles (with `saved_at` and `note` on saves), `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources`, `collections`, `collection_items` | 10 |
 
 Summaries and highlights had files of their own (`summaries.db`, `highlights.db`) until v6. On first start `server/db/legacyMerge.js` copies their rows in, keeping ids, and renames the old files `*.merged`. One database lets queries join articles with the summaries and highlights saved from them.
 

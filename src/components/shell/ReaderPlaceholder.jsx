@@ -6,6 +6,7 @@ const SHORTCUTS = [
   ['o', 'open the original'],
   ['b', 'save'],
   ['n', 'save with a note'],
+  ['c', 'add to a collection'],
   ['f', 'focus mode'],
   ['a', 'AI side rail'],
   ['[ / ]', 'sidebar / list'],

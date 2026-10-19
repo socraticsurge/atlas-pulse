@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import ArticleList from './components/ArticleList.jsx';
 import ArticleReader from './components/ArticleReader.jsx';
 import ReaderErrorBoundary from './components/reader/ReaderErrorBoundary.jsx';
@@ -10,7 +10,7 @@ import { LibraryProvider, useLibrary } from './app/LibraryContext.jsx';
 import { ToastProvider, useToast } from './app/ToastContext.jsx';
 import { useLayout } from './app/useLayout.js';
 import { usePaneKeyboard } from './app/usePaneKeyboard.js';
-import { emit } from './lib/appEvents.js';
+import { emit, on } from './lib/appEvents.js';
 import { useSettingsModal } from './app/useSettingsModal.js';
 import { useCommandPalette } from './app/useCommandPalette.js';
 import { usePaletteCommands } from './app/usePaletteCommands.js';
@@ -20,6 +20,7 @@ import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 // Screens opened now and then load on first use, keeping the startup bundle
 // small (the list, the reader and the AI rail are in it).
 const AddFeedDialog = lazy(() => import('./components/add-feed/AddFeedDialog.jsx'));
+const CollectionPicker = lazy(() => import('./components/library/CollectionPicker.jsx'));
 const CommandPalette = lazy(() => import('./components/shell/CommandPalette.jsx'));
 const HighlightsScreen = lazy(() => import('./components/library/HighlightsScreen.jsx'));
 const MultiArticlePanel = lazy(() => import('./components/multi-article/MultiArticlePanel.jsx'));
@@ -79,15 +80,41 @@ function PaletteHost({ open, onOpenChange, view, onOpenArticle, commands }) {
   return <CommandPalette open={open} onOpenChange={onOpenChange} groups={groups} view={view} sourceOf={sourceOf} onOpenArticle={onOpenArticle} />;
 }
 
+// The collection picker, opened by the 'open-collections' event with the
+// article ids to file (c in the reader, Collect on a selection).
+function useCollectionPicker() {
+  const [articleIds, setArticleIds] = useState(null);
+  useEffect(() => on('open-collections', (ids) => { if (ids?.length) setArticleIds(ids); }), []);
+  const close = useCallback(() => setArticleIds(null), []);
+  return { open: articleIds !== null, articleIds, close };
+}
+
+function CollectionPickerHost({ picker }) {
+  return (
+    <OnceOpened open={picker.open}>
+      <CollectionPicker key={picker.articleIds?.join(',')} open={picker.open} articleIds={picker.articleIds ?? []} onClose={picker.close} />
+    </OnceOpened>
+  );
+}
+
+// Dialogs over the workspace: Add Feed or Settings (modal), the collection
+// picker, and whether any of them or the palette is open (single-key
+// shortcuts pause while one is).
+function useOverlays(paletteOpen) {
+  const [modal, setModal] = useState(null); // 'addFeed' | 'settings' | null
+  const closeModal = useCallback(() => setModal(null), []);
+  const settingsSection = useSettingsModal(setModal);
+  const picker = useCollectionPicker();
+  const anyOpen = [modal !== null, paletteOpen, picker.open].some(Boolean);
+  return { modal, setModal, closeModal, settingsSection, picker, anyOpen };
+}
+
 function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArticle }) {
   const library = useLibrary();
   const layout = useLayout();
   const batch = useAIBatchProcessor();
   const batchActions = useBatchActions(batch);
   const [visibleArticles, setVisibleArticles] = useState([]);
-  const [modal, setModal] = useState(null); // 'addFeed' | 'settings' | null
-  const closeModal = useCallback(() => setModal(null), []);
-  const settingsSection = useSettingsModal(setModal);
   const [multiPanel, setMultiPanel] = useState(null); // { articles, operation }
   const [summaryCount, refreshSummaryCount] = useSummaryCount(activeView.type);
   const [changedArticle, setChangedArticle] = useState(null);
@@ -95,7 +122,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const onLibraryChanged = useCallback(() => { refreshSummaryCount(); library.bumpCounts(); }, [refreshSummaryCount, library]);
   const nav = useArticleNavigation(selectedArticle, setSelectedArticle, visibleArticles);
   const [paletteOpen, setPaletteOpen] = useCommandPalette();
-  const overlayOpen = modal !== null || paletteOpen; // single-key shortcuts pause while one is open
+  const { modal, setModal, closeModal, settingsSection, picker, anyOpen: overlayOpen } = useOverlays(paletteOpen);
   usePaneKeyboard({ isModalOpen: overlayOpen, toggleSidebar: layout.toggleSidebarMode, toggleList: layout.toggleList });
   const goToView = useCallback((view) => { setActiveView(view); setSelectedArticle(null); }, [setActiveView, setSelectedArticle]);
 
@@ -146,6 +173,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         onOpenArticle={LibraryScreen ? openFromLibrary : setSelectedArticle}
         commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
       /></OnceOpened>
+      <CollectionPickerHost picker={picker} />
       <OnceOpened open={modal === 'addFeed'}><AddFeedDialog isOpen={modal === 'addFeed'} onClose={closeModal} /></OnceOpened>
       <OnceOpened open={modal === 'settings'}>
         <SettingsScreen key={settingsSection ?? 'start'} section={settingsSection} isOpen={modal === 'settings'} onClose={closeModal} availableModels={batch.availableModels} />

@@ -10,12 +10,13 @@ import { ListHeader, SearchBar } from './article-list/ListHeader.jsx';
 import { SelectionBar } from './article-list/SelectionBar.jsx';
 import { articlesToCSV, downloadCSV, emptyStateText, groupingFor, viewTitle } from './article-list/listLogic.js';
 import { useArticleListData } from './article-list/useArticleListData.js';
+import { useCollections } from './library/useCollections.js';
 import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
 import { useSelection } from './article-list/useSelection.js';
 import { VirtualArticleList } from './article-list/VirtualArticleList.jsx';
 import ListKeyHints from './shell/ListKeyHints.jsx';
-import { on } from '../lib/appEvents.js';
+import { emit, on } from '../lib/appEvents.js';
 import { cn } from '../lib/utils.js';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
@@ -63,11 +64,12 @@ function useScrollTopOnQuery(scrollRef, query) {
   useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [scrollRef, key]);
 }
 
-// The view's current name (a feed or folder may have been renamed since it was opened).
+// The view's current name (a feed, folder or collection may have been renamed since it was opened).
 function useLiveViewTitle(activeView) {
   const { feeds, folders } = useLibrary();
-  const source = activeView.type === 'feed' ? feeds : folders;
-  const item = source.find((x) => x.id === activeView.id);
+  const collections = useCollections();
+  const sources = { feed: feeds, folder: folders, collection: collections };
+  const item = (sources[activeView.type] ?? []).find((x) => x.id === activeView.id);
   return viewTitle({ ...activeView, name: item?.title ?? item?.name ?? activeView.name });
 }
 
@@ -114,6 +116,7 @@ function useListActions({ data, activeView, selection, visible, sourceOf, onCoun
     selectAll: () => selection.selectAll(visible),
     markRead: async () => { await update([...selection.ids], { isRead: 1 }); selection.clear(); },
     bookmark: async () => { await update([...selection.ids], { isBookmarked: 1 }); selection.clear(); },
+    collect: () => emit('open-collections', [...selection.ids]),
     exportCSV: () => { downloadCSV(articlesToCSV(selected(), sourceOf), 'atlas-pulse-articles.csv'); selection.clear(); },
     openAIPanel: (operation) => onOpenAIPanel?.(selected().map((a) => ({ ...a, feedTitle: sourceOf(a) || 'Unknown' })), operation),
     markAllRead,

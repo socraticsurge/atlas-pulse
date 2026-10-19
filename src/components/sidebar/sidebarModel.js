@@ -16,6 +16,13 @@ export const NAV_ITEMS = [
   { type: 'studio', label: 'Studio', iconTitle: 'Studio: saved newsletters', Icon: HiOutlinePaintBrush, count: (c) => c.studio },
 ];
 
+// Opens the context menu at the pointer (right-click or the "…" button).
+export const menuOpener = (openMenu, type, id) => (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  openMenu({ type, id, x: e.clientX, y: e.clientY });
+};
+
 export const isActive = (activeView, type, id) => activeView.type === type && (id === undefined || activeView.id === id);
 
 /** Feeds grouped by folder id, plus the uncategorized ones. */

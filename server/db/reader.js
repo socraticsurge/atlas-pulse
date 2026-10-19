@@ -373,7 +373,8 @@ function saveChange(data) {
 
 /**
  * SET clauses and parameters for a change, limited to `keys`. Saving stamps
- * saved_at once (saving again keeps the first time); unsaving clears it.
+ * saved_at once (saving again keeps the first time); unsaving clears it, and
+ * `unsave` tells the caller to take the article out of its collections.
  */
 function articleChanges(data, keys) {
   const fields = [];
@@ -390,22 +391,30 @@ function articleChanges(data, keys) {
   } else if (save === false) {
     fields.push('is_bookmarked = 0', 'saved_at = NULL');
   }
-  return { fields, values };
+  return { fields, values, unsave: save === false };
 }
+
+// A collection holds saved articles only, so unsaving takes them out.
+const leaveCollections = (ids) => db.prepare(
+  `DELETE FROM collection_items WHERE article_id IN (${ids.map(() => '?').join(',')})`
+).run(...ids);
 
 const SINGLE_KEYS = ['isRead', 'isBookmarked', 'aiStatus', 'aiSummary', 'aiAnalysis', 'note'];
 const BULK_KEYS = ['isRead', 'isBookmarked', 'aiStatus'];
 
 export function updateArticle(id, data) {
-  const { fields, values } = articleChanges(data, SINGLE_KEYS);
+  const { fields, values, unsave } = articleChanges(data, SINGLE_KEYS);
   if (fields.length === 0) return getArticleById(id);
-  db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id = @id`).run({ ...values, id });
+  db.transaction(() => {
+    db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id = @id`).run({ ...values, id });
+    if (unsave) leaveCollections([id]);
+  })();
   return getArticleById(id);
 }
 
 export function bulkUpdateArticles(ids, data) {
   if (ids.length === 0) return;
-  const { fields, values } = articleChanges(data, BULK_KEYS);
+  const { fields, values, unsave } = articleChanges(data, BULK_KEYS);
   if (fields.length === 0) return;
   // SQLite allows 32,766 bound variables per statement, so "mark all read" on
   // a large library is split into chunks, all in one transaction.
@@ -415,6 +424,7 @@ export function bulkUpdateArticles(ids, data) {
       const placeholders = chunk.map((_, j) => `@id${j}`).join(',');
       const params = { ...values, ...Object.fromEntries(chunk.map((id, j) => [`id${j}`, id])) };
       db.prepare(`UPDATE articles SET ${fields.join(', ')} WHERE id IN (${placeholders})`).run(params);
+      if (unsave) leaveCollections(chunk);
     }
   })();
 }

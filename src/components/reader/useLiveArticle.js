@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as api from '../../utils/api.js';
 import { useOnKeyChange } from '../../hooks/useOnKeyChange.js';
+import { on } from '../../lib/appEvents.js';
 
 const flip = (flag) => (flag ? 0 : 1);
 
@@ -46,6 +47,12 @@ export function useLiveArticle(article, onArticleChanged) {
   const notify = useCallback((updated) => onArticleChanged?.(updated), [onArticleChanged]);
   useMarkReadOnOpen(article, setLive, notify);
   const current = live || article;
+
+  // Changed elsewhere (filed in a collection, which saves it): reload the server copy.
+  useEffect(() => on('articles-changed', (ids) => {
+    if (!ids?.includes(articleId)) return;
+    api.fetchArticle(articleId).then((updated) => { setLive(updated); notify(updated); }).catch(() => {});
+  }), [articleId, setLive, notify]);
 
   const patch = useCallback(async (changes) => {
     if (!articleId) return;

@@ -12,6 +12,7 @@ function actionFor(key, a) {
   const actions = {
     b: a.toggleBookmark,
     n: a.editNote,
+    c: a.collect,
     o: () => safeHttpUrl(a.link) && window.open(safeHttpUrl(a.link), '_blank', 'noopener,noreferrer'),
     f: a.toggleZen,
     a: a.toggleAI,
@@ -21,7 +22,7 @@ function actionFor(key, a) {
 }
 
 /**
- * Reader shortcuts: j/k/arrows navigate, b save, n note, o open original,
+ * Reader shortcuts: j/k/arrows navigate, b save, n note, c collections, o open original,
  * f focus mode, a AI rail, Esc exit focus mode or close. Ignored while typing or when a
  * modal is open.
  */
