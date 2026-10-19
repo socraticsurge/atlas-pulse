@@ -78,7 +78,7 @@
     "express": "^5.3.0",
     "express-rate-limit": "^8.5.2",
     "marked": "^18.0.14",
-    "puppeteer-core": "^24.43.1",
+    "puppeteer-core": "^25.14.0",
     "radix-ui": "^1.8.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

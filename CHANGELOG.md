@@ -11,6 +11,10 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 - **Images in Medium articles.** Full-text extraction dropped the inline images from Medium publications such as Towards AI; they now come through (#122).
 - **Delete all** in Settings → Data says that it also deletes your saves and their notes and empties collections, and AI errors point to Settings → AI engines (#121).
 
+### Security
+
+- **No more audit warnings on install.** puppeteer-core, which renders Studio's PNG and PDF exports, is upgraded to 25. Its browser-download helper no longer pulls in `extract-zip`, `proxy-agent` or `basic-ftp`, which carried 7 high-severity advisories. `npm audit` now reports 0 vulnerabilities. Atlas Pulse never downloads a browser (it uses your installed Chrome), so the vulnerable code was not reachable, but scanners flagged it on every install (#124).
+
 ## 2.0.0 (2026-10-19)
 
 A new reader. Atlas Pulse now scans like an inbox, reads like a magazine, and keeps what you find: saves with notes, collections, NotebookLM export and Studio. Your data moves into a single local database; the upgrade is automatic.
