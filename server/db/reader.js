@@ -108,6 +108,9 @@ const stmts = {
     `SELECT feed_id, COUNT(*) AS cnt FROM articles WHERE is_read = 0 GROUP BY feed_id`
   ),
   getSavedCount: db.prepare(`SELECT COUNT(*) AS cnt FROM articles WHERE is_bookmarked = 1`),
+  getUnsortedCount: db.prepare(
+    `SELECT COUNT(*) AS cnt FROM articles WHERE is_bookmarked = 1 AND id NOT IN (SELECT article_id FROM collection_items)`
+  ),
   getQueueCount: db.prepare(`SELECT COUNT(*) AS cnt FROM articles WHERE ai_status = 'queued'`),
   clearArticles: db.prepare(`DELETE FROM articles`),
   clearFeeds: db.prepare(`DELETE FROM feeds`),
@@ -500,10 +503,11 @@ export function getCounts() {
   let total = 0;
   for (const r of unreadRows) { unreadByFeed[r.feed_id] = r.cnt; total += r.cnt; }
   const savedCount = stmts.getSavedCount.get().cnt;
+  const unsortedCount = stmts.getUnsortedCount.get().cnt;
   const todayCount = db.prepare(
     `SELECT COUNT(*) AS cnt FROM articles WHERE published_at >= ?`
   ).get(start.toISOString()).cnt;
-  return { unreadByFeed, total, savedCount, todayCount };
+  return { unreadByFeed, total, savedCount, unsortedCount, todayCount };
 }
 
 export function clearAll() {

@@ -72,3 +72,18 @@ test('deleting a collection keeps its articles saved; removing a feed empties co
   reader.removeFeed(feedId);
   assert.equal(collections.getCollection(e.id).count, 0);
 });
+
+test('Unsorted lists saves that are in no collection, latest save first', async () => {
+  const { ids: [one, two, three] } = addArticles(3);
+  const f = collections.createCollection({ name: 'F' });
+  reader.updateArticle(one, { isBookmarked: 1 });
+  await new Promise((resolve) => { setTimeout(resolve, 5); });
+  reader.updateArticle(two, { isBookmarked: 1 });
+  collections.addToCollection(f.id, [three]);
+  const unsorted = pages.getArticlePage('unsorted').articles.map((a) => a.id);
+  assert.deepEqual(unsorted.slice(0, 2), [two, one]);
+  assert.ok(!unsorted.includes(three));
+  assert.equal(reader.getCounts().unsortedCount, pages.getArticlePage('unsorted').total);
+  collections.addToCollection(f.id, [two]);
+  assert.ok(!pages.getArticlePage('unsorted').articles.some((a) => a.id === two));
+});

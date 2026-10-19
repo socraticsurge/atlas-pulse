@@ -8,7 +8,7 @@ import { EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
 import { FilterBar } from './article-list/FilterBar.jsx';
 import { ListHeader, SearchBar } from './article-list/ListHeader.jsx';
 import { SelectionBar } from './article-list/SelectionBar.jsx';
-import { articlesToCSV, downloadCSV, emptyStateText, groupingFor, viewTitle } from './article-list/listLogic.js';
+import { articlesToCSV, downloadCSV, emptyStateText, groupingFor, isSaveList, viewTitle } from './article-list/listLogic.js';
 import { useArticleListData } from './article-list/useArticleListData.js';
 import { useCollections } from './library/useCollections.js';
 import { useConfirmAction } from '../hooks/useConfirmAction.js';
@@ -193,7 +193,7 @@ export default function ArticleList({
           grouping={groupingFor(activeView.type)}
         />
       </div>
-      <ListKeyHints />
+      <ListKeyHints filing={isSaveList(activeView.type)} />
       <SelectionBar count={selection.size} visibleCount={visible.length} actions={actions} />
     </div>
   );

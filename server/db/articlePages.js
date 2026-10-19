@@ -21,6 +21,7 @@ function viewWhere(view, id) {
     case 'feed': return { sql: 'feed_id = ?', params: [id] };
     case 'folder': return { sql: 'feed_id IN (SELECT id FROM feeds WHERE folder_id = ?)', params: [id] };
     case 'saved': return { sql: 'is_bookmarked = 1', params: [] };
+    case 'unsorted': return { sql: 'is_bookmarked = 1 AND id NOT IN (SELECT article_id FROM collection_items)', params: [] };
     case 'collection': return { sql: 'id IN (SELECT article_id FROM collection_items WHERE collection_id = ?)', params: [id] };
     case 'today': return { sql: 'published_at >= ?', params: [startOfToday()] };
     default: return { sql: '1 = 1', params: [] };
@@ -54,7 +55,7 @@ function viewFacets(where) {
 const facetsToArrays = (facets) => Object.fromEntries(Object.entries(facets).map(([k, set]) => [k, [...set]]));
 
 // Saved articles list in the order they were saved; the rest by publication.
-const SAVE_ORDERED = new Set(['saved', 'collection']);
+const SAVE_ORDERED = new Set(['saved', 'unsorted', 'collection']);
 const orderOf = (view) => (SAVE_ORDERED.has(view) ? 'saved_at DESC, id DESC' : 'published_at DESC, id DESC');
 
 // Newest first, filtered in SQL.

@@ -99,7 +99,7 @@ export function ExpandedSidebar({ style, activeView, onViewChange, counts, folde
       <CommandBar onAddFeed={actions.onAddFeed} />
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pt-1.5 pb-4">
         <MainNav activeView={activeView} onViewChange={onViewChange} counts={counts} />
-        <CollectionList activeView={activeView} onViewChange={onViewChange} />
+        <CollectionList activeView={activeView} onViewChange={onViewChange} unsorted={counts.unsorted} />
         <div className="mt-4">
           <div className="flex items-center justify-between px-2.5 pb-1">
             <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Folders</span>
