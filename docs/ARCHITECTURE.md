@@ -103,7 +103,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | | **AI engines** | `src/utils/chromeAI.js`, `src/components/ollama/**` | Gemini Nano and the Ollama setup. `streamChat()` is still in `api.js`; it moves here with the Engine port. |
 | | **AI tasks** | `src/ai/**` | Prompts, the prompt registry, article context, output parsing and the batch helpers. One module per concern; no React. |
 | | **AI surfaces** | `src/components/{ai-drawer,multi-article}/**`, `src/hooks/{useAIBatchProcessor,useStreamRun,useTokenBuffer}.js` | The AI rail, the multi-article panel and background batch processing. |
-| | **Library** | `src/components/library/**` | The Summaries and Highlights screens, and collections: the picker (`c`) and their data hooks. |
+| | **Library** | `src/components/library/**` | The Summaries and Highlights screens, and collections: the picker (`c`), their data hooks, and sending a collection out (NotebookLM sources, a Studio draft). |
 | | **Export** | `src/utils/{docx,share,download}.js`, `src/print/**`, `server/utils/pageRenderer.js`, `server/routes/pageExport.js` | Word export and sharing; newsletter PNG and PDF. `POST /api/studio/:id/export` opens `print.html` (one page, drawn by `src/print/`) in a headless copy of the installed Chrome via puppeteer-core and returns the capture. |
 | | **Studio** | `src/components/studio/**` | Saved, editable AI outputs (newsletters first): the list, the Markdown editor with live preview, and the newsletter templates (`studio/templates/`: parser, presentation rules, page renderer, design systems, checks). |
 

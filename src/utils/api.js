@@ -124,6 +124,8 @@ export async function addToCollection(id, articleIds) {
 export async function removeFromCollection(id, articleIds) {
   return request(`/collections/${id}/remove`, 'Failed to remove from the collection', json({ articleIds }));
 }
+/** URL of a collection's articles as one Markdown file (downloads; for NotebookLM). */
+export function getCollectionExportURL(id) { return `${API_BASE}/collections/${id}/export.md`; }
 
 // ── Highlights ───────────────────────────────────────────────────────────────
 

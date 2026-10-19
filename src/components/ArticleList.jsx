@@ -10,6 +10,7 @@ import { ListHeader, SearchBar } from './article-list/ListHeader.jsx';
 import { SelectionBar } from './article-list/SelectionBar.jsx';
 import { articlesToCSV, downloadCSV, emptyStateText, groupingFor, isSaveList, viewTitle } from './article-list/listLogic.js';
 import { useArticleListData } from './article-list/useArticleListData.js';
+import CollectionOutBar from './library/CollectionOutBar.jsx';
 import { useCollections } from './library/useCollections.js';
 import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
@@ -173,6 +174,7 @@ export default function ArticleList({
         unreadCount={unreadCount}
         markAllRead={markAllRead}
       />
+      {activeView.type === 'collection' && <CollectionOutBar id={activeView.id} />}
       <SearchBar search={search} inputRef={searchInputRef} />
       {showFilters && (
         <FilterBar available={data.facets} active={activeFilters} onChange={setActiveFilters} aiOnly={aiOnly} onToggleAiOnly={() => setAiOnly((v) => !v)} />

@@ -108,6 +108,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 |---------|---------|
 | **Folders** | Create folders, move feeds into them, right-click to rename or delete |
 | **Collections** | Group your saves: press `c` on an article (or **Collect** on a selection) to add it to one or more collections, or type a new name to create one. An article can sit in several collections; adding it saves it, and unsaving takes it out of all of them. Collections are listed in the sidebar with their counts; right-click to rename or delete (the articles stay saved) |
+| **Collection → NotebookLM or Studio** | A collection's header has **Send to NotebookLM**: download its articles as one Markdown file (title, source, dates, your note and the stored text of each) to upload as a source, copy its links to paste as website sources, or open NotebookLM. **Start a Studio draft** makes a newsletter draft with one section per article and your note as "Why it matters", and opens it in Studio |
 | **Unsorted** | Saves that aren't in a collection yet, newest first: the filing queue. Open the first, press `c` to file it, and `j` moves on to the next; the footer shows the filing keys in lists of saves |
 | **Saved** | Press `b` to save an article, or `n` to save it with a note on why it caught your eye. Saved lists your saves newest first, under "Saved today / this week" headings, with each note in place of the preview |
 | **Today view** | Shows only articles published today |
