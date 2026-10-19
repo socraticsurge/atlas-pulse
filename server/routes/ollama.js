@@ -4,9 +4,10 @@ import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import rateLimit from 'express-rate-limit';
+import { installPaths, ollamaBase, whichCommand } from '../utils/ollamaHost.js';
 
 const execAsync = promisify(exec);
-const OLLAMA_BASE = 'http://localhost:11434';
+const OLLAMA_BASE = ollamaBase();
 const router = Router();
 
 // Throttle the routes that spawn processes / trigger model downloads, so a
@@ -19,17 +20,14 @@ const processLimiter = rateLimit({
   message: { error: 'Too many requests, please slow down.' },
 });
 
-// Common install locations, for when the server's PATH (a launchd service,
-// say) doesn't include the one Ollama was installed to.
-const OLLAMA_PATHS = ['/opt/homebrew/bin/ollama', '/usr/local/bin/ollama', '/usr/bin/ollama'];
-
 /** Absolute path of the ollama binary, or null when it isn't installed. */
 async function findOllama() {
   try {
-    const { stdout } = await execAsync('which ollama');
-    if (stdout.trim()) return stdout.trim();
+    const { stdout } = await execAsync(whichCommand());
+    const first = stdout.split(/\r?\n/)[0].trim(); // `where` lists every match
+    if (first) return first;
   } catch { /* not on PATH */ }
-  return OLLAMA_PATHS.find((p) => existsSync(p)) ?? null;
+  return installPaths().find((p) => existsSync(p)) ?? null;
 }
 
 async function isOllamaInstalled() {

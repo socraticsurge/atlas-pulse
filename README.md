@@ -79,7 +79,7 @@ Then open **http://atlas-pulse.localhost:4317**. Chrome resolves every `*.localh
 | `npm run service logs` | Follow the logs (`~/Library/Logs/atlas-pulse/`) |
 | `npm run service uninstall` | Stop the service and remove it |
 
-The service listens on `127.0.0.1` only and is not reachable from other devices. Set `PORT=<number>` before `install` to use another port.
+The service listens on `127.0.0.1` only and is not reachable from other devices. Set `PORT=<number>` before `install` to use another port. `CHROME_PATH`, `ATLAS_DATA_DIR` and `OLLAMA_HOST`, if set when you run `install`, are kept for the service too; run `install` again to change them.
 
 ---
 
@@ -220,7 +220,7 @@ ollama pull llama3.1:8b      # balanced quality and speed
 ollama serve                 # API on http://localhost:11434
 ```
 
-Installed models appear in the model picker automatically.
+Installed models appear in the model picker automatically. If Ollama listens somewhere else (another port, or another machine), set `OLLAMA_HOST` the way Ollama reads it, for example `OLLAMA_HOST=gpu-box:11434 npm run dev`.
 
 ### Background processing
 
@@ -315,13 +315,13 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 
 **"Articles were shortened" or "too long for Gemini Nano".** Select fewer articles, or switch to an Ollama model.
 
-**No Ollama models in the picker.** Run `ollama serve`, check `curl http://localhost:11434`, then pull a model (`ollama pull qwen2.5:3b`) or use **Pull** in the Ollama setup.
+**No Ollama models in the picker.** Run `ollama serve`, check `curl http://localhost:11434` (or your `OLLAMA_HOST`), then pull a model (`ollama pull qwen2.5:3b`) or use **Pull** in the Ollama setup.
 
 **A feed won't add.** Some sites block automated requests (403/429). Try the feed URL itself, for example `https://feeds.bbci.co.uk/news/rss.xml` instead of `https://bbc.com`.
 
 **The full article doesn't load.** The site blocked extraction. Press `o` to read it on the site.
 
-**Studio PNG or PDF export fails.** It needs Google Chrome or Microsoft Edge installed. If yours is in an unusual place, start the server with `CHROME_PATH=/path/to/chrome`.
+**Studio PNG or PDF export fails.** It needs Google Chrome or Microsoft Edge installed. If yours is in an unusual place, start the server with `CHROME_PATH=/path/to/chrome` (for the background service, set it before `npm run service install`).
 
 ---
 

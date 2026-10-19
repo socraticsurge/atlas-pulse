@@ -25,6 +25,25 @@ sync_deps() {
   fi
 }
 
+# Settings the server reads, carried into the service when they are set at
+# install (launchd starts it without your shell's environment).
+PASSED_ENV=(CHROME_PATH ATLAS_DATA_DIR OLLAMA_HOST)
+
+xml_escape() {
+  local s=$1
+  s=${s//&/&amp;}; s=${s//</&lt;}; s=${s//>/&gt;}
+  printf '%s' "$s"
+}
+
+passed_env() {
+  local name
+  for name in "${PASSED_ENV[@]}"; do
+    if [ -n "${!name:-}" ]; then
+      printf '    <key>%s</key><string>%s</string>\n' "$name" "$(xml_escape "${!name}")"
+    fi
+  done
+}
+
 write_plist() {
   mkdir -p "$LOG_DIR" "$(dirname "$PLIST")"
   cat > "$PLIST" <<PLIST
@@ -43,6 +62,7 @@ write_plist() {
   <dict>
     <key>PORT</key><string>$PORT</string>
     <key>HOST</key><string>127.0.0.1</string>
+$(passed_env)
   </dict>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
