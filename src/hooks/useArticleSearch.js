@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { searchArticleBodies } from '../utils/api.js';
-import { rankArticles, tokenizeQuery } from '../utils/search.js';
+import { rankArticles, tokenizeQuery } from '../../shared/search.js';
 
 const DEBOUNCE_MS = 250;
 

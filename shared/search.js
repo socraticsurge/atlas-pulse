@@ -1,7 +1,7 @@
 // Article search: AND across terms, each term matching the title, source,
 // AI topics, or body. Ranked title › source › topics › body.
 
-import { tokenizeQuery } from '../../shared/searchQuery.js';
+import { tokenizeQuery } from './searchQuery.js';
 
 export { tokenizeQuery };
 

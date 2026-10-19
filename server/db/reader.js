@@ -56,10 +56,10 @@ function toArticle(row) {
 // guid/canonical link/created-at/favicon (the list uses the feed's favicon),
 // and the excerpt cut to what a preview line can show.
 export const LIST_EXCERPT_CHARS = 200;
-const LIST_COLUMNS = `id, feed_id, title, link, published_at, is_read, is_bookmarked, author,
+export const LIST_COLUMNS = `id, feed_id, title, link, published_at, is_read, is_bookmarked, author,
   image_url, ai_status, ai_summary, ai_analysis, substr(excerpt, 1, ${LIST_EXCERPT_CHARS}) AS excerpt`;
 
-function toListItem(row) {
+export function toListItem(row) {
   const { content: _content, summary: _summary, description: _description, ...item } = toArticle(row);
   return item;
 }
