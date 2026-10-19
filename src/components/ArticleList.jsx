@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { bulkUpdateArticles, markViewRead } from '../utils/api.js';
 import { readStored, writeStored } from '../utils/storage.js';
 import { useLibrary } from '../app/LibraryContext.jsx';
+import { useServerDown } from '../app/useServerDown.js';
 import { useToast } from '../app/ToastContext.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
@@ -159,7 +160,8 @@ export default function ArticleList({
   const activeCount = Object.values(activeFilters).filter(Boolean).length + (aiOnly ? 1 : 0);
   const hasActiveFilters = activeCount > 0;
   const showFilters = filtersOpen || hasActiveFilters; // an active filter stays in view
-  const empty = { ...emptyStateText({ hasActiveFilters, searchQuery: search.query, viewType: activeView.type }), searching: Boolean(search.query) };
+  const serverDown = useServerDown();
+  const empty = { ...emptyStateText({ serverDown, hasActiveFilters, searchQuery: search.query, viewType: activeView.type }), searching: Boolean(search.query) };
 
   return (
     <div className="article-list-panel">
@@ -182,7 +184,7 @@ export default function ArticleList({
       <div ref={scrollRef} className={cn('min-h-0 flex-1 overflow-y-auto', CONTENT_PADDING[viewMode] ?? 'pb-5', selection.size > 0 && 'pb-16')}>
         <ListContent
           scrollRef={scrollRef}
-          loading={data.loading}
+          loading={data.loading && !serverDown}
           articles={visible}
           empty={empty}
           viewMode={viewMode}

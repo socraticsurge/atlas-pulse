@@ -11,6 +11,8 @@ test('viewTitle and emptyStateText', () => {
   assert.equal(emptyStateText({ searchQuery: 'ai', viewType: 'saved' }).body, 'No articles match "ai"');
   assert.equal(emptyStateText({ viewType: 'saved' }).title, 'Nothing saved yet');
   assert.equal(emptyStateText({ viewType: 'all' }).title, 'Your feed is empty');
+  // A list that is empty because the server isn't answering says so, not "empty".
+  assert.equal(emptyStateText({ serverDown: true, searchQuery: 'ai', viewType: 'all' }).title, "Can't load articles");
 });
 
 test('articlesToCSV quotes text fields when needed and neutralises formulas', () => {
