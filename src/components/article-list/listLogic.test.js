@@ -1,28 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { applyFilters, articlesToCSV, availableFilters, chunkRows, dayGroup, emptyStateText, maxArticleId, mergeNewArticles, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
-
-const analyzed = (id, analysis, extra = {}) => ({ id, aiStatus: 'done', aiAnalysis: JSON.stringify(analysis), ...extra });
-const articles = [
-  analyzed(1, { sentiment: 'positive', urgency: 'breaking' }),
-  analyzed(2, { sentiment: 'negative', urgency: 'breaking' }),
-  { id: 3, aiStatus: 'none' },
-  { id: 4, aiStatus: 'done', aiAnalysis: '{not json' },
-];
-
-test('availableFilters collects values per dimension and skips malformed analyses', () => {
-  const f = availableFilters(articles);
-  assert.deepEqual([...f.sentiment].sort(), ['negative', 'positive']);
-  assert.deepEqual([...f.urgency], ['breaking']);
-  assert.equal(f.tone.size, 0);
-});
-
-test('applyFilters: AI-only toggle and dimension filters', () => {
-  assert.deepEqual(applyFilters(articles).map((a) => a.id), [1, 2, 3, 4]);
-  assert.deepEqual(applyFilters(articles, { aiOnly: true }).map((a) => a.id), [1, 2, 4]);
-  assert.deepEqual(applyFilters(articles, { activeFilters: { urgency: 'breaking', sentiment: 'negative' } }).map((a) => a.id), [2]);
-  assert.deepEqual(applyFilters(articles, { activeFilters: { sentiment: null } }).map((a) => a.id), [1, 2, 3, 4]);
-});
+import { articlesToCSV, chunkRows, dayGroup, emptyStateText, flattenPages, patchPages, shortTime, viewTitle, withDayHeaders } from './listLogic.js';
 
 test('viewTitle and emptyStateText', () => {
   assert.equal(viewTitle({ type: 'all' }), 'All Articles');
@@ -80,11 +58,24 @@ test('shortTime is a clock time today, a weekday this week, a date before', () =
   assert.equal(shortTime('', now), '');
 });
 
-test('new articles merge in newest first, without duplicates', () => {
-  const list = [{ id: 5, publishedAt: '2026-10-18T10:00:00Z' }, { id: 3, publishedAt: '2026-10-17T10:00:00Z' }];
-  const merged = mergeNewArticles(list, [{ id: 9, publishedAt: '2026-10-17T12:00:00Z' }, { id: 5, publishedAt: '2026-10-18T10:00:00Z' }]);
-  assert.deepEqual(merged.map((a) => a.id), [5, 9, 3]);
-  assert.equal(mergeNewArticles(list, []), list);
-  assert.equal(maxArticleId(merged), 9);
-  assert.equal(maxArticleId([]), 0);
+test('loaded pages flatten in order, each article once', () => {
+  const pages = [{ articles: [{ id: 9 }, { id: 8 }] }, { articles: [{ id: 8 }, { id: 7 }] }];
+  assert.deepEqual(flattenPages(pages).map((a) => a.id), [9, 8, 7]);
+  assert.deepEqual(flattenPages(), []);
+});
+
+test('patching cached pages updates the articles and the unread count', () => {
+  const data = {
+    pageParams: [0, 2],
+    pages: [
+      { unread: 3, articles: [{ id: 1, isRead: 0 }, { id: 2, isRead: 1 }] },
+      { unread: 3, articles: [{ id: 3, isRead: 0 }, { id: 1, isRead: 0 }] },
+    ],
+  };
+  const patched = patchPages(data, new Set([1, 2, 3]), { isRead: 1 });
+  assert.deepEqual(patched.pages.flatMap((p) => p.articles.map((a) => a.isRead)), [1, 1, 1, 1]);
+  assert.deepEqual(patched.pages.map((p) => p.unread), [1, 1], 'two newly read, counted once each');
+  assert.deepEqual(patched.pageParams, [0, 2]);
+  assert.equal(patchPages(patched, new Set([2]), { isRead: 0 }).pages[0].unread, 2);
+  assert.equal(patchPages(undefined, new Set([1]), { isRead: 1 }), undefined);
 });

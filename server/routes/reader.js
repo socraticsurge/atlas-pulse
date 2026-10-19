@@ -3,7 +3,7 @@ import {
   createFolder, listFolders, updateFolderById, removeFolderById, removeFolderAndFeedsById,
   findFolderByName,
   createFeed, listFeeds, getFeed, updateFeed, removeFeed,
-  bulkInsertArticles, getArticles, getArticleById, findArticleByLink, searchArticleBodies,
+  bulkInsertArticles, getArticleById, findArticleByLink,
   updateArticle, bulkUpdateArticles, getArticlesByAiStatus, getUnprocessedForFeed,
   getQueueCount, resetProcessingToQueued, claimNextQueued, getCounts, clearAll,
   DB_PATH,
@@ -143,13 +143,6 @@ router.get('/articles/unprocessed', (req, res) => {
   catch (err) { sendDbError(res, err); }
 });
 
-// Full-text body matches per search term: { tokens: [term], matches: [[ids]] } (aligned by index)
-router.get('/articles/search', (req, res) => {
-  const q = String(req.query.q || '').slice(0, 500);
-  try { res.json(searchArticleBodies(q)); }
-  catch (err) { sendDbError(res, err); }
-});
-
 router.get('/articles/by-link', (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: 'url is required' });
@@ -158,12 +151,6 @@ router.get('/articles/by-link', (req, res) => {
     if (!article) return res.status(404).json({ error: 'Not found' });
     res.json(article);
   } catch (err) { sendDbError(res, err); }
-});
-
-router.get('/articles', (req, res) => {
-  const { view = 'all', id, after } = req.query;
-  try { res.json(getArticles(view, id ? Number(id) : undefined, Number(after) || 0)); }
-  catch (err) { sendDbError(res, err); }
 });
 
 // Each view, and whether it needs the id of a feed or folder.

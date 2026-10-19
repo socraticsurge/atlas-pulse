@@ -1,12 +1,27 @@
 import { useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { HiOutlineDocumentText } from 'react-icons/hi2';
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut,
 } from '@/components/ui/command';
-import { useArticleSearch } from '../../hooks/useArticleSearch.js';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue.js';
+import { fetchArticlePage } from '../../utils/api.js';
 import { commandFilter } from './commands.js';
 
 const ARTICLE_LIMIT = 8;
+const SEARCH_DEBOUNCE_MS = 150;
+
+// The best matches for the query in a view, ranked on the server like the list's search.
+function useArticleMatches(view, query) {
+  const q = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+  const { data } = useQuery({
+    queryKey: ['palette-articles', view.type, view.id, q],
+    queryFn: () => fetchArticlePage(view.type, view.id, { q, limit: ARTICLE_LIMIT }),
+    enabled: Boolean(q),
+    placeholderData: keepPreviousData,
+  });
+  return query.trim() && q ? data?.articles ?? [] : [];
+}
 
 function CommandRow({ item, onSelect }) {
   const { Icon } = item;
@@ -38,13 +53,12 @@ function ArticleResults({ articles, sourceOf, onOpen }) {
 
 /**
  * ⌘K palette: go to a view, folder or feed; run an action; switch the list
- * view; or open an article from the current list (ranked like the list's own
- * search: title, source and excerpt, then full text).
+ * view; or open an article from `view` (ranked like the list's own search:
+ * title, source, topics, then full text).
  */
-export default function CommandPalette({ open, onOpenChange, groups, articles, sourceOf, onOpenArticle }) {
+export default function CommandPalette({ open, onOpenChange, groups, view, sourceOf, onOpenArticle }) {
   const [query, setQuery] = useState('');
-  const ranked = useArticleSearch(articles, query, sourceOf);
-  const found = query.trim() ? ranked.slice(0, ARTICLE_LIMIT) : [];
+  const found = useArticleMatches(view, query);
   const close = () => { onOpenChange(false); setQuery(''); };
   const runAndClose = (run) => () => { close(); run(); };
 
@@ -60,7 +74,7 @@ export default function CommandPalette({ open, onOpenChange, groups, articles, s
     >
       <CommandInput placeholder="Type a command, feed or article…" value={query} onValueChange={setQuery} />
       <CommandList className="max-h-[min(460px,60vh)]">
-        <CommandEmpty>Nothing matches.</CommandEmpty>
+        {found.length === 0 && <CommandEmpty>Nothing matches.</CommandEmpty>}
         {groups.map((group) => (
           <CommandGroup key={group.heading} heading={group.heading}>
             {group.items.map((item) => <CommandRow key={item.id} item={item} onSelect={runAndClose(item.run)} />)}

@@ -27,6 +27,8 @@ const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen.j
 const SummariesScreen = lazy(() => import('./components/library/SummariesScreen.jsx'));
 
 const LIBRARY_VIEWS = { library: SummariesScreen, highlights: HighlightsScreen };
+// The palette searches all articles while a library screen is open.
+const ALL_ARTICLES = { type: 'all' };
 
 // Mounts lazy children only once they have been opened, then keeps them
 // mounted (so dialogs keep their state and close animations).
@@ -69,11 +71,11 @@ function useBatchActions(batch) {
 }
 
 // The ⌘K palette with the workspace's commands and the current list's articles.
-function PaletteHost({ open, onOpenChange, articles, onOpenArticle, commands }) {
+function PaletteHost({ open, onOpenChange, view, onOpenArticle, commands }) {
   const { feeds } = useLibrary();
   const groups = usePaletteCommands(commands);
   const sourceOf = useCallback((article) => feeds.find((f) => f.id === article.feedId)?.title || '', [feeds]);
-  return <CommandPalette open={open} onOpenChange={onOpenChange} groups={groups} articles={articles} sourceOf={sourceOf} onOpenArticle={onOpenArticle} />;
+  return <CommandPalette open={open} onOpenChange={onOpenChange} groups={groups} view={view} sourceOf={sourceOf} onOpenArticle={onOpenArticle} />;
 }
 
 function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArticle }) {
@@ -139,7 +141,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
       )}
 
       <OnceOpened open={paletteOpen}><PaletteHost
-        open={paletteOpen} onOpenChange={setPaletteOpen} articles={visibleArticles}
+        open={paletteOpen} onOpenChange={setPaletteOpen} view={LibraryScreen ? ALL_ARTICLES : activeView}
         onOpenArticle={LibraryScreen ? openFromLibrary : setSelectedArticle}
         commands={{ goToView, setModal, layout, readerOpen: Boolean(selectedArticle) }}
       /></OnceOpened>

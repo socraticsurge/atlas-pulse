@@ -1,6 +1,6 @@
 import { csvCell } from '../../../shared/csv.js';
 
-// Pure helpers for the article list: AI filters, empty-state copy, CSV.
+// Pure helpers for the article list: filter labels, cached pages, empty-state copy, CSV.
 
 export const FILTER_DIMS = [
   { key: 'sentiment', label: 'Sentiment', values: { positive: '😊 Positive', neutral: '😐 Neutral', negative: '😟 Negative' } },
@@ -9,8 +9,6 @@ export const FILTER_DIMS = [
   { key: 'tone',      label: 'Tone',      values: { alarming: '🚨 Alarming', analytical: '💡 Analytical', optimistic: '✨ Optimistic', opinion: '💭 Opinion' } },
   { key: 'depth',     label: 'Depth',     values: { brief: '⚡ Brief', standard: '📄 Standard', deep_dive: '📚 Deep Dive' } },
 ];
-
-export { applyFilters, availableFilters } from '../../../shared/aiFilters.js';
 
 const VIEW_TITLES = { all: 'All Articles', today: 'Today', saved: 'Saved' };
 
@@ -111,16 +109,39 @@ export function shortTime(dateStr, now = new Date()) {
   return date.toLocaleDateString(undefined, sameYear ? { month: 'short', day: 'numeric' } : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-/** The highest article id in a list (ids increase as articles are added), or 0. */
-export function maxArticleId(articles) {
-  return articles.reduce((max, a) => (a.id > max ? a.id : max), 0);
+/** The loaded articles in page order, each once (offsets shift when articles arrive between pages). */
+export function flattenPages(pages = []) {
+  const seen = new Set();
+  const articles = [];
+  for (const page of pages) {
+    for (const article of page.articles) {
+      if (seen.has(article.id)) continue;
+      seen.add(article.id);
+      articles.push(article);
+    }
+  }
+  return articles;
 }
 
-/** A list with newly fetched articles merged in: no duplicates, newest first. */
-export function mergeNewArticles(articles, added) {
-  if (added.length === 0) return articles;
-  const known = new Set(articles.map((a) => a.id));
-  const fresh = added.filter((a) => !known.has(a.id));
-  if (fresh.length === 0) return articles;
-  return [...fresh, ...articles].sort((a, b) => (b.publishedAt ?? '').localeCompare(a.publishedAt ?? ''));
+// How a change moves an article's read state: +1 newly read, -1 newly unread, 0 neither.
+const readDelta = (article, changes) => {
+  if (!('isRead' in changes) || Boolean(changes.isRead) === Boolean(article.isRead)) return 0;
+  return changes.isRead ? 1 : -1;
+};
+
+/**
+ * Cached list pages ({ pages: [{ articles, unread, … }] }) with `changes`
+ * applied to the articles in idSet, and the unread count adjusted to match.
+ */
+export function patchPages(data, idSet, changes) {
+  if (!data) return data;
+  const counted = new Set();
+  let nowRead = 0;
+  const patch = (article) => {
+    if (!idSet.has(article.id)) return article;
+    if (!counted.has(article.id)) { counted.add(article.id); nowRead += readDelta(article, changes); }
+    return { ...article, ...changes };
+  };
+  const pages = data.pages.map((page) => ({ ...page, articles: page.articles.map(patch) }));
+  return { ...data, pages: pages.map((page) => ({ ...page, unread: Math.max(0, page.unread - nowRead) })) };
 }
