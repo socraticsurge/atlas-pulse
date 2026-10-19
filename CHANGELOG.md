@@ -7,7 +7,7 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ### Fixed
 
-- **A clear message on an unsupported Node.** `npm run dev` and `npm run build` now stop and say which Node to install, instead of failing inside Vite with `SyntaxError: … does not provide an export named 'styleText'`, and `npm install` refuses an unsupported Node. The minimum is now stated correctly as Node 22.13+ or 24+, since several dependencies no longer support Node 20. `.nvmrc` pins 24 LTS, and CI runs on it (#PR).
+- **A clear message on an unsupported Node.** `npm run dev` and `npm run build` now stop and say which Node to install, instead of failing inside Vite with `SyntaxError: … does not provide an export named 'styleText'`, and `npm install` refuses an unsupported Node. The minimum is now stated correctly as Node 22.13+ or 24+, since several dependencies no longer support Node 20. `.nvmrc` pins 24 LTS, and CI runs on it (#123).
 - **Images in Medium articles.** Full-text extraction dropped the inline images from Medium publications such as Towards AI; they now come through (#122).
 - **Delete all** in Settings → Data says that it also deletes your saves and their notes and empties collections, and AI errors point to Settings → AI engines (#121).
 
