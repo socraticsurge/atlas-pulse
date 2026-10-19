@@ -1,13 +1,8 @@
-import { join } from 'path';
-import { DATA_DIR, openDatabase } from './connection.js';
-import { MIGRATIONS } from './migrations/reader.js';
+import { db, DB_PATH } from './database.js';
 import { makeExcerpt, searchText, tokenizeQuery } from '../utils/text.js';
 import { itemGuid, normalizeDate } from '../utils/articleFields.js';
 
-const DB_FILE = 'reader.db';
-export const DB_PATH = join(DATA_DIR, DB_FILE);
-
-const db = openDatabase(DB_FILE, MIGRATIONS);
+export { DB_PATH };
 
 // ── Row mappers (DB snake_case → client camelCase) ────────────────────────────
 

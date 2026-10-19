@@ -1,12 +1,5 @@
-import { join } from 'path';
 import { csvCell } from '../../shared/csv.js';
-import { DATA_DIR, openDatabase } from './connection.js';
-import { MIGRATIONS } from './migrations/summaries.js';
-
-const DB_FILE = 'summaries.db';
-const DB_PATH = join(DATA_DIR, DB_FILE);
-
-const db = openDatabase(DB_FILE, MIGRATIONS);
+import { db, DB_PATH } from './database.js';
 
 const insert = db.prepare(`
   INSERT INTO summaries (

@@ -1,12 +1,5 @@
-import { join } from 'path';
 import { csvCell } from '../../shared/csv.js';
-import { DATA_DIR, openDatabase } from './connection.js';
-import { MIGRATIONS } from './migrations/highlights.js';
-
-const DB_FILE = 'highlights.db';
-const DB_PATH = join(DATA_DIR, DB_FILE);
-
-const db = openDatabase(DB_FILE, MIGRATIONS);
+import { db, DB_PATH } from './database.js';
 
 const insert = db.prepare(`
   INSERT INTO highlights (created_at, article_url, article_title, article_source, highlighted_text, note, color)

@@ -372,10 +372,9 @@ Browsers block direct cross-origin requests (CORS), so the Express server fetche
 
 | Data | Where stored |
 |------|-------------|
-| Feeds, articles, folders, bookmarks, read state, batch AI results | `data/reader.db` (SQLite, local) |
-| Saved AI summaries | `data/summaries.db` (SQLite, local) |
-| Highlights | `data/highlights.db` (SQLite, local) |
-| Theme, reader, AI persona, and batch settings | `localStorage` in your browser |
+| Feeds, articles, folders, bookmarks, read state, batch AI results, saved AI summaries, highlights | `data/reader.db` (SQLite, local) |
+| Settings | `data/settings.json` |
+| Pane widths and other per-device layout | `localStorage` in your browser |
 | Gemini Nano model | Managed by Google Chrome on your device |
 
 - **Private by design** — feeds are fetched directly from their publishers; AI runs on your device through Chrome or Ollama; nothing is sent to an Atlas Pulse server, because there isn't one
