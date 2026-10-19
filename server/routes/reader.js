@@ -8,6 +8,8 @@ import {
   getQueueCount, resetProcessingToQueued, claimNextQueued, getCounts, clearAll,
   DB_PATH,
 } from '../db/reader.js';
+import { getArticlePage, markViewRead } from '../db/articlePages.js';
+import { FILTER_KEYS } from '../../shared/aiFilters.js';
 
 const router = Router();
 
@@ -161,6 +163,42 @@ router.get('/articles/by-link', (req, res) => {
 router.get('/articles', (req, res) => {
   const { view = 'all', id, after } = req.query;
   try { res.json(getArticles(view, id ? Number(id) : undefined, Number(after) || 0)); }
+  catch (err) { sendDbError(res, err); }
+});
+
+// Each view, and whether it needs the id of a feed or folder.
+const VIEWS = { all: false, today: false, saved: false, feed: true, folder: true };
+const text = (value) => (typeof value === 'string' ? value : '');
+
+// The view a request names, or null if it isn't one.
+function viewOf({ view = 'all', id }) {
+  if (!Object.hasOwn(VIEWS, view)) return null;
+  const viewId = Number(id);
+  const missingId = VIEWS[view] && !Number.isInteger(viewId);
+  return missingId ? null : { view, id: viewId };
+}
+
+/** GET /articles/page?view&id&q&aiOnly=1&sentiment=…&offset&limit — one page of a view. */
+router.get('/articles/page', (req, res) => {
+  const target = viewOf(req.query);
+  if (!target) return res.status(400).json({ error: 'invalid view' });
+  const filters = Object.fromEntries(FILTER_KEYS.map((key) => [key, text(req.query[key])]).filter(([, v]) => v));
+  try {
+    res.json(getArticlePage(target.view, target.id, {
+      q: text(req.query.q).slice(0, 500),
+      filters,
+      aiOnly: req.query.aiOnly === '1',
+      offset: Number(req.query.offset) || 0,
+      limit: Number(req.query.limit) || undefined,
+    }));
+  } catch (err) { sendDbError(res, err); }
+});
+
+/** POST /articles/mark-view-read { view, id } — marks every unread article in the view read. */
+router.post('/articles/mark-view-read', (req, res) => {
+  const target = viewOf(req.body ?? {});
+  if (!target) return res.status(400).json({ error: 'invalid view' });
+  try { res.json({ changed: markViewRead(target.view, target.id) }); }
   catch (err) { sendDbError(res, err); }
 });
 
