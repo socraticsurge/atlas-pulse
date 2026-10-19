@@ -3,7 +3,11 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
-## Unreleased
+## 2.1.0 (2026-10-19)
+
+Setup and first use, made clearer. Atlas Pulse now says what is wrong and how to fix it: an unsupported Node, a taken port, a stopped server, or an AI engine it can't use. Medium articles come through with their images and without the page clutter, and installs no longer report security warnings.
+
+**Upgrading:** Node.js 22.13+ or 24+ is now required (2.0.0 said 20.19, but its dependencies already needed more). After pulling, run `npm ci`; with the background service, `npm run service restart` now does that for you.
 
 ### Fixed
 
