@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchSummaries } from '../utils/api.js';
+import { on } from '../lib/appEvents.js';
 
 /** Previous/next navigation within the visible article list. */
 export function useArticleNavigation(selected, setSelected, visible) {
@@ -19,4 +20,19 @@ export function useSummaryCount(viewType) {
   }, []);
   useEffect(() => { refresh(); }, [viewType, refresh]);
   return [count, refresh];
+}
+
+/**
+ * Moving between the library screens and the reader: openFromLibrary(article)
+ * reads it in All Articles; selectStudioItem(id) opens a Studio item, also on
+ * the 'open-studio' event (for example after Save to Studio).
+ */
+export function useLibraryNavigation(setActiveView, setSelectedArticle) {
+  const openFromLibrary = useCallback((article) => {
+    setActiveView({ type: 'all' });
+    setSelectedArticle(article);
+  }, [setActiveView, setSelectedArticle]);
+  const selectStudioItem = useCallback((id) => setActiveView({ type: 'studio', id }), [setActiveView]);
+  useEffect(() => on('open-studio', selectStudioItem), [selectStudioItem]);
+  return { openFromLibrary, selectStudioItem };
 }

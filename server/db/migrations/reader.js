@@ -159,4 +159,31 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_highlights_article_url ON highlights(article_url);
     `),
   },
+  {
+    version: 7,
+    description: 'Studio: saved, editable AI outputs (newsletters first) and the articles each was made from',
+    up: (db) => db.exec(`
+      CREATE TABLE studio_items (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        kind        TEXT NOT NULL,
+        title       TEXT NOT NULL,
+        body_md     TEXT NOT NULL,
+        style       TEXT,
+        model       TEXT,
+        ai_settings TEXT,
+        created_at  TEXT NOT NULL,
+        updated_at  TEXT NOT NULL
+      );
+      CREATE INDEX idx_studio_items_updated_at ON studio_items(updated_at);
+      CREATE TABLE studio_item_sources (
+        item_id        INTEGER NOT NULL REFERENCES studio_items(id) ON DELETE CASCADE,
+        position       INTEGER NOT NULL,
+        article_id     INTEGER,
+        article_url    TEXT,
+        article_title  TEXT,
+        article_source TEXT,
+        PRIMARY KEY (item_id, position)
+      );
+    `),
+  },
 ];

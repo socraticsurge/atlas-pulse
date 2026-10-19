@@ -14,7 +14,7 @@ import { emit } from './lib/appEvents.js';
 import { useSettingsModal } from './app/useSettingsModal.js';
 import { useCommandPalette } from './app/useCommandPalette.js';
 import { usePaletteCommands } from './app/usePaletteCommands.js';
-import { useArticleNavigation, useSummaryCount } from './app/useWorkspace.js';
+import { useArticleNavigation, useLibraryNavigation, useSummaryCount } from './app/useWorkspace.js';
 import { useAIBatchProcessor } from './hooks/useAIBatchProcessor.js';
 
 // Screens opened now and then load on first use, keeping the startup bundle
@@ -25,8 +25,9 @@ const HighlightsScreen = lazy(() => import('./components/library/HighlightsScree
 const MultiArticlePanel = lazy(() => import('./components/multi-article/MultiArticlePanel.jsx'));
 const SettingsScreen = lazy(() => import('./components/settings/SettingsScreen.jsx'));
 const SummariesScreen = lazy(() => import('./components/library/SummariesScreen.jsx'));
+const StudioScreen = lazy(() => import('./components/studio/StudioScreen.jsx'));
 
-const LIBRARY_VIEWS = { library: SummariesScreen, highlights: HighlightsScreen };
+const LIBRARY_VIEWS = { library: SummariesScreen, highlights: HighlightsScreen, studio: StudioScreen };
 // The palette searches all articles while a library screen is open.
 const ALL_ARTICLES = { type: 'all' };
 
@@ -99,7 +100,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
   const goToView = useCallback((view) => { setActiveView(view); setSelectedArticle(null); }, [setActiveView, setSelectedArticle]);
 
   const closeReader = useCallback(() => setSelectedArticle(null), [setSelectedArticle]);
-  const openFromLibrary = useCallback((article) => { setActiveView({ type: 'all' }); setSelectedArticle(article); }, [setActiveView, setSelectedArticle]);
+  const { openFromLibrary, selectStudioItem } = useLibraryNavigation(setActiveView, setSelectedArticle);
   const LibraryScreen = LIBRARY_VIEWS[activeView.type];
 
   return (
@@ -114,7 +115,7 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
       />
       {layout.sidebarMode === 'expanded' && <ResizableHandle onResize={layout.resizeSidebar} />}
 
-      {LibraryScreen ? <Suspense fallback={<div className="flex-1" />}><LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} /></Suspense> : (
+      {LibraryScreen ? <Suspense fallback={<div className="flex-1" />}><LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} selectedId={activeView.id} onSelect={selectStudioItem} /></Suspense> : (
         <>
           <ArticleList
             activeView={activeView}

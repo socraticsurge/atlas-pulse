@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   HiOutlineArrowDownTray, HiOutlineArrowPath, HiOutlineCheck, HiOutlineClipboardDocument,
-  HiOutlineEnvelope, HiOutlineSparkles, HiOutlineXMark,
+  HiOutlineEnvelope, HiOutlineExclamationCircle, HiOutlinePaintBrush, HiOutlineSparkles, HiOutlineXMark,
 } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { downloadAsDocx, downloadAsMarkdown } from '../../utils/docx.js';
+import { emit } from '../../lib/appEvents.js';
 import { RailAction, RailEmpty, RailError, TypingCursor } from '../ai-drawer/parts.jsx';
 import { NEWSLETTER_TEMPLATES, OPERATIONS, placeholderText } from './operations.js';
 
@@ -113,7 +114,15 @@ export function Output({ operation, gen, onRetry }) {
   );
 }
 
-export function ExportBar({ operation, output }) {
+// Save to Studio, then a link to the saved item.
+function StudioAction({ studio }) {
+  if (studio.status === 'saved') return <RailAction onClick={() => emit('open-studio', studio.id)}><HiOutlinePaintBrush /> Open in Studio</RailAction>;
+  if (studio.status === 'error') return <RailAction onClick={studio.save} title={studio.error}><HiOutlineExclamationCircle /> Couldn't save · Retry</RailAction>;
+  const saving = studio.status === 'saving';
+  return <RailAction onClick={studio.save} disabled={saving}><HiOutlinePaintBrush /> {saving ? 'Saving…' : 'Save to Studio'}</RailAction>;
+}
+
+export function ExportBar({ operation, output, studio }) {
   const [copied, setCopied] = useState(false);
   const filename = `atlas-pulse-${operation}`;
   const copy = async () => {
@@ -127,6 +136,7 @@ export function ExportBar({ operation, output }) {
   };
   return (
     <div className="flex shrink-0 flex-wrap gap-0.5 border-t border-border px-3 py-2">
+      {studio && <StudioAction studio={studio} />}
       <RailAction onClick={copy}>{copied ? <HiOutlineCheck /> : <HiOutlineClipboardDocument />} {copied ? 'Copied' : 'Copy'}</RailAction>
       <RailAction onClick={() => downloadAsMarkdown(filename, output)}><HiOutlineArrowDownTray /> Markdown</RailAction>
       <RailAction onClick={() => downloadAsDocx(filename, output)}><HiOutlineArrowDownTray /> Word</RailAction>

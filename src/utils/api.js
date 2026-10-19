@@ -81,6 +81,19 @@ export async function fetchDBPath() {
   return request('/summaries/db-path', 'Failed to get DB path');
 }
 
+// ── Studio ───────────────────────────────────────────────────────────────────
+// Saved, editable AI outputs (newsletters first).
+
+export async function fetchStudioItems() { return request('/studio', 'Failed to load Studio'); }
+export async function fetchStudioItem(id) { return request(`/studio/${id}`, 'Failed to load the newsletter'); }
+export async function createStudioItem(item) { return request('/studio', 'Failed to save to Studio', json(item)); }
+export async function updateStudioItem(id, changes) {
+  return request(`/studio/${id}`, 'Failed to save your edits', json(changes, 'PUT'));
+}
+export async function deleteStudioItem(id) {
+  return request(`/studio/${id}`, 'Failed to delete the newsletter', { method: 'DELETE' });
+}
+
 // ── Highlights ───────────────────────────────────────────────────────────────
 
 export async function saveHighlight(data) {
