@@ -61,7 +61,7 @@ function useBatchActions(batch) {
   const showToast = useToast();
   const trigger = useCallback(async () => {
     const { queued, reason } = await batch.triggerBatch();
-    if (reason === 'no-model') showToast('No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.', 'error');
+    if (reason === 'no-model') showToast('No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI engines.', 'error');
     else if (queued > 0) showToast(`Analyzing ${queued} recent article${queued !== 1 ? 's' : ''}`);
     else showToast('All recent articles are already analyzed', 'error');
   }, [batch, showToast]);

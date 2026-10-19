@@ -54,7 +54,7 @@ export function multiArticleMessages(request, charsPerArticle = getLimit('perArt
   ];
 }
 
-const NO_MODEL_ERROR = 'No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI Processing.';
+const NO_MODEL_ERROR = 'No AI model available. Open Atlas Pulse in Google Chrome for Gemini Nano, or set up Ollama in Settings → AI engines.';
 
 // The batch model from Settings if it is still available, otherwise (or for
 // "Auto") the first available model, Gemini Nano when present.

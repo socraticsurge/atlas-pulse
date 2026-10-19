@@ -10,7 +10,7 @@ export const NANO_MODEL_NAME = 'gemini-nano';
 // just echoes the prompt back, prefixed with this message.
 const CHROMIUM_STUB_PREFIX = 'On-device model is not available';
 const NOT_CHROME_ERROR = 'Gemini Nano needs Google Chrome (desktop, 148+). This browser exposes the API but has no on-device model.';
-const TOO_LONG_ERROR = 'This request is too long for Gemini Nano. Select fewer articles, or switch to an Ollama model in Settings → AI Processing.';
+const TOO_LONG_ERROR = 'This request is too long for Gemini Nano. Select fewer articles, or switch to an Ollama model in Settings → AI engines.';
 
 // Room left in the context window for the model's answer.
 const OUTPUT_RESERVE_TOKENS = 1536;

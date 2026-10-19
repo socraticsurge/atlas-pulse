@@ -57,7 +57,7 @@ export const SETTINGS = [
   { id: 'export-opml', section: 'data', level: S, label: 'Export feeds and folders', hint: 'As OPML, for another reader or a backup.', Control: ExportOPMLControl },
   { id: 'import-opml', section: 'data', level: S, label: 'Import feeds', hint: 'From an OPML file.', Control: ImportOPMLControl },
   { id: 'settings-file', section: 'data', level: P, label: 'Settings file', hint: 'Plain JSON beside your databases: back it up, edit it, or copy it to another machine.', stacked: true, Control: SettingsFileControl },
-  { id: 'clear-all', section: 'data', level: S, label: 'Delete all feeds, articles and folders', hint: 'Saved summaries and highlights are kept.', Control: ClearAllControl },
+  { id: 'clear-all', section: 'data', level: S, label: 'Delete all feeds, articles and folders', hint: 'Your saves and their notes are deleted too, and collections are emptied. The AI Summaries library, highlights and Studio newsletters are kept.', Control: ClearAllControl },
 
   { id: 'about', section: 'about', level: S, label: 'Atlas Pulse', hint: 'An open-source RSS reader for fast scanning and calm reading. Everything stays on your machine: no accounts, no cloud, no tracking.' },
 ];
