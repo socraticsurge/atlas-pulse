@@ -6,11 +6,7 @@ export const OPERATIONS = {
   briefing:   { label: 'Briefing',   title: 'AI Briefing',         min: 2, max: 15, hint: '2–15 articles' },
 };
 
-export const NEWSLETTER_TEMPLATES = [
-  { id: 'digest',  label: 'Daily Digest' },
-  { id: 'roundup', label: 'Weekly Roundup' },
-  { id: 'brief',   label: 'Executive Brief' },
-];
+export { NEWSLETTER_STYLES as NEWSLETTER_TEMPLATES } from '../../ai/newsletter.js';
 
 export const countOk = (op, count) => count >= op.min && count <= op.max;
 

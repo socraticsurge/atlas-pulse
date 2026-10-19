@@ -70,7 +70,7 @@ Gemini Nano only exists in Google Chrome, so any packaging keeps the UI in Chrom
 | Core | `src/ai/`, models and parsers, all tested | Done; keep the rule |
 | Settings and prompt registries | `src/components/settings/registry.js`, `src/ai/promptRegistry.js`, Simple/Power switch | Done (#90) |
 | Engine port | `streamChat()` switches on the model name; `isNanoModel` is still checked in callers | With the newsletter work |
-| Template registry and Studio | None | With the newsletter templates |
+| Template registry and Studio | Studio saves and edits newsletters; no templates yet | Templates with the next newsletter slice |
 | Store and Fetcher ports | `api.js` is the single seam, but it is the HTTP implementation | Only when a second backend is real |
 | Platform port | `scripts/service.sh` (macOS launchd) | With the installer |
 
@@ -90,7 +90,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | Layer | Component | Paths | Owns |
 |---|---|---|---|
 | Server | **Ingestion** | `server/routes/{feeds,discover,articles,favicon}.js`, `server/utils/{articleExtractor,articleFields,favicon,feedDiscovery,feedParser,feedText,fetchText,text,urlGuard}.js` | Fetching, parsing and extracting feeds and articles, and favicons. Every outbound URL passes `assertPublicHttpUrl` / `safeFetch` (SSRF guard). |
-| | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
+| | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js`, `server/routes/studio*.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
 | | **AI bridge** | `server/routes/{ai,ollama}.js`, `server/utils/stream.js` | Optional proxy to a local Ollama, plus its install and start helpers. |
 | | **Platform** | `server/index.js`, `scripts/**`, `.github/**`, `vite.config.js`, `eslint.config.js`, `jsconfig.json`, `package.json`, `index.html`, `.gitignore` | Server wiring, the background service, build and CI. The installer goes here. |
 | Shared | **Shared** | `shared/{searchQuery,search,aiFilters,csv}.js` | Search tokenizing and ranking, the AI-analysis filters, and CSV export: pure rules the server applies when it pages the list. |
@@ -105,7 +105,7 @@ These are also the architectural components in CodeScene (project 86144, which a
 | | **AI surfaces** | `src/components/{ai-drawer,multi-article}/**`, `src/hooks/{useAIBatchProcessor,useStreamRun,useTokenBuffer}.js` | The AI rail, the multi-article panel and background batch processing. |
 | | **Library** | `src/components/library/**` | The Summaries and Highlights screens. |
 | | **Export** | `src/utils/{docx,share}.js` | Word export and sharing. Newsletter PNG, PDF and HTML export goes here. |
-| | **Studio** | `src/components/studio/**` | Saved, editable AI outputs such as newsletters, and their templates. Empty until the newsletter work starts. |
+| | **Studio** | `src/components/studio/**` | Saved, editable AI outputs (newsletters first): the list, the Markdown editor with live preview, and later their templates and exports. |
 
 Tests (`*.test.js`) belong to the component of the file they test. CodeScene excludes `docs/**`, `package-lock.json`, `dist/**` and `data/**`.
 
@@ -125,7 +125,7 @@ All data is in one SQLite database, `data/reader.db` (or in `ATLAS_DATA_DIR` if 
 
 | Tables | Schema version |
 |---|---|
-| feeds, folders, articles, `articles_fts`, favicons, summaries, highlights | 6 |
+| feeds, folders, articles, `articles_fts`, favicons, summaries, highlights, `studio_items`, `studio_item_sources` | 7 |
 
 Summaries and highlights had files of their own (`summaries.db`, `highlights.db`) until v6. On first start `server/db/legacyMerge.js` copies their rows in, keeping ids, and renames the old files `*.merged`. One database lets queries join articles with the summaries and highlights saved from them.
 

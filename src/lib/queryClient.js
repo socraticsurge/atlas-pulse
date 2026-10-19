@@ -7,3 +7,6 @@ export const queryClient = new QueryClient({
     queries: { staleTime: 30_000, refetchOnWindowFocus: false, retry: 1 },
   },
 });
+
+/** Query keys shared by more than one feature. */
+export const STUDIO_QUERY_KEY = 'studio';

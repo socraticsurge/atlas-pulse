@@ -94,9 +94,20 @@ test('reader migration 5 adds the last refresh error to feeds', () => {
 
 test('reader migration 6 adds the summaries and highlights tables', () => {
   const db = new Database(':memory:');
-  migrate(db, READER);
+  migrate(db, READER.slice(0, 6));
   db.prepare("INSERT INTO summaries (created_at, summary_text) VALUES ('now', 'S')").run();
   db.prepare("INSERT INTO highlights (created_at, highlighted_text, article_url) VALUES ('now', 'H', 'https://a.example')").run();
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM summaries').get().n, 1);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM highlights').get().n, 1);
+});
+
+test('reader migration 7 adds Studio items whose sources are deleted with them', () => {
+  const db = new Database(':memory:');
+  db.pragma('foreign_keys = ON');
+  migrate(db, READER);
+  const { lastInsertRowid: id } = db.prepare("INSERT INTO studio_items (kind, title, body_md, created_at, updated_at) VALUES ('newsletter', 'T', 'B', 'now', 'now')").run();
+  db.prepare("INSERT INTO studio_item_sources (item_id, position, article_url) VALUES (?, 0, 'u')").run(id);
+  db.prepare('DELETE FROM studio_items WHERE id = ?').run(id);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM studio_item_sources').get().n, 0);
+  assert.equal(db.pragma('user_version', { simple: true }), 7);
 });

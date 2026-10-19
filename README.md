@@ -150,6 +150,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **On-demand batch trigger** | `✨` button in the article list header queues the latest N articles for immediate processing |
 | **AI processing indicator** | Spinner with remaining count appears in the header while batch is running |
 | **AI Summaries Library** | Save any AI summary to a persistent SQLite library; search, browse, and export as CSV |
+| **Studio** | Save a generated newsletter to Studio, then edit its title and Markdown with a live preview; changes save as you type, and each newsletter lists the articles it came from |
 | **Model selector** | Gemini Nano plus any installed Ollama models, switchable per session |
 | **AI processed badge** | Sparkle icon appears on analyzed articles in all three list views |
 
@@ -372,7 +373,7 @@ Browsers block direct cross-origin requests (CORS), so the Express server fetche
 
 | Data | Where stored |
 |------|-------------|
-| Feeds, articles, folders, bookmarks, read state, batch AI results, saved AI summaries, highlights | `data/reader.db` (SQLite, local) |
+| Feeds, articles, folders, bookmarks, read state, batch AI results, saved AI summaries, highlights, Studio newsletters | `data/reader.db` (SQLite, local) |
 | Settings | `data/settings.json` |
 | Pane widths and other per-device layout | `localStorage` in your browser |
 | Gemini Nano model | Managed by Google Chrome on your device |
