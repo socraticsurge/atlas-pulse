@@ -166,15 +166,16 @@ router.get('/articles', (req, res) => {
   catch (err) { sendDbError(res, err); }
 });
 
-const VIEWS = new Set(['all', 'today', 'saved', 'feed', 'folder']);
+// Each view, and whether it needs the id of a feed or folder.
+const VIEWS = { all: false, today: false, saved: false, feed: true, folder: true };
 const text = (value) => (typeof value === 'string' ? value : '');
 
-// The view a request names, or null if it isn't one (feed and folder need an id).
+// The view a request names, or null if it isn't one.
 function viewOf({ view = 'all', id }) {
-  if (!VIEWS.has(view)) return null;
+  if (!Object.hasOwn(VIEWS, view)) return null;
   const viewId = Number(id);
-  if ((view === 'feed' || view === 'folder') && !Number.isInteger(viewId)) return null;
-  return { view, id: viewId };
+  const missingId = VIEWS[view] && !Number.isInteger(viewId);
+  return missingId ? null : { view, id: viewId };
 }
 
 /** GET /articles/page?view&id&q&aiOnly=1&sentiment=…&offset&limit — one page of a view. */
