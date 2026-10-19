@@ -17,7 +17,7 @@ Before proposing a change, keep the project's core promises in mind. Contributio
 # Fork the repo on GitHub, then:
 git clone https://github.com/<your-username>/atlas-pulse.git
 cd atlas-pulse
-npm install
+npm ci
 npm run dev
 ```
 

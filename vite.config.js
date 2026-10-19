@@ -3,6 +3,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// The API's port: PORT if set (`PORT=3002 npm run dev` reaches both processes), else 3001.
+const API = { target: `http://127.0.0.1:${Number(process.env.PORT) || 3001}`, changeOrigin: true };
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
@@ -16,11 +19,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-      },
-    },
+    // Stop if 5173 is taken rather than moving to another port: the docs and
+    // the server's startup line say 5173 (server/utils/startup.js).
+    strictPort: true,
+    proxy: { '/api': API },
   },
+  // `npm run preview` serves dist/; the API must be running too (npm run dev:server).
+  preview: { proxy: { '/api': API } },
 })

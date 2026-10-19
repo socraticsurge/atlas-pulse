@@ -35,7 +35,8 @@
     "predev": "node scripts/check-node.js",
     "dev": "concurrently --kill-others \"npm run dev:frontend\" \"npm run dev:server\"",
     "dev:frontend": "vite",
-    "dev:server": "node server/index.js",
+    "dev:server": "node server/index.js --dev",
+    "start": "npm run build -- --logLevel warn && node server/index.js",
     "prebuild": "node scripts/check-node.js",
     "build": "vite build",
     "lint": "eslint . --max-warnings=0",
@@ -103,6 +104,7 @@
     "vite": "^8.3.4"
   },
   "allowScripts": {
-    "better-sqlite3@12.11.1": true
+    "better-sqlite3@12.11.1": true,
+    "fsevents": false
   }
 }
