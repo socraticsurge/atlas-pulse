@@ -57,15 +57,15 @@ Server ─┼──────────────────────�
 
 ## Data
 
-There are three SQLite databases in `data/` (or in `ATLAS_DATA_DIR` if set):
+All data is in one SQLite database, `data/reader.db` (or in `ATLAS_DATA_DIR` if set), opened once by `server/db/database.js`:
 
-| File | Tables | Schema version |
-|---|---|---|
-| `reader.db` | feeds, folders, articles, `articles_fts`, favicons | 4 |
-| `summaries.db` | summaries | 1 |
-| `highlights.db` | highlights | 1 |
+| Tables | Schema version |
+|---|---|
+| feeds, folders, articles, `articles_fts`, favicons, summaries, highlights | 6 |
 
-Each schema change is a numbered migration in `server/db/migrations/<db>.js`. `server/db/migrate.js` applies pending migrations in order and records progress in `PRAGMA user_version`. Databases from before the migration runner are adopted as version 1. Never edit a released migration; add a new one.
+Summaries and highlights had files of their own (`summaries.db`, `highlights.db`) until v6. On first start `server/db/legacyMerge.js` copies their rows in, keeping ids, and renames the old files `*.merged`. One database lets queries join articles with the summaries and highlights saved from them.
+
+Each schema change is a numbered migration in `server/db/migrations/reader.js`. `server/db/migrate.js` applies pending migrations in order and records progress in `PRAGMA user_version`. Databases from before the migration runner are adopted as version 1. Never edit a released migration; add a new one.
 
 Settings are in `data/settings.json`, a flat `{ "atlas-pulse-…": "<string>" }` file you can read, edit or back up. `shared/settingsKeys.js` lists the keys it accepts. Per-device layout state (sidebar and pane widths, list and rail visibility, scroll positions) stays in the browser. At startup `src/settings/sync.js` copies the file into `localStorage`, which the app reads synchronously; if the file is still empty, it seeds the file from the browser instead. After that, every `writeStored()` of a synced key is sent back through `PUT /api/settings` (batched).
 

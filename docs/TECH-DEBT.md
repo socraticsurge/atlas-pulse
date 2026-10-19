@@ -64,7 +64,6 @@ The second round fixed the items left open by the first, plus issues found while
 ### Still open
 
 - **Article list payload.** The list endpoint still returns every article (8.2 MB for 9,998 articles). On localhost it downloads and parses in about 0.2 s, so it no longer limits speed now that rendering is virtualized. Paging it means moving search and the AI filters to the server, which fits best with adopting TanStack Query for data fetching.
-- **Three databases.** Cross-entity queries remain impossible. This matters for the artifact model in section 4.
 - **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 
 ## 1. File-level Code Health (CodeScene)

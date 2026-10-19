@@ -3,8 +3,6 @@ import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
 import { migrate, getSchemaVersion, validateMigrations } from './migrate.js';
 import { MIGRATIONS as READER } from './migrations/reader.js';
-import { MIGRATIONS as SUMMARIES } from './migrations/summaries.js';
-import { MIGRATIONS as HIGHLIGHTS } from './migrations/highlights.js';
 
 const createNotes = { version: 1, up: (db) => db.exec('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)') };
 const addTitle = { version: 2, up: (db) => db.exec('ALTER TABLE notes ADD COLUMN title TEXT') };
@@ -40,8 +38,8 @@ test('rejects gaps or missing up() functions', () => {
   assert.throws(() => validateMigrations([{ version: 1 }]), /up\(\)/);
 });
 
-test('app schemas adopt an existing pre-migration database without data loss', () => {
-  for (const migrations of [READER, SUMMARIES, HIGHLIGHTS]) {
+test('the app schema adopts an existing pre-migration database without data loss', () => {
+  for (const migrations of [READER]) {
     // A database created before migrations existed: the v1 schema with user_version 0.
     const legacy = new Database(':memory:');
     migrations[0].up(legacy);
@@ -88,8 +86,17 @@ test('reader migration 4 adds the favicon cache and points Google favicon URLs a
 
 test('reader migration 5 adds the last refresh error to feeds', () => {
   const db = new Database(':memory:');
-  migrate(db, READER);
+  migrate(db, READER.slice(0, 5));
   db.prepare("INSERT INTO feeds (title, url, created_at, last_error, last_error_at) VALUES ('F', 'https://f.example/rss', 'now', 'Bad XML', '2026-10-19')").run();
   assert.deepEqual(db.prepare('SELECT last_error, last_error_at FROM feeds').get(), { last_error: 'Bad XML', last_error_at: '2026-10-19' });
   assert.equal(db.pragma('user_version', { simple: true }), 5);
+});
+
+test('reader migration 6 adds the summaries and highlights tables', () => {
+  const db = new Database(':memory:');
+  migrate(db, READER);
+  db.prepare("INSERT INTO summaries (created_at, summary_text) VALUES ('now', 'S')").run();
+  db.prepare("INSERT INTO highlights (created_at, highlighted_text, article_url) VALUES ('now', 'H', 'https://a.example')").run();
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM summaries').get().n, 1);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM highlights').get().n, 1);
 });

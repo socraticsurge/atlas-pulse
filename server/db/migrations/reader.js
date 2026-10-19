@@ -1,6 +1,6 @@
 import { makeExcerpt, searchText } from '../../utils/text.js';
 
-// Schema history for reader.db. Never edit a shipped migration; append a new one.
+// Schema history for reader.db, the app's one database. Never edit a shipped migration; append a new one.
 export const MIGRATIONS = [
   {
     version: 1,
@@ -125,5 +125,38 @@ export const MIGRATIONS = [
         ALTER TABLE feeds ADD COLUMN last_error_at TEXT;
       `);
     },
+  },
+  {
+    version: 6,
+    description: 'Summaries and highlights move into this database (from summaries.db and highlights.db)',
+    up: (db) => db.exec(`
+      CREATE TABLE IF NOT EXISTS summaries (
+        id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at             TEXT NOT NULL,
+        article_title          TEXT,
+        article_url            TEXT,
+        article_author         TEXT,
+        article_source         TEXT,
+        article_published_at   TEXT,
+        summary_text           TEXT NOT NULL,
+        ai_model               TEXT,
+        ai_personas            TEXT,
+        ai_tone_voice          TEXT,
+        ai_tone_energy         TEXT,
+        ai_tone_angle          TEXT,
+        ai_custom_instructions TEXT
+      );
+      CREATE TABLE IF NOT EXISTS highlights (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at       TEXT NOT NULL,
+        article_url      TEXT,
+        article_title    TEXT,
+        article_source   TEXT,
+        highlighted_text TEXT NOT NULL,
+        note             TEXT,
+        color            TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_highlights_article_url ON highlights(article_url);
+    `),
   },
 ];
