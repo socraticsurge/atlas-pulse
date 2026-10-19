@@ -9,10 +9,14 @@ const GRID_COLUMNS = 3;
 const ROW = 'absolute top-0 left-0 w-full';
 // First-guess heights in px; items are then measured as they render.
 const ESTIMATES = { header: 30, rows: 58, magazine: 292, excerpt: 96, compact: 37 };
+// Load the next page when the rendered items come within this many of the end.
+const END_MARGIN = 15;
 
-// The virtualized items for a view mode. Rows: day headings and one article
-// each. Grid: rows of three cards. List and Compact: one card each.
-function listItems(articles, viewMode) {
+// The virtualized items for a view mode. Rows: day headings (unless the list
+// is ranked by relevance, not date) and one article each. Grid: rows of three
+// cards. List and Compact: one card each.
+function listItems(articles, viewMode, ranked) {
+  if (viewMode === 'rows' && ranked) return articles.map((article) => ({ type: 'article', key: article.id, article }));
   if (viewMode === 'rows') return withDayHeaders(articles);
   const columns = viewMode === 'magazine' ? GRID_COLUMNS : 1;
   return chunkRows(articles, columns).map((cards) => ({ type: 'cards', key: cards[0].id, articles: cards }));
@@ -49,6 +53,13 @@ function useListOffset(scrollRef, listRef, viewMode) {
   return offset;
 }
 
+// Asks for more items once the last rendered one is near the end of the list.
+function useEndReached(lastRenderedIndex, count, onEndReached) {
+  useEffect(() => {
+    if (count > 0 && lastRenderedIndex >= count - END_MARGIN) onEndReached?.();
+  }, [lastRenderedIndex, count, onEndReached]);
+}
+
 function ItemContent({ item, viewMode, props }) {
   const { feedMap, selectedArticleId, selection, onSelectArticle } = props;
   if (item.type === 'header') return <DayHeading label={item.label} />;
@@ -80,12 +91,13 @@ function ItemContent({ item, viewMode, props }) {
 }
 
 /**
- * The articles, rendered only near the visible part of `scrollRef`.
+ * The articles, rendered only near the visible part of `scrollRef`; calls
+ * onEndReached as the reader nears the end, to load the next page.
  * Rows (default) shows day headings and dense two-line rows; Grid lays out
  * rows of three cards; List and Compact one card per row.
  */
-export function VirtualArticleList({ scrollRef, articles, viewMode, ...props }) {
-  const items = useMemo(() => listItems(articles, viewMode), [articles, viewMode]);
+export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, onEndReached, ...props }) {
+  const items = useMemo(() => listItems(articles, viewMode, ranked), [articles, viewMode, ranked]);
   const indexById = useMemo(() => itemIndexById(items), [items]);
   const listRef = useRef(null);
   const scrollMargin = useListOffset(scrollRef, listRef, viewMode);
@@ -100,10 +112,12 @@ export function VirtualArticleList({ scrollRef, articles, viewMode, ...props }) 
     scrollMargin,
   });
   useScrollToActive(virtualizer, indexById, props.selectedArticleId);
+  const virtualItems = virtualizer.getVirtualItems();
+  useEndReached(virtualItems.at(-1)?.index ?? -1, items.length, onEndReached);
 
   return (
     <div ref={listRef} className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
-      {virtualizer.getVirtualItems().map((virtualItem) => {
+      {virtualItems.map((virtualItem) => {
         const item = items[virtualItem.index];
         return (
           <div

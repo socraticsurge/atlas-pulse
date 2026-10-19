@@ -11,14 +11,12 @@ const LibraryContext = createContext(null);
 const plural = (n, word) => `${n} ${word}${n !== 1 ? 's' : ''}`;
 
 
-// Keys bumped after mutations so lists and counts re-fetch. The articles
-// key carries what changed: 'added' (new articles only, so the list can fetch
-// just those) or 'changed' (anything else: reload the list).
+// Keys bumped after mutations so lists and counts re-fetch.
 function useRefreshKeys() {
-  const [articlesKey, setArticlesKey] = useState({ n: 0, kind: 'changed' });
+  const [articlesKey, setArticlesKey] = useState(0);
   const [countsKey, setCountsKey] = useState(0);
-  const bumpArticles = useCallback((kind = 'changed') => {
-    setArticlesKey((k) => ({ n: k.n + 1, kind: kind === 'added' ? 'added' : 'changed' }));
+  const bumpArticles = useCallback(() => {
+    setArticlesKey((k) => k + 1);
     setCountsKey((k) => k + 1);
   }, []);
   const bumpCounts = useCallback(() => setCountsKey((k) => k + 1), []);

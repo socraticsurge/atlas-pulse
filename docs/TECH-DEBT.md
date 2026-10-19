@@ -63,7 +63,6 @@ The second round fixed the items left open by the first, plus issues found while
 
 ### Still open
 
-- **Article list payload.** The list endpoint still returns every article (8.2 MB for 9,998 articles). On localhost it downloads and parses in about 0.2 s, so it no longer limits speed now that rendering is virtualized. Paging it means moving search and the AI filters to the server, which fits best with adopting TanStack Query for data fetching.
 - **CodeScene configuration.** Define the components from [ARCHITECTURE.md](ARCHITECTURE.md) in the `atlas-pulse` project and enable its own PR integration.
 
 ## 1. File-level Code Health (CodeScene)
@@ -191,5 +190,5 @@ Packages 1 and 2 come first because both new feature areas depend on them. The S
 
 - **CodeScene:** project `atlas-pulse` → Technical Debt → Code Health. Compare against the tables above.
 - **Local complexity scan:** these rules (`complexity: 9`, `max-lines-per-function: 70`, `max-depth: 3`, `max-params: 4`, `max-nested-callbacks: 3`) are part of `npm run lint` as warnings. The lint script's `--max-warnings` cap is the ratchet: it started at **58**, was lowered as each package landed, and is now **0**, so any new finding fails CI.
-- **Article list payload:** `curl -so /dev/null -w '%{size_download}\n' http://localhost:3001/api/reader/articles`. The Package 1 target is a page under 1 MB. It is 8.2 MB for 9,998 articles, see "Still open".
+- **Article list payload:** `curl -so /dev/null -w '%{size_download}\n' 'http://localhost:3001/api/reader/articles/page?view=all'`. The Package 1 target is a page under 1 MB. It is 93 KB per 150-row page (it was 8.2 MB for the whole list).
 - **Article list rendering:** open All Articles on a large library and count DOM elements (`document.getElementsByTagName('*').length`). With virtualization it stays in the hundreds whatever the library size.

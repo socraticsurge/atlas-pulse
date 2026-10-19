@@ -146,17 +146,19 @@ export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, j
 export async function removeFeed(id) { return readerFetch(`/feeds/${id}`, { method: 'DELETE' }); }
 
 // Articles
-/** A view's article list; with afterId, only articles added since (ids increase). */
-export async function fetchArticles(view = 'all', id, afterId) {
-  const params = new URLSearchParams({ view });
-  if (id !== undefined) params.set('id', id);
-  if (afterId) params.set('after', afterId);
-  return readerFetch(`/articles?${params}`);
+/**
+ * One page of a view's articles: { articles, total, unread, facets, nextOffset }.
+ * options: { q, filters: { sentiment, … }, aiOnly, offset, limit }.
+ */
+export async function fetchArticlePage(view = 'all', id, { q, filters = {}, aiOnly, offset = 0, limit } = {}) {
+  const fields = { view, id, offset, q, aiOnly: aiOnly ? '1' : '', limit, ...filters };
+  const set = Object.entries(fields).filter(([, value]) => value !== undefined && value !== null && value !== '');
+  return readerFetch(`/articles/page?${new URLSearchParams(set.map(([k, v]) => [k, String(v)]))}`);
+}
+export async function markViewRead(view, id) {
+  return readerFetch('/articles/mark-view-read', json({ view, id }));
 }
 export async function fetchArticle(id) { return readerFetch(`/articles/${id}`); }
-export async function searchArticleBodies(query) {
-  return readerFetch(`/articles/search?q=${encodeURIComponent(query)}`);
-}
 
 // List items omit article bodies; load full articles for any that lack one.
 export async function withFullContent(articles) {

@@ -5,9 +5,11 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 
 let reader;
+let pages;
 before(async () => {
   process.env.ATLAS_DATA_DIR = mkdtempSync(join(tmpdir(), 'atlas-claim-'));
   reader = await import('./reader.js');
+  pages = await import('./articlePages.js');
 });
 
 const statusOf = (id) => reader.getArticleById(id).aiStatus;
@@ -18,7 +20,7 @@ test('each queued article is claimed once, newest first', () => {
     { guid: 'old', title: 'Old', summary: '', content: '', publishedAt: '2026-10-01T00:00:00Z' },
     { guid: 'new', title: 'New', summary: '', content: '', publishedAt: '2026-10-18T00:00:00Z' },
   ]);
-  const ids = reader.getArticles('feed', feed.id).map((a) => a.id);
+  const ids = pages.getArticlePage('feed', feed.id).articles.map((a) => a.id);
   reader.bulkUpdateArticles(ids, { aiStatus: 'queued' });
 
   // Two tabs asking at once get different articles.
@@ -34,7 +36,7 @@ test('each queued article is claimed once, newest first', () => {
 test('a new tab only re-queues stale claims, not ones being worked on', () => {
   const feed = reader.createFeed({ title: 'R', url: 'https://r.example/rss' });
   reader.bulkInsertArticles(feed.id, [{ guid: 'a', title: 'A', summary: '', content: '' }, { guid: 'b', title: 'B', summary: '', content: '' }]);
-  const ids = reader.getArticles('feed', feed.id).map((a) => a.id);
+  const ids = pages.getArticlePage('feed', feed.id).articles.map((a) => a.id);
   reader.bulkUpdateArticles(ids, { aiStatus: 'queued' });
   const t0 = Date.now();
   const busy = reader.claimNextQueued(t0).article;     // a tab is working on this one

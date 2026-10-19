@@ -102,13 +102,6 @@ const stmts = {
 
   getArticleById: db.prepare(`SELECT * FROM articles WHERE id = ?`),
   getArticleByLink: db.prepare(`SELECT * FROM articles WHERE link = ? LIMIT 1`),
-  getArticlesByFeed: db.prepare(
-    `SELECT ${LIST_COLUMNS} FROM articles WHERE feed_id = ? ORDER BY published_at DESC`
-  ),
-  getAllArticles: db.prepare(`SELECT ${LIST_COLUMNS} FROM articles ORDER BY published_at DESC`),
-  getSavedArticles: db.prepare(
-    `SELECT ${LIST_COLUMNS} FROM articles WHERE is_bookmarked = 1 ORDER BY published_at DESC`
-  ),
   getUnreadByFeed: db.prepare(
     `SELECT feed_id, COUNT(*) AS cnt FROM articles WHERE is_read = 0 GROUP BY feed_id`
   ),
@@ -321,41 +314,6 @@ export function bulkInsertArticles(feedId, items) {
 }
 
 // List view of articles (no full content). view: all | feed | folder | saved | today
-/**
- * The list for a view, newest first. With afterId, only articles added since
- * (ids are increasing), so a refresh can fetch just what is new.
- */
-export function getArticles(view, id, afterId) {
-  const rows = viewArticles(view, id);
-  return afterId > 0 ? rows.filter((a) => a.id > afterId) : rows;
-}
-
-function viewArticles(view, id) {
-  switch (view) {
-    case 'feed':
-      return stmts.getArticlesByFeed.all(id).map(toListItem);
-    case 'folder': {
-      const feedIds = db.prepare(`SELECT id FROM feeds WHERE folder_id = ?`).all(id).map(r => r.id);
-      if (feedIds.length === 0) return [];
-      const placeholders = feedIds.map(() => '?').join(',');
-      return db.prepare(
-        `SELECT ${LIST_COLUMNS} FROM articles WHERE feed_id IN (${placeholders}) ORDER BY published_at DESC`
-      ).all(...feedIds).map(toListItem);
-    }
-    case 'saved':
-      return stmts.getSavedArticles.all().map(toListItem);
-    case 'today': {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      return db.prepare(
-        `SELECT ${LIST_COLUMNS} FROM articles WHERE published_at >= ? ORDER BY published_at DESC`
-      ).all(start.toISOString()).map(toListItem);
-    }
-    default:
-      return stmts.getAllArticles.all().map(toListItem);
-  }
-}
-
 // FTS5 query for one search term: phrases match exactly, single words also
 // match as prefixes ("cloud" finds "clouds"). Quotes are escaped by doubling.
 function ftsTerm(token) {

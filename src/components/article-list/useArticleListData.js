@@ -1,54 +1,79 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { fetchArticles } from '../../utils/api.js';
-import { maxArticleId, mergeNewArticles } from './listLogic.js';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchArticlePage } from '../../utils/api.js';
+import { flattenPages, patchPages } from './listLogic.js';
 
-/**
- * Articles for the active view, labelled with the library's feeds. Reloaded
- * when the view changes or refreshKey ({ n, kind }) is bumped; stale
- * responses are ignored. When the bump only added articles (a feed refresh)
- * and this view is already loaded, just the new ones are fetched and merged.
- * Only a view change shows the loading state: a refresh swaps the new list in
- * place, so the reader keeps their scroll position.
- */
-// The id to fetch articles after: the list's highest, when the bump only
-// added articles and this view is the one loaded; else 0 (a full reload).
-function deltaAfterId(refreshKey, latest, viewKey) {
-  if (refreshKey.kind !== 'added') return 0;
-  return latest.loadedView === viewKey ? maxArticleId(latest.articles) : 0;
+export const ARTICLES_KEY = 'articles';
+const PAGE_SIZE = 150;
+const NO_PAGES = { pages: [] };
+
+const toSets = (facets = {}) => Object.fromEntries(Object.entries(facets).map(([k, values]) => [k, new Set(values)]));
+
+// While a search or filter change loads, keep showing the previous results,
+// but not across views (a new view shows the loading state).
+const sameViewPlaceholder = (viewKey) => (previous, previousQuery) => (
+  previousQuery?.queryKey[1] === viewKey ? previous : undefined
+);
+
+// Every cached list is refetched when refreshKey (a number) is bumped (a
+// feed refresh, a batch result). The pages already loaded are fetched again,
+// so the reader keeps their place.
+function useRefetchOnRefresh(refreshKey, queryClient) {
+  const mounted = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey !== mounted.current) queryClient.invalidateQueries({ queryKey: [ARTICLES_KEY] });
+  }, [refreshKey, queryClient]);
 }
 
-const withNew = (afterId, data) => (prev) => (afterId ? mergeNewArticles(prev, data) : data);
-
-export function useArticleListData(activeView, refreshKey, feeds) {
-  const [articles, setArticles] = useState([]);
-  const [loadedView, setLoadedView] = useState(null);
-  const latest = useRef({ articles, loadedView });
-  useEffect(() => { latest.current = { articles, loadedView }; }, [articles, loadedView]);
-
+/**
+ * The active view's articles, a page at a time, narrowed on the server by
+ * the search query and AI filters ({ q, filters, aiOnly }). Also returns the
+ * view's counts and filter values, and calls to patch cached rows in place,
+ * refetch, and load the next page.
+ */
+export function useArticleListData(activeView, refreshKey, feeds, { q, filters, aiOnly }) {
+  const queryClient = useQueryClient();
   const viewKey = `${activeView.type}:${activeView.id}`;
-  useEffect(() => {
-    let cancelled = false;
-    const afterId = deltaAfterId(refreshKey, latest.current, viewKey);
-    fetchArticles(activeView.type, activeView.id, afterId)
-      .then((data) => { if (!cancelled) setArticles(withNew(afterId, data)); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setLoadedView(viewKey); });
-    return () => { cancelled = true; };
-  }, [activeView.type, activeView.id, viewKey, refreshKey]);
+  const query = useInfiniteQuery({
+    queryKey: [ARTICLES_KEY, viewKey, { q, filters, aiOnly }],
+    queryFn: ({ pageParam }) => fetchArticlePage(activeView.type, activeView.id, {
+      q, filters, aiOnly, offset: pageParam, limit: PAGE_SIZE,
+    }),
+    initialPageParam: 0,
+    getNextPageParam: (last) => last.nextOffset ?? undefined,
+    placeholderData: sameViewPlaceholder(viewKey),
+  });
+  useRefetchOnRefresh(refreshKey, queryClient);
 
+  const { pages } = query.data ?? NO_PAGES;
+  const articles = useMemo(() => flattenPages(pages), [pages]);
+  const first = pages[0];
+  const facets = useMemo(() => toSets(first?.facets), [first]);
   const feedMap = useMemo(() => Object.fromEntries(feeds.map((f) => [f.id, f])), [feeds]);
 
-  // Optimistic update of several articles in local state.
+  // Optimistic update of several articles in every cached list (and its unread count).
   const updateLocal = useCallback((ids, changes) => {
     const idSet = new Set(ids);
-    setArticles((prev) => prev.map((a) => (idSet.has(a.id) ? { ...a, ...changes } : a)));
-  }, []);
+    queryClient.setQueriesData({ queryKey: [ARTICLES_KEY] }, (data) => patchPages(data, idSet, changes));
+  }, [queryClient]);
 
-  // Puts back each article's own earlier values (to undo a failed update).
-  const restoreLocal = useCallback((snapshots) => {
-    const byId = new Map(snapshots.map((s) => [s.id, s]));
-    setArticles((prev) => prev.map((a) => (byId.has(a.id) ? { ...a, ...byId.get(a.id) } : a)));
-  }, []);
+  const reload = useCallback(() => queryClient.invalidateQueries({ queryKey: [ARTICLES_KEY] }), [queryClient]);
 
-  return { articles, loading: loadedView !== viewKey, feedMap, updateLocal, restoreLocal };
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query;
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  return {
+    articles,
+    total: first?.total ?? 0,
+    unread: first?.unread ?? 0,
+    facets,
+    loading: query.isPending,
+    loadingMore: isFetchingNextPage,
+    feedMap,
+    updateLocal,
+    reload,
+    loadMore,
+  };
 }

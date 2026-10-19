@@ -6,10 +6,12 @@ import { join } from 'path';
 import { canonicalizeUrl } from '../../src/utils/helpers.js';
 
 let reader;
+let pages;
 before(async () => {
   // Point the db layer at a throwaway directory before it opens anything.
   process.env.ATLAS_DATA_DIR = mkdtempSync(join(tmpdir(), 'atlas-ingest-'));
   reader = await import('./reader.js');
+  pages = await import('./articlePages.js');
 });
 
 // An article as the client sends it (toArticle in src/utils/feedSync.js).
@@ -52,7 +54,7 @@ test('unreadable dates are stored as the insert time, never as raw text', () => 
     item({ guid: 'd1', link: 'https://d.example/1', publishedAt: 'Sat, 18 Oct 2026 10:00:00 IST' }),
     item({ guid: 'd2', link: 'https://d.example/2', publishedAt: 'Mon, 01 Jan 2001 10:00:00 XYZT' }),
   ]);
-  const dates = reader.getArticles('feed', feed.id).map((a) => a.publishedAt);
+  const dates = pages.getArticlePage('feed', feed.id).articles.map((a) => a.publishedAt);
   assert.ok(dates.includes('2026-10-18T04:30:00.000Z'));
   assert.ok(dates.every((d) => /^\d{4}-\d{2}-\d{2}T/.test(d)), dates.join(', '));
 });

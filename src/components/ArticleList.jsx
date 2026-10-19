@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { bulkUpdateArticles } from '../utils/api.js';
+import { bulkUpdateArticles, markViewRead } from '../utils/api.js';
 import { readStored, writeStored } from '../utils/storage.js';
 import { useLibrary } from '../app/LibraryContext.jsx';
 import { useToast } from '../app/ToastContext.jsx';
-import { useArticleSearch } from '../hooks/useArticleSearch.js';
+import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { EmptyList, LoadingCards } from './article-list/ArticleCards.jsx';
 import { FilterBar } from './article-list/FilterBar.jsx';
 import { ListHeader, SearchBar } from './article-list/ListHeader.jsx';
 import { SelectionBar } from './article-list/SelectionBar.jsx';
-import {
-  applyFilters, articlesToCSV, availableFilters, downloadCSV, emptyStateText, viewTitle,
-} from './article-list/listLogic.js';
+import { articlesToCSV, downloadCSV, emptyStateText, viewTitle } from './article-list/listLogic.js';
 import { useArticleListData } from './article-list/useArticleListData.js';
 import { useConfirmAction } from '../hooks/useConfirmAction.js';
 import { useListKeyboard } from './article-list/useListKeyboard.js';
@@ -21,7 +19,7 @@ import { on } from '../lib/appEvents.js';
 import { cn } from '../lib/utils.js';
 
 const VIEW_MODE_KEY = 'atlas-pulse-view-mode';
-const INITIAL_REFRESH = { n: 0, kind: 'changed' };
+const SEARCH_DEBOUNCE_MS = 250;
 // Padding of the scroll container per view mode (rows and cards carry their own sides).
 const CONTENT_PADDING = { magazine: 'px-3.5 pt-3.5 pb-5', rows: 'pt-1 pb-3' };
 
@@ -59,12 +57,10 @@ function useNotifyVisible(articles, onArticlesLoaded) {
   }, [articles, onArticlesLoaded]);
 }
 
-// The current values of `keys` for the articles in `ids`.
-function snapshot(articles, ids, keys) {
-  const idSet = new Set(ids);
-  return articles
-    .filter((a) => idSet.has(a.id))
-    .map((a) => Object.fromEntries([['id', a.id], ...keys.map((k) => [k, a[k]])]));
+// A new search or filter starts the results at the top.
+function useScrollTopOnQuery(scrollRef, query) {
+  const key = JSON.stringify(query);
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [scrollRef, key]);
 }
 
 // The view's current name (a feed or folder may have been renamed since it was opened).
@@ -84,24 +80,33 @@ function useReaderChanges(changedArticle, updateLocal) {
   }, [changedArticle, updateLocal]);
 }
 
-// Bulk actions on the selection and on the whole list.
-function useListActions({ data, selection, visible, sourceOf, onCountChanged, onOpenAIPanel }) {
+// Bulk actions on the selection and on the whole view.
+function useListActions({ data, activeView, selection, visible, sourceOf, onCountChanged, onOpenAIPanel }) {
   const selected = useCallback(() => visible.filter((a) => selection.has(a.id)), [visible, selection]);
 
   const showToast = useToast();
-  // Optimistic: shown at once, and put back if the server rejects it.
-  const update = useCallback(async (ids, changes) => {
-    if (ids.length === 0) return;
-    const before = snapshot(data.articles, ids, Object.keys(changes));
-    data.updateLocal(ids, changes);
+  // Optimistic: shown at once; on failure the list is refetched from the server.
+  const commit = useCallback(async (apply, save) => {
+    apply();
     try {
-      await bulkUpdateArticles(ids, changes);
+      await save();
       onCountChanged?.();
     } catch (err) {
-      data.restoreLocal(before);
       showToast(`Couldn't update articles: ${err.message}`, 'error');
+      data.reload();
     }
   }, [data, onCountChanged, showToast]);
+
+  const update = useCallback((ids, changes) => (ids.length === 0 ? undefined : commit(
+    () => data.updateLocal(ids, changes),
+    () => bulkUpdateArticles(ids, changes),
+  )), [data, commit]);
+
+  // Every unread article in the view, loaded or not; the counts come back from the server.
+  const markAllRead = useCallback(() => commit(
+    () => data.updateLocal(data.articles.filter((a) => !a.isRead).map((a) => a.id), { isRead: 1 }),
+    async () => { await markViewRead(activeView.type, activeView.id); data.reload(); },
+  ), [data, commit, activeView.type, activeView.id]);
 
   return useMemo(() => ({
     clear: selection.clear,
@@ -110,8 +115,8 @@ function useListActions({ data, selection, visible, sourceOf, onCountChanged, on
     bookmark: async () => { await update([...selection.ids], { isBookmarked: 1 }); selection.clear(); },
     exportCSV: () => { downloadCSV(articlesToCSV(selected(), sourceOf), 'atlas-pulse-articles.csv'); selection.clear(); },
     openAIPanel: (operation) => onOpenAIPanel?.(selected().map((a) => ({ ...a, feedTitle: sourceOf(a) || 'Unknown' })), operation),
-    markAllRead: () => update(data.articles.filter((a) => !a.isRead).map((a) => a.id), { isRead: 1 }),
-  }), [selection, visible, update, selected, sourceOf, onOpenAIPanel, data.articles]);
+    markAllRead,
+  }), [selection, visible, update, selected, sourceOf, onOpenAIPanel, markAllRead]);
 }
 
 function ListContent({ loading, articles, empty, ...listProps }) {
@@ -122,30 +127,30 @@ function ListContent({ loading, articles, empty, ...listProps }) {
 
 export default function ArticleList({
   activeView, selectedArticleId, onSelectArticle, onArticlesLoaded,
-  batch, onOpenAIPanel, refreshKey = INITIAL_REFRESH, onCountChanged, changedArticle,
+  batch, onOpenAIPanel, refreshKey = 0, onCountChanged, changedArticle,
 }) {
   const library = useLibrary();
-  const data = useArticleListData(activeView, refreshKey, library.feeds);
-  useReaderChanges(changedArticle, data.updateLocal);
-  const title = useLiveViewTitle(activeView);
-  const [viewMode, setViewMode] = useViewMode();
   const [search, searchInputRef] = useSearchState();
   const [activeFilters, setActiveFilters] = useState({});
   const [aiOnly, setAiOnly] = useState(false);
+  const q = useDebouncedValue(search.query.trim(), SEARCH_DEBOUNCE_MS);
+  const data = useArticleListData(activeView, refreshKey, library.feeds, { q, filters: activeFilters, aiOnly });
+  useReaderChanges(changedArticle, data.updateLocal);
+  const title = useLiveViewTitle(activeView);
+  const [viewMode, setViewMode] = useViewMode();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const selection = useSelection(`${activeView.type}:${activeView.id}`);
   const scrollRef = useRef(null);
+  useScrollTopOnQuery(scrollRef, { q, activeFilters, aiOnly });
 
   const sourceOf = useCallback((article) => data.feedMap[article.feedId]?.title, [data.feedMap]);
-  const searched = useArticleSearch(data.articles, search.query, sourceOf);
-  const available = useMemo(() => availableFilters(searched), [searched]);
-  const visible = useMemo(() => applyFilters(searched, { activeFilters, aiOnly }), [searched, activeFilters, aiOnly]);
+  const visible = data.articles;
   useNotifyVisible(visible, onArticlesLoaded);
   useListKeyboard({ search, selection });
 
-  const actions = useListActions({ data, selection, visible, sourceOf, onCountChanged, onOpenAIPanel });
+  const actions = useListActions({ data, activeView, selection, visible, sourceOf, onCountChanged, onOpenAIPanel });
   const markAllRead = useConfirmAction(actions.markAllRead);
-  const unreadCount = data.articles.filter((a) => !a.isRead).length;
+  const unreadCount = data.unread;
   const activeCount = Object.values(activeFilters).filter(Boolean).length + (aiOnly ? 1 : 0);
   const hasActiveFilters = activeCount > 0;
   const showFilters = filtersOpen || hasActiveFilters; // an active filter stays in view
@@ -155,7 +160,7 @@ export default function ArticleList({
     <div className="article-list-panel">
       <ListHeader
         title={title}
-        count={visible.length}
+        count={data.total}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         filters={{ open: showFilters, activeCount, toggle: () => setFiltersOpen((o) => !o) }}
@@ -166,7 +171,7 @@ export default function ArticleList({
       />
       <SearchBar search={search} inputRef={searchInputRef} />
       {showFilters && (
-        <FilterBar available={available} active={activeFilters} onChange={setActiveFilters} aiOnly={aiOnly} onToggleAiOnly={() => setAiOnly((v) => !v)} />
+        <FilterBar available={data.facets} active={activeFilters} onChange={setActiveFilters} aiOnly={aiOnly} onToggleAiOnly={() => setAiOnly((v) => !v)} />
       )}
       <div ref={scrollRef} className={cn('min-h-0 flex-1 overflow-y-auto', CONTENT_PADDING[viewMode] ?? 'pb-5', selection.size > 0 && 'pb-16')}>
         <ListContent
@@ -179,6 +184,8 @@ export default function ArticleList({
           selectedArticleId={selectedArticleId}
           selection={selection}
           onSelectArticle={onSelectArticle}
+          onEndReached={data.loadMore}
+          ranked={Boolean(q)}
         />
       </div>
       <ListKeyHints />
