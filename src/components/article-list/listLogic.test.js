@@ -89,3 +89,10 @@ test('lists of saves group under save-date headings', () => {
   const labels = withDayHeaders(saves, now, BY_SAVED).filter((i) => i.type === 'header').map((i) => i.label);
   assert.deepEqual(labels, ['Saved today', 'Saved this week']);
 });
+
+test('collections have their own title, empty state and save-date headings', () => {
+  assert.equal(viewTitle({ type: 'collection', name: 'Agent Evals' }), 'Agent Evals');
+  assert.equal(viewTitle({ type: 'collection' }), 'Collection');
+  assert.equal(emptyStateText({ viewType: 'collection' }).title, 'Nothing in this collection yet');
+  assert.equal(groupingFor('collection'), BY_SAVED);
+});

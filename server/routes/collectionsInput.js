@@ -19,14 +19,16 @@ function parseDescription(description) {
   return { value: description.trim().slice(0, DESCRIPTION_MAX) };
 }
 
+const changesNothing = (value) => Object.values(value).every((v) => v === undefined);
+
 /** { name, description } for a new collection (required) or an edit (either). */
 export function parseCollection(body, { required }) {
   const name = parseName(body.name, required);
   if (name.error) return name;
   const description = parseDescription(body.description);
   if (description.error) return description;
-  if (!required && name.value === undefined && description.value === undefined) return { error: 'nothing to change' };
-  return { value: { name: name.value, description: description.value } };
+  const value = { name: name.value, description: description.value };
+  return changesNothing(value) ? { error: 'nothing to change' } : { value };
 }
 
 /** { articleIds } as positive integers, at most ARTICLES_MAX. */
