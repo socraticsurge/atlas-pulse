@@ -2,7 +2,8 @@ import { Router } from 'express';
 import {
   createStudioItem, deleteStudioItem, getStudioItem, listStudioItems, updateStudioItem,
 } from '../db/studio.js';
-import { parseEdit, parseNewItem } from './studioInput.js';
+import { parseEdit, parseExport, parseNewItem } from './studioInput.js';
+import { exportPage } from './pageExport.js';
 
 const router = Router();
 
@@ -45,6 +46,17 @@ router.put('/:id', (req, res) => {
     const item = updateStudioItem(id, value);
     return item ? res.json(item) : res.status(404).json({ error: 'Not found' });
   } catch (err) { return fail(res, err); }
+});
+
+/** POST /api/studio/:id/export { format, design?, origin } — the page as a PNG or PDF download. */
+router.post('/:id/export', (req, res) => {
+  const id = idOf(req);
+  if (!id) return res.status(400).json({ error: 'invalid id' });
+  const { value, error } = parseExport(req.body);
+  if (error) return res.status(400).json({ error });
+  const item = getStudioItem(id);
+  if (!item) return res.status(404).json({ error: 'Not found' });
+  return exportPage(item, value, res);
 });
 
 /** DELETE /api/studio/:id */

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { readStored, writeStored } from '../../utils/storage.js';
 import { downloadAsDocx, downloadAsMarkdown } from '../../utils/docx.js';
 import { DeleteButton } from '../library/ItemActions.jsx';
+import ExportButtons from './ExportButtons.jsx';
 import PagePreview from './PagePreview.jsx';
 import { DEFAULT_DESIGN, DESIGNS } from './templates/designs/index.js';
 import { styleLabel } from '../../ai/newsletter.js';
@@ -75,7 +76,7 @@ function CopyButton({ text }) {
 }
 
 // Title, save state, layout and the item's actions.
-function EditorBar({ draft, status, onEdit, onRetry, mode, onModeChange, onDelete }) {
+function EditorBar({ itemId, draft, status, onEdit, onRetry, mode, onModeChange, onDelete }) {
   const filename = draft.title.replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').toLowerCase() || 'newsletter';
   return (
     <div className="shrink-0 border-b border-border px-6 pt-4 pb-3">
@@ -97,6 +98,7 @@ function EditorBar({ draft, status, onEdit, onRetry, mode, onModeChange, onDelet
           <CopyButton text={draft.bodyMd} />
           <button type="button" onClick={() => downloadAsMarkdown(filename, draft.bodyMd)} className={ACTION}><HiOutlineArrowDownTray /> Markdown</button>
           <button type="button" onClick={() => downloadAsDocx(filename, draft.bodyMd)} className={ACTION}><HiOutlineArrowDownTray /> Word</button>
+          <ExportButtons itemId={itemId} design={draft.template} beforeExport={onRetry} />
           <DeleteButton what="newsletter" onDelete={onDelete} />
         </div>
       </div>
@@ -156,7 +158,7 @@ export default function StudioEditor({ item, onDelete, onOpenSource }) {
   if (!draft) return null;
   return (
     <section aria-label="Editor" className="flex min-w-0 flex-1 flex-col">
-      <EditorBar draft={draft} status={status} onEdit={edit} onRetry={retry} mode={mode} onModeChange={setMode} onDelete={onDelete} />
+      <EditorBar itemId={item.id} draft={draft} status={status} onEdit={edit} onRetry={retry} mode={mode} onModeChange={setMode} onDelete={onDelete} />
       <Panes mode={mode} draft={draft} item={item} onEdit={edit} onOpenSource={onOpenSource} />
     </section>
   );

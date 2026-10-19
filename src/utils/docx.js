@@ -1,3 +1,5 @@
+import { saveBlob } from './download.js';
+
 // The docx library is large, so it loads only when a Word download is asked
 // for. Builders take it as `D` (the module's exports).
 
@@ -46,14 +48,7 @@ function markdownToDocxChildren(D, markdown) {
 }
 
 function downloadBlob(blob, filename, extension) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename.replace(/[^a-z0-9\-_]/gi, '_').toLowerCase() + extension;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  saveBlob(blob, filename.replace(/[^a-z0-9\-_]/gi, '_').toLowerCase() + extension);
 }
 
 /** A Word document (Blob) from markdown; loads the docx library on first use. */

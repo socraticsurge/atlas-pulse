@@ -1,0 +1,17 @@
+/* The page alone, for export. The PDF is A4: the 1000 px page is scaled to
+   the paper's width (pageRenderer.js), and nothing that reads as one unit is
+   split across pages. */
+
+html, body { margin: 0; padding: 0; }
+
+/* No sheet margins (Chrome leaves them white); the page's own padding is
+   repeated on every sheet instead, so the paper colour runs edge to edge. */
+@page { size: A4; margin: 0; }
+
+@media print {
+  /* 48px: a design whose masthead meets the top edge pulls it up by this much. */
+  .nl { box-decoration-break: clone; -webkit-box-decoration-break: clone; padding-top: 48px; padding-bottom: 48px; }
+  .nl-masthead, .nl-front, .nl-panel, .nl-callout, .nl-pullquote, .nl-quote, .nl-list li, .nl-panel-items li { break-inside: avoid; }
+  .nl-h, .nl-kicker, .nl-panel-title, .nl-callout-label { break-after: avoid; }
+  .nl-p { orphans: 3; widows: 3; }
+}

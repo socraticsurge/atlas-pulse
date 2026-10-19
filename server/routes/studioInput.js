@@ -1,3 +1,5 @@
+import { localOrigin } from '../utils/loopback.js';
+
 // Checks Studio requests before they reach the database. Each parser returns
 // { value } with only the known fields, or { error } with a message for a 400.
 
@@ -83,4 +85,18 @@ export function parseEdit(body = {}) {
   const error = editProblem(body);
   if (error) return { error };
   return { value: { title: body.title?.trim(), bodyMd: body.bodyMd, template: body.template } };
+}
+
+export const EXPORT_FORMATS = ['png', 'pdf'];
+
+/**
+ * An export: { format: 'png' | 'pdf', design?, origin } — origin is where this
+ * app is served (the export renders its print page), and must be this machine.
+ */
+export function parseExport(body = {}) {
+  if (!EXPORT_FORMATS.includes(body.format)) return { error: `format must be one of: ${EXPORT_FORMATS.join(', ')}` };
+  if (body.design !== undefined && !isDesignId(body.design)) return { error: 'design must be a design id' };
+  const origin = localOrigin(body.origin);
+  if (!origin) return { error: 'origin must be this app on this machine' };
+  return { value: { format: body.format, design: body.design, origin } };
 }

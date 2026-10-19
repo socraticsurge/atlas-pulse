@@ -11,6 +11,7 @@ import aiRouter from './routes/ai.js';
 import summariesRouter from './routes/summaries.js';
 import highlightsRouter from './routes/highlights.js';
 import studioRouter from './routes/studio.js';
+import { isLocalHostname } from './utils/loopback.js';
 import ollamaRouter from './routes/ollama.js';
 import readerRouter from './routes/reader.js';
 import settingsRouter from './routes/settings.js';
@@ -21,13 +22,6 @@ const PORT = Number(process.env.PORT) || 3001;
 // Bind to loopback by default so the no-auth API is not exposed to the LAN.
 // Override with HOST=0.0.0.0 only if you deliberately want network access.
 const HOST = process.env.HOST || '127.0.0.1';
-
-const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
-
-// *.localhost names always resolve to loopback (RFC 6761).
-function isLocalHostname(hostname) {
-  return LOOPBACK_HOSTS.has(hostname) || hostname.endsWith('.localhost');
-}
 
 // This API has no auth by design (local, single-user). A wildcard CORS policy
 // would let any website the user visits read/delete their data cross-origin,

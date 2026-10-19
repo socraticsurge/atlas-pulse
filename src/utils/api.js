@@ -94,6 +94,16 @@ export async function deleteStudioItem(id) {
   return request(`/studio/${id}`, 'Failed to delete the newsletter', { method: 'DELETE' });
 }
 
+/**
+ * The item's page as a PNG or PDF ({ blob, filename }), rendered by the
+ * server from this app's print page (so it passes this origin).
+ */
+export async function exportStudioItem(id, { format, design }) {
+  const res = await send(`/studio/${id}/export`, 'Export failed', json({ format, design, origin: window.location.origin }));
+  const filename = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? `newsletter.${format}`;
+  return { blob: await res.blob(), filename };
+}
+
 // ── Highlights ───────────────────────────────────────────────────────────────
 
 export async function saveHighlight(data) {
