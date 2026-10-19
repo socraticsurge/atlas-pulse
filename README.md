@@ -59,6 +59,8 @@ Open **http://localhost:5173** in Chrome. `npm run dev` starts the Vite frontend
 
 To run it without the dev server, `npm start` builds the app and serves everything from **http://localhost:3001** (or your `PORT`).
 
+**On Windows**, commands in this README that set a variable, like `PORT=3002 npm run dev`, are written for macOS and Linux. In PowerShell write `$env:PORT=3002; npm run dev`, and in Command Prompt `set "PORT=3002" && npm run dev`. nvm-windows doesn't read `.nvmrc`, so run `nvm install 24` and `nvm use 24`. The background service below is macOS-only; use `npm start` instead.
+
 Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), search Google News, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
 
 ### Run it like an app (macOS)
@@ -305,7 +307,7 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 
 **`… was compiled against a different Node.js version … NODE_MODULE_VERSION …`.** You changed Node versions after installing. Run `npm ci`. With the background service, run `npm run service install` too, so it uses the new Node.
 
-**"Port 3001 is already in use" or "Port 5173 is already in use".** Another program has the port. See which with `lsof -i :3001` (or `:5173`) and quit it, or give the API another port: `PORT=3002 npm run dev`.
+**"Port 3001 is already in use" or "Port 5173 is already in use".** Another program has the port. See which with `lsof -i :3001` (or `:5173`; on Windows, `netstat -ano | findstr :3001`) and quit it, or give the API another port: `PORT=3002 npm run dev`.
 
 **The app won't load, or it looks empty and adding a feed fails.** The local server isn't running or can't be reached. Check the terminal where you ran `npm run dev` for an error. With the background service, run `npm run service status` and `npm run service logs`. After pulling updates, run `npm run service restart`.
 

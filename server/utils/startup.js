@@ -20,12 +20,19 @@ export function readyMessage({ url, dev, built }) {
   return `Atlas Pulse API is up on ${url}, but there is no built app to serve. Use npm start (builds it) or npm run dev.`;
 }
 
+// The commands to suggest, in the shell people have: PowerShell on Windows.
+const SHELL = {
+  win32: { whoHas: (port) => `netstat -ano | findstr :${port}`, withPort: (port) => `$env:PORT=${port}; npm run dev` },
+  other: { whoHas: (port) => `lsof -i :${port}`, withPort: (port) => `PORT=${port} npm run dev` },
+};
+
 /** Why the server couldn't listen on `port`, and what to do about it. */
-export function listenFailure(err, port) {
+export function listenFailure(err, port, platform = process.platform) {
+  const shell = SHELL[platform] ?? SHELL.other;
   if (err.code === 'EADDRINUSE') {
     return `Port ${port} is already in use, so Atlas Pulse can't start.\n`
-      + `Quit whatever is using it (lsof -i :${port} shows what), or use another port, for example: PORT=${port + 1} npm run dev`;
+      + `Quit whatever is using it (${shell.whoHas(port)} shows what), or use another port, for example: ${shell.withPort(port + 1)}`;
   }
-  if (err.code === 'EACCES') return `Atlas Pulse isn't allowed to use port ${port}. Use another port, for example: PORT=3002 npm run dev`;
+  if (err.code === 'EACCES') return `Atlas Pulse isn't allowed to use port ${port}. Use another port, for example: ${shell.withPort(3002)}`;
   return `Atlas Pulse couldn't start: ${err.message}`;
 }
