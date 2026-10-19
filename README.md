@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/version-2.0.0-f26b1d" alt="Version 2.0.0">
   <img src="https://img.shields.io/badge/license-MIT-0b3b6f" alt="License: MIT">
   <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
-  <img src="https://img.shields.io/badge/node-%E2%89%A520.19-0b3b6f" alt="Node 20.19 or later">
+  <img src="https://img.shields.io/badge/node-22.13%2B%20%7C%2024%2B-0b3b6f" alt="Node 22.13+ or 24+">
   <img src="https://img.shields.io/badge/PRs-welcome-f26b1d" alt="PRs welcome">
 </p>
 
@@ -46,7 +46,7 @@ It runs entirely on your own machine. There is no account, no cloud and no track
 
 ## Quick start
 
-**You need:** Node.js 20.19 or later, and desktop Google Chrome 148+ for the built-in Gemini Nano AI. Ollama is optional.
+**You need:** Node.js 22.13+ or 24+ (24 LTS recommended; with nvm, run `nvm install` in the folder), and desktop Google Chrome 148+ for the built-in Gemini Nano AI. Ollama is optional.
 
 ```bash
 git clone https://github.com/socraticsurge/atlas-pulse.git
@@ -297,6 +297,8 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 ---
 
 ## Troubleshooting
+
+**"Atlas Pulse needs Node.js …", or `SyntaxError: … does not provide an export named 'styleText'`.** Your Node is too old. Install the current LTS from [nodejs.org](https://nodejs.org) (or `nvm install`), then reinstall the dependencies, which are built for the Node that installed them: `rm -rf node_modules && npm install`.
 
 **The app won't load.** Check the terminal. `EADDRINUSE` means a port is taken:
 

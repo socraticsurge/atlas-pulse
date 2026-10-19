@@ -35,8 +35,8 @@ export default defineConfig([
     },
   },
   {
-    // Server code runs on Node, not in the browser.
-    files: ['server/**/*.js'],
+    // Server code and scripts run on Node, not in the browser.
+    files: ['server/**/*.js', 'scripts/**/*.js'],
     languageOptions: {
       globals: globals.node,
     },
