@@ -43,21 +43,56 @@ const BLOCKED_V4 = [
   ['240.0.0.0', 4],     // reserved, incl. 255.255.255.255 broadcast
 ];
 
-function isBlockedIpv4(ip) {
-  const int = ipv4ToInt(ip);
+function isBlockedIpv4Int(int) {
   return BLOCKED_V4.some(([base, bits]) => inCidr(int, base, bits));
 }
 
+const isBlockedIpv4 = (ip) => isBlockedIpv4Int(ipv4ToInt(ip));
+
+// An IPv6 address as a 128-bit number. URL does the parsing, and writes a
+// trailing a.b.c.d as hex groups (::ffff:127.0.0.1 → ::ffff:7f00:1), so every
+// spelling of an address comes out the same.
+function ipv6ToBigInt(ip) {
+  const hex = new URL(`http://[${ip.split('%')[0]}]/`).hostname.slice(1, -1); // no zone id, no brackets
+  const [head, tail] = hex.split('::');
+  const groups = (part) => (part ? part.split(':') : []);
+  const left = groups(head);
+  const right = groups(tail);
+  const all = [...left, ...Array(8 - left.length - right.length).fill('0'), ...right];
+  return all.reduce((acc, group) => (acc << 16n) | BigInt(parseInt(group, 16)), 0n);
+}
+
+const v6Cidr = (base, bits) => ({ base: ipv6ToBigInt(base), shift: BigInt(128 - bits) });
+const inV6Cidr = (value, { base, shift }) => (value >> shift) === (base >> shift);
+
+// Prefixes that carry an IPv4 address (at bit `at` from the right): such an
+// address is as public as that IPv4, whichever way it is written.
+const V6_WITH_V4 = [
+  { ...v6Cidr('::', 96), at: 0n },          // IPv4-compatible (also :: and ::1)
+  { ...v6Cidr('::ffff:0:0', 96), at: 0n },  // IPv4-mapped
+  { ...v6Cidr('64:ff9b::', 96), at: 0n },   // NAT64 (DNS64 networks reach IPv4-only sites this way)
+  { ...v6Cidr('2002::', 16), at: 80n },     // 6to4
+];
+// Only 2000::/3 is global unicast. Outside it: loopback, link-local
+// (fe80::/10), unique-local (fc00::/7), multicast, site-local and reserved space.
+const GLOBAL_UNICAST = v6Cidr('2000::', 3);
+const BLOCKED_V6 = [
+  v6Cidr('2001::', 32),     // Teredo: the IPv4 inside is obscured, so it can't be checked
+  v6Cidr('2001:2::', 48),   // benchmarking
+  v6Cidr('2001:db8::', 32), // documentation
+];
+
 function isBlockedIpv6(ip) {
-  const addr = ip.toLowerCase().split('%')[0]; // strip zone id
-  if (addr === '::1' || addr === '::') return true;
-  if (addr.startsWith('fe80')) return true;          // link-local
-  if (addr.startsWith('fc') || addr.startsWith('fd')) return true; // unique-local fc00::/7
-  if (addr.startsWith('ff')) return true;            // multicast
-  // IPv4-mapped (::ffff:a.b.c.d) — check the embedded v4 address
-  const mapped = addr.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return isBlockedIpv4(mapped[1]);
-  return false;
+  let value;
+  try {
+    value = ipv6ToBigInt(ip);
+  } catch {
+    return true; // not an address URL can read — refuse
+  }
+  const withV4 = V6_WITH_V4.find((cidr) => inV6Cidr(value, cidr));
+  if (withV4) return isBlockedIpv4Int(Number((value >> withV4.at) & 0xffffffffn));
+  if (!inV6Cidr(value, GLOBAL_UNICAST)) return true;
+  return BLOCKED_V6.some((cidr) => inV6Cidr(value, cidr));
 }
 
 function isBlockedIp(ip) {
