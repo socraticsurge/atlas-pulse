@@ -80,7 +80,9 @@ export default function HighlightToolbar({ containerRef, article, feedTitle, onS
           placeholder="Add a note…"
           value={note}
           onChange={(e) => setNote(e.target.value)}
+          aria-label="Note on this highlight"
           rows={2}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- the note field opens when the user asks to add a note
           autoFocus
           className="w-full resize-none rounded-md border border-border bg-[var(--bg-primary)] p-2 font-sans text-[12.5px] text-foreground outline-none focus:border-primary"
         />

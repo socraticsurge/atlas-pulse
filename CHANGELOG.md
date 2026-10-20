@@ -3,6 +3,14 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
+## Unreleased
+
+### Fixed
+
+- **Feeds refresh with the app closed.** Auto-refresh ran in the browser tab, so nothing was fetched once the tab was closed, unloaded by Chrome, or the browser quit. A feed lists only its latest items, so fast ones lost stories for good: Techmeme keeps about 8 hours, arXiv a single day. The local server now refreshes every feed on the Auto-refresh interval by itself, and the app picks up what it found within a minute. The Refresh buttons ask the server too, and a refresh it is already running is joined rather than repeated. New articles are queued for background processing after each refresh, as before; processing still needs the app open. A sleeping computer still refreshes nothing; the first check after it wakes catches up.
+- **Accessibility: readable text in both themes.** An axe-core audit against WCAG 2.2 AA found text below the 4.5:1 contrast minimum: secondary details such as counts, times and sources (in both themes), accent-coloured text in the light theme, red Delete buttons, and toolbars faded at rest. The colours were adjusted to pass on every background, with a test that checks each theme's colours (#139).
+- **Accessibility: everything works from the keyboard.** Articles in the list can be reached with `Tab` and opened with `Enter`; sidebar rows no longer nest buttons inside buttons; folders expand from the keyboard; the sidebar's "…" menu opens under its button with focus inside it; every menu follows the arrow keys, `Home`, `End` and `Esc`. Screen readers get a valid state on the Save button, names for image-only links in articles, and scrollable code blocks they can reach. `npm run lint` now includes the jsx-a11y rules (#139).
+
 ## 2.1.0 (2026-10-19)
 
 Setup and first use, made clearer. Atlas Pulse now says what is wrong and how to fix it: an unsupported Node, a taken port, a stopped server, or an AI engine it can't use. Medium articles come through with their images and without the page clutter, and installs no longer report security warnings.

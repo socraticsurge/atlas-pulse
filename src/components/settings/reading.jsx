@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useLibrary } from '../../app/LibraryContext.jsx';
 import { emit } from '../../lib/appEvents.js';
 import { VIEW_MODES } from '../article-list/viewModes.js';
 import { AUTO_REFRESH_OPTIONS, getAutoRefreshMinutes, saveAutoRefreshMinutes } from '../../utils/constants.js';
@@ -23,13 +22,12 @@ export function ViewModeControl() {
   return <Segmented label="List view" value={mode} onChange={change} options={VIEW_MODES.map((m) => ({ value: m.id, label: m.label }))} />;
 }
 
+// The server reads this setting from settings.json and refreshes on its own.
 export function AutoRefreshControl() {
-  const { setAutoRefreshMinutes } = useLibrary();
   const [minutes, setMinutes] = useState(getAutoRefreshMinutes);
   const change = (value) => {
     saveAutoRefreshMinutes(value);
     setMinutes(value);
-    setAutoRefreshMinutes?.(value);
   };
   return <Segmented label="Auto-refresh" value={minutes} onChange={change} options={AUTO_REFRESH_OPTIONS} />;
 }

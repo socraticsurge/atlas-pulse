@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { useClickOutside } from '../../hooks/useClickOutside.js';
+import { useMenuKeys } from '../../hooks/useMenuKeys.js';
 
 const AI_OPERATIONS = {
   compare:    { min: 2, max: 5,  label: 'Compare',    hint: '2–5' },
@@ -18,6 +19,7 @@ function OperationOption({ op, count, onPick }) {
   return (
     <button
       type="button"
+      role="menuitem"
       disabled={disabled}
       onClick={onPick}
       title={disabled ? `Needs ${op.hint} articles` : undefined}
@@ -33,14 +35,17 @@ function AIActionsMenu({ count, onOpenAIPanel }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useClickOutside(open, close);
+  const [menuRef, onMenuKeyDown] = useMenuKeys(open, close);
+  // Not `relative`: the menu anchors to the toolbar and opens above all of it,
+  // so on a bar wrapped onto two lines it never covers the first line's buttons.
   return (
-    <div className="relative" ref={ref}>
-      <Button size="sm" onClick={() => setOpen((m) => !m)} disabled={count < 2} title={count < 2 ? 'Select at least 2 articles' : 'AI actions'}>
+    <div ref={ref}>
+      <Button size="sm" onClick={() => setOpen((m) => !m)} aria-haspopup="menu" aria-expanded={open} disabled={count < 2} title={count < 2 ? 'Select at least 2 articles' : 'AI actions'}>
         <HiOutlineSparkles /> AI
         <HiOutlineChevronUp className={cn('transition-transform', !open && 'rotate-180')} />
       </Button>
       {open && (
-        <div role="menu" className="absolute right-0 bottom-full z-30 mb-2 min-w-44 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
+        <div role="menu" aria-label="AI actions" tabIndex={-1} ref={menuRef} onKeyDown={onMenuKeyDown} className="absolute right-0 bottom-full z-30 mb-2 min-w-44 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
           {Object.entries(AI_OPERATIONS).map(([key, op]) => (
             <OperationOption key={key} op={op} count={count} onPick={() => { setOpen(false); onOpenAIPanel(key); }} />
           ))}

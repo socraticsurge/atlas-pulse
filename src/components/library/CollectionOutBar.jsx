@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useLibrary } from '../../app/LibraryContext.jsx';
 import { useToast } from '../../app/ToastContext.jsx';
 import { useClickOutside } from '../../hooks/useClickOutside.js';
+import { useMenuKeys } from '../../hooks/useMenuKeys.js';
 import { emit } from '../../lib/appEvents.js';
 import { STUDIO_QUERY_KEY } from '../../lib/queryClient.js';
 import { createStudioItem, fetchArticlePage, getCollectionExportURL } from '../../utils/api.js';
@@ -52,15 +53,16 @@ function NotebookLMMenu({ id }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useClickOutside(open, close);
+  const [menuRef, onMenuKeyDown] = useMenuKeys(open, close);
   const actions = useNotebookLM(id);
   const pick = (run) => () => { close(); run(); };
   return (
     <div className="relative" ref={ref}>
-      <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
+      <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)} aria-haspopup="menu" aria-expanded={open}>
         Send to NotebookLM <HiOutlineChevronDown className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
       </Button>
       {open && (
-        <div role="menu" className="absolute left-0 top-full z-30 mt-1.5 min-w-60 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
+        <div role="menu" aria-label="Send to NotebookLM" tabIndex={-1} ref={menuRef} onKeyDown={onMenuKeyDown} className="absolute left-0 top-full z-30 mt-1.5 min-w-60 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
           <button type="button" role="menuitem" className={MENU_ITEM} onClick={pick(actions.downloadSources)}><HiOutlineArrowDownTray /> Download sources (.md) to upload</button>
           <button type="button" role="menuitem" className={MENU_ITEM} onClick={pick(actions.copyLinks)}><HiOutlineLink /> Copy links to paste as websites</button>
           <button type="button" role="menuitem" className={MENU_ITEM} onClick={pick(actions.open)}><HiOutlineArrowTopRightOnSquare /> Open NotebookLM</button>

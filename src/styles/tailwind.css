@@ -33,6 +33,7 @@
   --color-accent: var(--bg-hover);
   --color-accent-foreground: var(--text-primary);
   --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--danger-foreground);
   --color-border: var(--border);
   --color-input: var(--border-light);
   --color-ring: var(--accent);

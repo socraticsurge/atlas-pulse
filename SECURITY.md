@@ -17,6 +17,10 @@ Instead, report privately using one of these channels:
 
 Please include steps to reproduce, the potential impact, and any suggested fix. You can expect an acknowledgment within a few days. Once a fix ships, the issue will be disclosed in the changelog with credit to the reporter (unless you prefer to stay anonymous).
 
+## Security design
+
+[docs/SECURITY-DESIGN.md](docs/SECURITY-DESIGN.md) is the project's assurance case: the threat model, the trust boundaries, and how the code counters each threat, with pointers to the code and its tests.
+
 ## Areas of particular interest
 
 - Bypass of DOMPurify sanitization when rendering article HTML

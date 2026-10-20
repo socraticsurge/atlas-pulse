@@ -6,7 +6,8 @@ function IconButton({ active, className, type = "button", ...props }) {
     <button
       type={type}
       data-slot="icon-button"
-      aria-pressed={active}
+      // Booleans only: a SQLite 0/1 flag would render the invalid aria-pressed="0".
+      aria-pressed={active === undefined ? undefined : Boolean(active)}
       className={cn(
         "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md border-0 transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4",
         active ? "bg-[var(--bg-active)] text-foreground" : "bg-transparent text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground",

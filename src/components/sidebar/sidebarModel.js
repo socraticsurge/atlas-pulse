@@ -16,11 +16,19 @@ export const NAV_ITEMS = [
   { type: 'studio', label: 'Studio', iconTitle: 'Studio: saved newsletters', Icon: HiOutlinePaintBrush, count: (c) => c.studio },
 ];
 
-// Opens the context menu at the pointer (right-click or the "…" button).
+// Where the menu opens: at the pointer, or under the "…" button when it was
+// pressed from the keyboard (a keyboard click has detail 0 and no pointer position).
+const menuPosition = (e) => {
+  if (e.type === 'contextmenu' || e.detail > 0) return { x: e.clientX, y: e.clientY };
+  const rect = e.currentTarget.getBoundingClientRect();
+  return { x: rect.left, y: rect.bottom };
+};
+
+// Opens the context menu (right-click or the "…" button).
 export const menuOpener = (openMenu, type, id) => (e) => {
   e.preventDefault();
   e.stopPropagation();
-  openMenu({ type, id, x: e.clientX, y: e.clientY });
+  openMenu({ type, id, ...menuPosition(e) });
 };
 
 export const isActive = (activeView, type, id) => activeView.type === type && (id === undefined || activeView.id === id);
