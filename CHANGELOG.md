@@ -3,6 +3,12 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
+## Unreleased
+
+### Under the hood
+
+- [MAINTAINING.md](MAINTAINING.md) sets out the definition of done, the merge routine, the release checklist and the rules for AI-assisted work, and [CLAUDE.md](CLAUDE.md) points every Claude Code session in the repository to it. The pull request template gains CHANGELOG, security-design and AI-disclosure boxes (#146).
+
 ## 2.2.0 (2026-10-20)
 
 Feeds keep refreshing with the app closed, the reader works from the keyboard and with a screen reader, and two security holes in the local server are closed. Text in both themes now meets the WCAG 2.2 AA contrast minimum.
