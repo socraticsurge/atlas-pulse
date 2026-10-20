@@ -1,0 +1,207 @@
+# Security design
+
+_Written: 20 October 2026, at v2.1.0. Update it in the same pull request as any change that crosses a trust boundary; see [Keeping this document current](#keeping-this-document-current)._
+
+This is Atlas Pulse's assurance case: the argument, with pointers to the code, that its security requirements are met. It covers the threat model, the trust boundaries, how secure design principles are applied, and how common weaknesses are countered. To report a vulnerability, follow [SECURITY.md](../SECURITY.md), not this document.
+
+For how the code is organized, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## Security requirements
+
+Atlas Pulse must ensure that:
+
+1. **Content can't take over the app.** HTML from feeds and web pages cannot run script in the app, imitate the app's own controls, or read or change the user's data.
+2. **URLs can't reach inward.** A URL from the user, a feed or a web page cannot make the local server request addresses on the user's machine or local network (server-side request forgery, SSRF).
+3. **Other websites can't use the local API.** A website open in the same browser cannot read or change the user's library through it.
+4. **Input can't become code.** Nothing the server receives is run as a command or changes the shape of a database query.
+5. **Data stays local.** The library, notes and reading history stay on the user's machine. Atlas Pulse makes no requests except to fetch what the user asked for ([ROADMAP.md](../ROADMAP.md#what-atlas-pulse-will-not-do) lists what it will never add).
+
+## System overview
+
+Atlas Pulse runs on the user's own machine, for one user:
+
+- **A React app** in the browser, served from a local origin (`http://localhost:5173` in development, or the server's own address with `npm start`).
+- **An Express server** bound to `127.0.0.1`. It fetches feeds and pages for the app, owns the SQLite database in `data/`, renders Studio exports through the installed Chrome, and bridges to Ollama.
+- **An AI engine.** Gemini Nano runs inside Chrome. Ollama, if used, is a separate program the user runs, reached through the server at the address in `OLLAMA_HOST` (default `http://127.0.0.1:11434`).
+
+```
+   Internet: publishers' feeds,                  Other websites open
+   pages, icons and redirects                    in the same browser
+              │                                           │
+ ════ B1 ═════╪═ safeFetch (SSRF guard) ═══  ════ B2 ═════╪═ Origin check ═════
+              ▼                                           ▼
+ ┌──────────────────────────── Express on 127.0.0.1 ────────────────────────────┐
+ │  ingestion ─► parsers (text only)          storage ─► data/reader.db (B5)    │
+ │  AI bridge ─► Ollama at OLLAMA_HOST (B4)   export  ─► headless Chrome (B4)   │
+ └──────────────────────────────────────┬───────────────────────────────────────┘
+                                        │ /api/* (JSON)
+ ┌──────────────────────────────────────▼──────────────── React app ────────────┐
+ │  article and Studio HTML ── B3: DOMPurify ──► the app's DOM                  │
+ │  AI output ─► rendered as text by React                                      │
+ └──────────────────────────────────────────────────────────────────────────────┘
+```
+
+The trust boundaries B1–B6 are described [below](#trust-boundaries).
+
+## Threat model
+
+### What is protected
+
+- **The library** in `data/reader.db`: feeds, articles, saves and notes, collections, highlights, AI summaries and Studio drafts. Also the settings in `data/settings.json`, which include the user's edited AI prompts.
+- **The user's machine and network:** services listening on loopback or the local network, and cloud metadata endpoints.
+- **The app itself:** what the user sees in it, and the actions it takes for them.
+- **Privacy:** which feeds the user follows and what they read.
+
+### Who might attack, and how
+
+| Attacker | What they control | What they would try |
+|---|---|---|
+| **A hostile or compromised publisher** (the most likely attacker) | Feed XML, item HTML, item links, HTTP redirects, article pages, site icons, DNS for their own domain | Run script in the app (XSS); show a fake sign-in form; make the server fetch an internal address (SSRF); exhaust memory with a huge or endless response; slip a formula into a CSV export; steer the AI with text in the article (prompt injection) |
+| **A website the user visits** in the same browser | Requests the browser sends from that page | Read or change the library through the local API (CSRF, cross-origin reads) |
+| **A device on the local network** | Network access to the user's machine | Call the API, which has no authentication |
+| **A compromised dependency or CI action** | Code that runs at install, build or CI time | Get malicious code into the app or the repository |
+
+### Out of scope
+
+- **Someone already running code as the user**, or with access to their files. They can read `data/` directly; no defense inside Atlas Pulse would stop them.
+- **A compromised browser, operating system or Ollama.** Atlas Pulse relies on them. The Ollama at `OLLAMA_HOST` is trusted because the user chose it, though its *output* is still treated as untrusted text.
+- **Exposure the user chooses.** Setting `HOST=0.0.0.0` puts the unauthenticated API on the network. The code and README call this a deliberate override.
+
+## Trust boundaries
+
+| | Boundary | What crosses it | How it is guarded |
+|---|---|---|---|
+| **B1** | Internet → server | Every feed, page, icon and redirect the server fetches | All server-side fetches of untrusted URLs go through `safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js), with size and time limits from [server/utils/fetchText.js](../server/utils/fetchText.js). The parsers (rss-parser, @extractus/article-extractor, cheerio) only receive the fetched text, so they make no requests of their own. |
+| **B2** | Other websites → local API | Requests a browser sends from another site | The server binds to `127.0.0.1` ([server/index.js](../server/index.js)). Its CORS policy admits only origins on this machine (`isLocalHostname` in [server/utils/loopback.js](../server/utils/loopback.js)). A request whose `Origin` is anywhere else is refused before it reaches a route. |
+| **B3** | Untrusted HTML → the app's DOM | Article and feed HTML; Studio Markdown | The app inserts raw HTML only in the reader and in Studio templates, and both sanitize it first: [src/components/reader/sanitize.js](../src/components/reader/sanitize.js) and [src/components/studio/markdown.js](../src/components/studio/markdown.js). Everything else, including what the AI rail shows, is rendered as text by React. |
+| **B4** | Server → other programs | Ollama requests; `ollama serve`; headless Chrome | Fixed commands and binaries, with no request data on a command line ([server/routes/ollama.js](../server/routes/ollama.js), [server/utils/ollamaHost.js](../server/utils/ollamaHost.js)). The Ollama address comes from the environment, never from a request. Headless Chrome only opens the app's own print page ([server/routes/pageExport.js](../server/routes/pageExport.js)). |
+| **B5** | Requests → database and settings file | JSON bodies from the app | Prepared statements with bound parameters ([server/db/](../server/db/)); request bodies checked against fixed fields and limits before storage. |
+| **B6** | Contributors → repository | Pull requests, dependency updates, CI | Required checks on `master`, CodeQL, pinned actions and read-only CI tokens; see [Supply chain and process](#supply-chain-and-process). |
+
+## How each threat is countered
+
+### Hostile HTML in articles and feeds (B3)
+
+- **Sanitized with DOMPurify** before insertion: `sanitizeArticleHtml` for extracted articles and `sanitizeFeedHtml` for the feed preview ([src/components/reader/sanitize.js](../src/components/reader/sanitize.js)). DOMPurify removes script, event handlers and `javascript:` URLs.
+- **No fake controls.** `form`, `input`, `button`, `select`, `option`, `textarea` and `style` elements are removed, and so are `style`, `action` and `formaction` attributes. A feed cannot draw a "sign in again" form or a full-window overlay.
+- **Video embeds only from an allowlist.** An `iframe` stays only if its host is YouTube, youtube-nocookie, Vimeo's player or SoundCloud's widget, and every kept iframe gets a fixed `sandbox` that overrides whatever the feed set.
+- **Links can't navigate the app.** Every link gets `target="_blank"` and `rel="noopener noreferrer"`.
+- **Studio** renders newsletter Markdown through `marked` and its own DOMPurify instance, so its link rule cannot change the reader's configuration.
+- **AI output is text.** The AI rail shows summaries, analysis and chat as React text, never as HTML.
+
+### Server-side request forgery (B1)
+
+`safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js) is the only path for server-side fetches of untrusted URLs: feeds (`feedParser.js`), feed discovery (`feedDiscovery.js`), full-text extraction (`articleExtractor.js`) and site icons (`favicon.js`), mostly through `fetchText.js`. It makes three checks:
+
+1. **Before the request:** the URL must be `http:` or `https:`, and every address its host resolves to must be public. The blocked ranges are listed in `BLOCKED_V4` and `isBlockedIpv6`: loopback, private, carrier-grade NAT, link-local (including `169.254.169.254`, the cloud metadata address), multicast and reserved. Anything not recognized as an IP address is refused.
+2. **At connect time:** the connection resolves the hostname again through `guardedLookup`, which refuses blocked addresses. A DNS server that answers "public" for the first check and "127.0.0.1" for the connection (DNS rebinding) is caught here.
+3. **On every redirect:** redirects are followed by hand (`redirect: 'manual'`, at most 5), and each target is checked again before it is requested.
+
+The favicon route accepts only a plain DNS name (`isValidHostname`: no IP addresses, ports, paths or credentials) and builds the URL itself.
+
+Tests: [server/utils/urlGuard.test.js](../server/utils/urlGuard.test.js) covers blocked schemes and ranges, redirects into private addresses and a host that rebinds to loopback; [server/utils/favicon.test.js](../server/utils/favicon.test.js) covers hostname checks.
+
+### Other websites and the local network (B2)
+
+- **Loopback only.** The server listens on `127.0.0.1` unless `HOST` says otherwise. The macOS background service sets `HOST=127.0.0.1` explicitly ([scripts/service.sh](../scripts/service.sh)).
+- **Local origins only.** Browsers attach an `Origin` header to cross-origin requests. The CORS policy refuses any origin that isn't on this machine, so another site can neither read responses nor make the server act on a request. Requests with no `Origin` (curl, same-origin page loads) are allowed.
+- **JSON bodies.** Routes that take data read JSON (`express.json`), which a plain HTML form on another site can't send.
+- **Studio export** only renders an origin that passes `localOrigin` ([server/routes/studioInput.js](../server/routes/studioInput.js), tested in `pageExport.test.js`), so a request cannot point headless Chrome at an arbitrary site.
+
+### Injection into SQLite (B5)
+
+- All queries use better-sqlite3 prepared statements with bound parameters (`?` or `@name`). User values never become part of the SQL text.
+- Where SQL is assembled, every piece comes from code, never from a request: column names from the fixed `ARTICLE_FIELDS` table ([server/db/reader.js](../server/db/reader.js)), filter keys from `FILTER_KEYS` ([shared/aiFilters.js](../shared/aiFilters.js)), view conditions from a `switch` ([server/db/articlePages.js](../server/db/articlePages.js)), and placeholder lists generated from an array's length.
+- Full-text search terms are quoted for FTS5 (quotes doubled) and passed as a bound parameter to `MATCH`, at most 10 terms per query.
+
+Tests: `server/db/*.test.js`, including [search.test.js](../server/db/search.test.js).
+
+### Command injection and the Ollama bridge (B4)
+
+- The server runs only fixed commands: `which ollama` (`where ollama` on Windows) and `ollama serve` through `spawn` with an argument array. The `ollama` binary is the one on `PATH` or at a fixed install location.
+- The model name in a model download (`/api/ollama/pull`) goes to Ollama's HTTP API as a JSON field, not to a command line.
+- `OLLAMA_HOST` is read once, from the environment, at startup ([server/utils/ollamaHost.js](../server/utils/ollamaHost.js)). No request can change where the bridge connects.
+- `/api/ollama/start` and `/api/ollama/pull` are rate limited to 20 requests a minute.
+
+### Prompt injection
+
+An article can contain text written to steer the model. The AI has no tools: it cannot fetch URLs, run commands or write data. Its output is stored as the summary, analysis or Studio draft the user asked for, and shown as text or as sanitized Markdown. The worst case is a misleading summary of a hostile article.
+
+### Resource exhaustion
+
+- Fetched documents: 15-second timeout and 15 MB cap ([server/utils/fetchText.js](../server/utils/fetchText.js)). Icons: 8 seconds and 512 KB.
+- Request bodies: 2 MB, or 8 MB on the bulk-insert route ([server/index.js](../server/index.js)).
+- One Studio export at a time; a second request gets 429 while it runs.
+- Static files are rate limited when the server hosts the built app.
+- Tag stripping runs in one linear pass, so crafted input like `<<<<…` can't cause catastrophic regex backtracking ([server/utils/text.js](../server/utils/text.js), tested in `text.test.js`).
+
+### Smaller vectors
+
+- **Site icons** come from third parties and may be SVG. `/api/favicon` serves them with `Content-Security-Policy: default-src 'none'; …; sandbox` and `X-Content-Type-Options: nosniff`, so an icon opened directly can't run script against the API ([server/routes/favicon.js](../server/routes/favicon.js)).
+- **CSV exports** prefix cells that start with `=`, `+`, `-`, `@`, tab or carriage return, so a spreadsheet doesn't run them as formulas ([shared/csv.js](../shared/csv.js), tested).
+- **Settings** accept only known keys (`SYNCED_SETTING_KEYS`), string values and a length limit ([server/settings.js](../server/settings.js), tested). Studio and collection requests keep only known fields within fixed limits ([server/routes/studioInput.js](../server/routes/studioInput.js), [server/routes/collectionsInput.js](../server/routes/collectionsInput.js), tested).
+- **Errors** that escape a route return JSON with a status code, and a 500 says only "Internal server error". No stack traces reach the client.
+
+## Secure design principles
+
+How the classic principles (Saltzer and Schroeder) and a few practical ones are applied:
+
+- **Economy of mechanism.** One fetch path (`safeFetch`), one sanitizer module per HTML sink, one database module with prepared statements. There is no login system to get wrong, because there is one user on one machine.
+- **Fail-safe defaults.** Loopback unless told otherwise; an unrecognized or unresolvable address is refused; an iframe is dropped unless its host is allowlisted; an origin is refused unless it is local; an unknown settings key is rejected.
+- **Complete mediation.** Every redirect hop is checked again, every connection's DNS answer is checked, and every request passes the origin check.
+- **Open design.** All code and this document are public. Nothing depends on a secret: there are no keys, tokens or hosted services.
+- **Separation of privilege.** The `master` branch ruleset has no bypass, so the maintainer can't land a change until CI and CodeQL pass either. With one maintainer, those checks are the second pair of eyes.
+- **Least privilege.** The server runs as the user, never as root. The parsing libraries get text and no network access. Embedded iframes are sandboxed. Headless Chrome runs without extensions and only opens the app's print page. CI tokens are read-only.
+- **Least common mechanism.** Studio has its own DOMPurify instance, separate from the reader's. Site icons, served from the app's own origin, are sandboxed so they can't share its privileges.
+- **Psychological acceptability.** The safe setup is the default and needs no configuration: no keys, no accounts, no firewall rules. Errors say what went wrong and how to fix it.
+- **Input validation with allowlists.** URL schemes, iframe hosts, settings keys, Studio kinds, SQL columns and filter keys are all checked against lists of what is allowed, not of what is forbidden.
+- **Limited resources.** Every fetch of untrusted content, request body, icon and export has a size, time or rate limit.
+
+## Common weaknesses countered
+
+| Weakness | Countered by | Tested in |
+|---|---|---|
+| CWE-79 Cross-site scripting | DOMPurify on every raw-HTML sink; React escaping everywhere else | (no DOM in the test runner yet; see [Known limits](#known-limits-and-accepted-risks)) |
+| CWE-1021 UI redress, clickjacking | Forms, inputs and inline styles removed; iframe host allowlist and fixed sandbox | n/a |
+| CWE-918 Server-side request forgery | `safeFetch`: scheme allowlist, blocked ranges, connect-time DNS check, re-checked redirects | `urlGuard.test.js`, `favicon.test.js` |
+| CWE-352 Cross-site request forgery | Loopback binding; CORS admits local origins only; JSON bodies | `loopback.test.js`, `pageExport.test.js` |
+| CWE-89 SQL injection | Prepared statements with bound parameters; SQL fragments only from code | `server/db/*.test.js` |
+| CWE-78 OS command injection | Fixed commands; `spawn` with an argument array; no request data on a command line | n/a: no request data reaches a command |
+| CWE-1236 CSV injection | Formula prefixes neutralized | `shared/csv.test.js` |
+| CWE-1321 Prototype pollution | Settings checked with `Object.hasOwn` against a fixed key list; search results kept in arrays, never in objects keyed by user input | `settings.test.js`, `server/db/search.test.js` |
+| CWE-1333 Regular expression DoS | Linear tag stripping | `text.test.js` |
+| CWE-400, CWE-770 Resource exhaustion | Size, time and rate limits | `pageExport.test.js` (one export at a time) |
+| CWE-209 Error details exposed | Central error handler; generic 500 message | n/a |
+| CWE-1357, CWE-829 Untrusted components | Lockfile installs, Dependabot, pinned actions, CodeQL, `npm audit` | CI |
+
+CodeQL (`javascript-typescript`) scans every pull request, every push to `master` and the whole code weekly for these and other weaknesses ([.github/workflows/codeql.yml](../.github/workflows/codeql.yml)).
+
+## Supply chain and process
+
+- **Dependencies:** installed from `package-lock.json` with `npm ci`. Dependabot proposes npm and GitHub Actions updates weekly ([.github/dependabot.yml](../.github/dependabot.yml)). `npm audit` reported no vulnerabilities at v2.1.0.
+- **CI:** GitHub Actions are pinned to commit SHAs, workflow tokens are read-only, and checkout doesn't keep credentials ([.github/workflows/](../.github/workflows/)). OpenSSF Scorecard runs on the repository.
+- **Merging:** the `master` branch ruleset requires lint, tests and builds on Linux, macOS and Windows, plus CodeQL, before a change lands. It also blocks a merge while CodeQL reports a high or critical security alert, and forbids force-pushes and deleting the branch. Nobody can bypass it, the maintainer included ([GOVERNANCE.md](../GOVERNANCE.md#how-decisions-are-made)).
+- **Vulnerability reports:** private, through GitHub security advisories or email ([SECURITY.md](../SECURITY.md)).
+
+## Known limits and accepted risks
+
+- **No authentication on the API.** Any program running as the user can call it, and could read `data/` directly anyway. This is accepted for a single-user, local app.
+- **No Content-Security-Policy on the app page.** DOMPurify is the only layer between article HTML and the DOM. A CSP is a [roadmap candidate](../ROADMAP.md#candidates).
+- **The sanitizer rules have no automated test.** The test runner has no DOM. Changes to `sanitize.js` are checked by hand until that changes ([roadmap candidate](../ROADMAP.md#candidates)).
+- **Publishers see article opens.** Images and allowlisted video embeds load from the publisher's servers when the user opens an article, as they would on the publisher's site.
+- **Data is not encrypted at rest.** `data/` relies on the operating system's account permissions and disk encryption.
+- **A remote Ollama receives article text in plain HTTP.** Only if the user points `OLLAMA_HOST` at another machine.
+- **Releases and tags are not signed.** Users install from source with git. Signing is a [roadmap candidate](../ROADMAP.md#candidates).
+- **One maintainer.** Reviews rely on required CI and CodeQL checks rather than a second person. Naming a backup maintainer is [planned](../ROADMAP.md#project-health-next-three-months).
+
+## Keeping this document current
+
+Update this document in the same pull request when a change:
+
+- adds a server route that fetches a URL, or a new way for a URL to reach `safeFetch`;
+- inserts raw HTML anywhere new, or changes `sanitize.js` or `markdown.js`;
+- starts a process, or changes how Ollama or Chrome is reached;
+- builds SQL from anything other than fixed fragments;
+- changes the server's binding, CORS policy or request limits.
+
+The maintainer also reviews it at each minor release, with [ROADMAP.md](../ROADMAP.md) and [TECH-DEBT.md](TECH-DEBT.md).
