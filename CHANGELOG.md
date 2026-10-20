@@ -8,6 +8,7 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 ### Under the hood
 
 - [MAINTAINING.md](MAINTAINING.md) sets out the definition of done, the merge routine, the release checklist and the rules for AI-assisted work, and [CLAUDE.md](CLAUDE.md) points every Claude Code session in the repository to it. The pull request template gains CHANGELOG, security-design and AI-disclosure boxes (#146).
+- [GOVERNANCE.md](GOVERNANCE.md) says how review works with AI assistance, and how a single maintainer changes governance: a pull request labelled `governance` that the maintainer reads in full and that stays open for 24 hours, with a Discussion first once there is a co-maintainer or a named backup (#147).
 
 ## 2.2.0 (2026-10-20)
 
