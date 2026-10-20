@@ -9,6 +9,11 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 - **Feeds refresh with the app closed.** Auto-refresh ran in the browser tab, so nothing was fetched once the tab was closed, unloaded by Chrome, or the browser quit. A feed lists only its latest items, so fast ones lost stories for good: Techmeme keeps about 8 hours, arXiv a single day. The local server now refreshes every feed on the Auto-refresh interval by itself, and the app picks up what it found within a minute. The Refresh buttons ask the server too, and a refresh it is already running is joined rather than repeated. New articles are queued for background processing after each refresh, as before; processing still needs the app open. A sleeping computer still refreshes nothing; the first check after it wakes catches up.
 
+### Security
+
+- **The address check covers every way of writing an IPv6 address.** Before it fetches a feed, an article or a site icon, the server refuses loopback, private and cloud-metadata addresses. An IPv6 address that carries an IPv4 one (IPv4-mapped like `[::ffff:127.0.0.1]`, IPv4-compatible, NAT64 or 6to4) was let through, so a feed's article link, a redirect or a page's icon could make the server send a request to a service on your own machine or network. Such addresses are now judged by the IPv4 address inside them, and IPv6 addresses outside the public range are refused.
+- **Other websites can't read your library by pointing their name at your computer.** A page could make its own domain resolve to 127.0.0.1 (DNS rebinding) and then read the local API as if it were the same site, since such requests carry no `Origin` for the origin check to refuse. The server now answers only requests addressed to `localhost`, a `*.localhost` name, an IP address, or the `HOST` it was started with; anything else gets 403. Requests from another site's page also get 403 now, instead of 500.
+
 ## 2.1.0 (2026-10-19)
 
 Setup and first use, made clearer. Atlas Pulse now says what is wrong and how to fix it: an unsupported Node, a taken port, a stopped server, or an AI engine it can't use. Medium articles come through with their images and without the page clutter, and installs no longer report security warnings.
