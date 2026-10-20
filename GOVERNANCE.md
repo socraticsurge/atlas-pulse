@@ -8,7 +8,7 @@ Atlas Pulse is a single-maintainer project. This document says who decides what,
 
 - reviews and merges pull requests, and triages issues and Discussions;
 - decides what goes into the project, following the process below;
-- cuts releases: bumps the version, updates `CHANGELOG.md`, tags `vX.Y.Z` and publishes a GitHub release;
+- cuts releases following the [release checklist](MAINTAINING.md#release-checklist): bumps the version, updates `CHANGELOG.md`, tags `vX.Y.Z` and publishes a GitHub release;
 - keeps the [roadmap](ROADMAP.md) and the [security design](docs/SECURITY-DESIGN.md) current;
 - handles vulnerability reports as described in [SECURITY.md](SECURITY.md);
 - enforces the [Code of Conduct](CODE_OF_CONDUCT.md);
@@ -22,7 +22,8 @@ There are no other roles today. A contributor with a record of sustained, carefu
 
 ## How decisions are made
 
-- **Small changes** (bug fixes, docs, small improvements): open a pull request. The maintainer reviews it and merges it once the required checks pass: lint, tests and build on Linux, macOS and Windows, plus CodeQL.
+- **Small changes** (bug fixes, docs, small improvements): open a pull request. The maintainer reviews it and merges it once it meets the [definition of done](MAINTAINING.md#definition-of-done), which includes the required checks: lint, tests and build on Linux, macOS and Windows, plus CodeQL.
+- **Review with AI assistance.** The maintainer works with AI coding assistants, mostly Claude Code. An assistant session may review a diff against [MAINTAINING.md](MAINTAINING.md) and run the [merge routine](MAINTAINING.md#merge-routine), but it merges or releases only on the maintainer's explicit go-ahead. The maintainer is responsible for every merge and release, whoever ran the steps. What AI sessions may and may not do is set out in [AI-assisted work](MAINTAINING.md#ai-assisted-work).
 - **Larger changes** (a new feature, a new dependency, a SQLite schema change, a change to how AI or storage works): open an [issue](https://github.com/socraticsurge/atlas-pulse/issues/new/choose) or a [Discussion](https://github.com/socraticsurge/atlas-pulse/discussions) first, so the approach is agreed before anyone writes code. A pull request for a larger change that skipped this step may be asked to start there.
 - **The project principles are binding.** The [guiding principles in CONTRIBUTING.md](CONTRIBUTING.md#guiding-principles) (local-first, on-device AI only, one styling system, privacy over convenience) are not traded off case by case. A change that breaks one is not merged, whoever proposes it, the maintainer included.
 - **The roadmap.** [ROADMAP.md](ROADMAP.md) says what the project plans for the next year and what it will not do. Adding to it follows the same process as any larger change.
