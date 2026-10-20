@@ -14,6 +14,8 @@
 ## Checklist
 
 - [ ] `npm run lint` passes
+- [ ] `npm test` passes
+- [ ] Tests added or updated for new behavior or the fixed bug (for UI-only changes: a logic test, or how you checked it manually in "What does this PR do?")
 - [ ] App starts cleanly with `npm run dev` and the affected flows work (tested manually)
 - [ ] Works in both dark and light themes (for UI changes)
 - [ ] README updated (features table, shortcuts, changelog) if user-facing behavior changed
