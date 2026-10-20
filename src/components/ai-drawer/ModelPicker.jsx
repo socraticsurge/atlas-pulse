@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { HiOutlineCheck, HiOutlineChevronDown } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import { useClickOutside } from '../../hooks/useClickOutside.js';
+import { useMenuKeys } from '../../hooks/useMenuKeys.js';
 
 const modelLabel = (name) => (name ? name.split(':')[0].replace(/-/g, ' ') : 'No model');
 
@@ -10,12 +11,14 @@ export default function ModelPicker({ models, selectedModel, onSelect }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useClickOutside(open, close);
+  const [menuRef, onMenuKeyDown] = useMenuKeys(open, close);
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}
         title="Model"
+        aria-haspopup="menu"
         aria-expanded={open}
         className="flex h-7 cursor-pointer items-center gap-1 rounded-md border border-border bg-transparent px-2 font-mono text-[11px] text-muted-foreground hover:text-foreground"
       >
@@ -23,7 +26,7 @@ export default function ModelPicker({ models, selectedModel, onSelect }) {
         <HiOutlineChevronDown className={cn('size-3 transition-transform', open && 'rotate-180')} />
       </button>
       {open && models.length > 0 && (
-        <div role="menu" className="absolute top-full right-0 z-30 mt-1 min-w-48 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
+        <div role="menu" aria-label="Model" tabIndex={-1} ref={menuRef} onKeyDown={onMenuKeyDown} className="absolute top-full right-0 z-30 mt-1 min-w-48 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
           {models.map((m) => (
             <button
               key={m.name}

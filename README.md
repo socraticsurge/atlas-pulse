@@ -178,6 +178,8 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 
 The article keys work while an article is open. None of them fire while you're typing. In a note, `Enter` or `Esc` finishes and `Shift+Enter` adds a line.
 
+Without a mouse, `Tab` reaches every article title, sidebar entry, folder toggle and "…" menu, and `Enter` opens it. In a menu, the arrow keys, `Home` and `End` move between items and `Esc` closes it.
+
 ---
 
 ## Setting up AI

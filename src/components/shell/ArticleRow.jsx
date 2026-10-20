@@ -3,6 +3,7 @@ import { BsBookmarkFill } from 'react-icons/bs';
 import { cn } from '@/lib/utils';
 import { stripHtml } from '../../utils/helpers.js';
 import { shortTime } from '../article-list/listLogic.js';
+import { OpenTitle } from '../article-list/OpenTitle.jsx';
 
 // The preview line: the AI summary when there is one, else the feed's excerpt.
 const previewOf = (article) => article.aiSummary || stripHtml(article.excerpt || '', 220);
@@ -83,12 +84,13 @@ function AIMark({ article }) {
 export default function ArticleRow({ article, feed, active, selected, onOpen, onToggle }) {
   const unread = !article.isRead;
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- pointer shortcut: the whole row opens the article; the keyboard uses the title button (OpenTitle)
     <div className={rowClass({ read: article.isRead, active, selected })} onClick={onOpen}>
       <Gutter selected={selected} unread={unread} onToggle={onToggle} />
       <div className="flex items-baseline gap-3">
-        <span className={cn('line-clamp-2 min-w-0 flex-1 text-[14px] leading-snug', unread ? 'font-medium text-foreground' : 'text-[var(--text-tertiary)]')}>
-          {article.title}
-        </span>
+        <OpenTitle active={active} onOpen={onOpen} className={cn('flex-1 text-[14px] leading-snug', unread ? 'font-medium text-foreground' : 'text-[var(--text-tertiary)]')}>
+          <span className="line-clamp-2">{article.title}</span>
+        </OpenTitle>
         <span className="shrink-0 font-mono text-[11.5px] text-[var(--text-tertiary)]">{shortTime(article.publishedAt)}</span>
       </div>
       <MetaLine article={article} feed={feed} unread={unread} />

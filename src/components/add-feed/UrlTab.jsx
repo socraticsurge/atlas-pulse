@@ -63,6 +63,7 @@ export function UrlTab({ discovery, loading, adder }) {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && discovery.discover()}
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- the field opens with its Add feed tab, so focus belongs in it
           autoFocus
         />
         <Button className="h-9" onClick={discovery.discover} disabled={loading || !url.trim()}>

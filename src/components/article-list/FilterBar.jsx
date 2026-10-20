@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { HiOutlineCheck, HiOutlineChevronDown, HiOutlineSparkles, HiOutlineXMark } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import { useClickOutside } from '../../hooks/useClickOutside.js';
+import { useMenuKeys } from '../../hooks/useMenuKeys.js';
 import { FILTER_DIMS } from './listLogic.js';
 
 const PILL = 'inline-flex h-6 shrink-0 cursor-pointer items-center gap-1 rounded-full border px-2.5 text-[11.5px] transition-colors [&_svg]:size-3';
@@ -21,15 +22,16 @@ function FilterPill({ dim, values, activeValue, onPick }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const ref = useClickOutside(open, close);
+  const [menuRef, onMenuKeyDown] = useMenuKeys(open, close);
   const pick = (value) => { onPick(value); setOpen(false); };
   return (
     <div className="relative" ref={ref}>
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={cn(PILL, pillState(Boolean(activeValue)))}>
+      <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={cn(PILL, pillState(Boolean(activeValue)))}>
         {activeValue ? `${dim.label}: ${dim.values[activeValue] || activeValue}` : dim.label}
         <HiOutlineChevronDown className={cn('transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
-        <div role="menu" className="absolute top-full left-0 z-30 mt-1 min-w-40 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
+        <div role="menu" aria-label={dim.label} tabIndex={-1} ref={menuRef} onKeyDown={onMenuKeyDown} className="absolute top-full left-0 z-30 mt-1 min-w-40 rounded-md border border-border bg-[var(--bg-modal)] p-1 shadow-lg">
           <MenuOption selected={!activeValue} onClick={() => pick(null)}>All</MenuOption>
           {[...values].map((value) => (
             <MenuOption key={value} selected={activeValue === value} onClick={() => pick(activeValue === value ? null : value)}>{dim.values[value] || value}</MenuOption>

@@ -20,6 +20,7 @@ function NewFolderInput({ onAdd, onCancel }) {
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- the field opens from the New folder button, so focus belongs in it
         autoFocus
       />
       <Button size="sm" onClick={submit}>Add</Button>

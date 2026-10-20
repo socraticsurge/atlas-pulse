@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { stripHtml, timeAgo } from '../../utils/helpers.js';
 import FeedFavicon from '../FeedFavicon.jsx';
 import { shortTime } from './listLogic.js';
+import { OpenTitle } from './OpenTitle.jsx';
 
 const hideOnError = (e) => { e.target.style.display = 'none'; };
 
@@ -15,7 +16,7 @@ function SelectButton({ selected, onToggle, className }) {
       title={selected ? 'Deselect' : 'Select'}
       aria-label={selected ? 'Deselect article' : 'Select article'}
       aria-pressed={selected}
-      className={cn('absolute z-10 flex size-5 cursor-pointer items-center justify-center rounded-full border-0 p-0', selected ? 'bg-primary text-primary-foreground' : 'bg-transparent opacity-0 group-hover/card:opacity-100', className)}
+      className={cn('absolute z-10 flex size-5 cursor-pointer items-center justify-center rounded-full border-0 p-0', selected ? 'bg-primary text-primary-foreground' : 'bg-transparent opacity-0 group-hover/card:opacity-100 focus-visible:opacity-100', className)}
     >
       {selected ? <HiOutlineCheck className="size-3" /> : <span className="size-3.5 rounded-full border border-[var(--text-tertiary)] bg-[var(--bg-primary)]" />}
     </button>
@@ -40,13 +41,14 @@ const titleTone = (read) => (read ? 'font-normal text-[var(--text-tertiary)]' : 
 
 function CompactCard({ article, feed, state, onOpen, onToggle }) {
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- pointer shortcut: the whole card opens the article; the keyboard uses the title button (OpenTitle)
     <div className={cn(surface(state), 'grid min-h-9 grid-cols-[14px_minmax(0,120px)_1fr_auto] items-center gap-3 border-b border-border py-2 pr-4 pl-5')} onClick={onOpen}>
       <SelectButton selected={state.selected} onToggle={onToggle} className="left-0.5" />
       <SourceIcon feed={feed} />
       <span className="truncate text-[11.5px] text-muted-foreground">{feed?.title || 'Unknown'}</span>
       <span className={cn('flex min-w-0 items-center gap-2 text-[13px]', titleTone(article.isRead))}>
         {!article.isRead && <UnreadDot />}
-        <span className="truncate">{article.title}</span>
+        <OpenTitle active={state.active} onOpen={onOpen} className="truncate">{article.title}</OpenTitle>
       </span>
       <span className="flex items-center gap-2">
         {article.aiStatus === 'done' && <AIBadge />}
@@ -59,6 +61,7 @@ function CompactCard({ article, feed, state, onOpen, onToggle }) {
 function ExcerptCard({ article, feed, state, onOpen, onToggle }) {
   const summary = stripHtml(article.excerpt || '');
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- pointer shortcut: the whole card opens the article; the keyboard uses the title button (OpenTitle)
     <div className={cn(surface(state), 'border-b border-border py-3.5 pr-4 pl-5')} onClick={onOpen}>
       <SelectButton selected={state.selected} onToggle={onToggle} className="top-3.5 left-0.5" />
       <div className="flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
@@ -70,7 +73,9 @@ function ExcerptCard({ article, feed, state, onOpen, onToggle }) {
       </div>
       <div className="mt-1.5 flex gap-3">
         <div className="min-w-0 flex-1">
-          <div className={cn('line-clamp-2 text-[14px] leading-snug', titleTone(article.isRead))}>{article.title}</div>
+          <OpenTitle active={state.active} onOpen={onOpen} className={cn('block w-full text-[14px] leading-snug', titleTone(article.isRead))}>
+            <span className="line-clamp-2">{article.title}</span>
+          </OpenTitle>
           {summary && <div className="mt-1 line-clamp-2 text-[12.5px] leading-relaxed text-[var(--text-tertiary)]">{summary}</div>}
         </div>
         {article.imageUrl && <img className="size-14 shrink-0 rounded-md object-cover" src={article.imageUrl} alt="" loading="lazy" onError={hideOnError} />}
@@ -81,6 +86,7 @@ function ExcerptCard({ article, feed, state, onOpen, onToggle }) {
 
 function GridCard({ article, feed, state, onOpen, onToggle }) {
   return (
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- pointer shortcut: the whole card opens the article; the keyboard uses the title button (OpenTitle)
     <div className={cn(surface(state), 'flex h-full flex-col overflow-hidden rounded-lg border border-border bg-[var(--bg-secondary)]', state.active && 'border-primary')} onClick={onOpen}>
       <SelectButton selected={state.selected} onToggle={onToggle} className="top-2 left-2" />
       <div className="relative h-[150px] shrink-0 bg-[var(--bg-tertiary)]">
@@ -96,7 +102,9 @@ function GridCard({ article, feed, state, onOpen, onToggle }) {
           <span className="truncate">{feed?.title || 'Unknown'}</span>
           <span className="ml-auto shrink-0 font-mono text-[10.5px] text-[var(--text-tertiary)]">{shortTime(article.publishedAt)}</span>
         </div>
-        <h3 className={cn('m-0 line-clamp-4 text-[13.5px] leading-snug', titleTone(article.isRead))}>{article.title}</h3>
+        <h3 className={cn('m-0 text-[13.5px] leading-snug', titleTone(article.isRead))}>
+          <OpenTitle active={state.active} onOpen={onOpen}><span className="line-clamp-4">{article.title}</span></OpenTitle>
+        </h3>
       </div>
     </div>
   );

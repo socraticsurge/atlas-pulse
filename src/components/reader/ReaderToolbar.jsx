@@ -39,7 +39,8 @@ function ExtractionStatus({ extraction }) {
 }
 
 // Dimmed until pointed at or focused, and fully shown while one of its menus is open.
-const GROUP = 'flex items-center gap-0.5 opacity-60 transition-opacity group-hover/toolbar:opacity-100 group-focus-within/toolbar:opacity-100 has-[[data-open]]:opacity-100';
+// 85% is the floor that keeps label text at 4.5:1 contrast in the light theme.
+const GROUP = 'flex items-center gap-0.5 opacity-85 transition-opacity group-hover/toolbar:opacity-100 group-focus-within/toolbar:opacity-100 has-[[data-open]]:opacity-100';
 
 // Save (b), the note (n) and collections (c); the last two also save.
 function SaveControls({ live, note }) {
