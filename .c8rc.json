@@ -1,0 +1,7 @@
+{
+  "all": true,
+  "include": ["server/**", "shared/**", "src/**", "scripts/**"],
+  "exclude": ["**/*.test.js"],
+  "extension": [".js", ".jsx"],
+  "reporter": ["json-summary"]
+}

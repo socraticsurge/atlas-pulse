@@ -46,5 +46,12 @@ jobs:
       - name: Test
         run: npm test
 
+      # Measure once, like lint. The step reruns the suite under c8 and writes
+      # statement coverage per folder to the job summary. It reports and does
+      # not enforce a threshold yet.
+      - name: Coverage
+        if: runner.os == 'Linux'
+        run: npm run test:coverage
+
       - name: Build
         run: npm run build
