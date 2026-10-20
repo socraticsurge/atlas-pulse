@@ -6,15 +6,30 @@ on:
   pull_request:
     branches: ["master"]
 
+# Least privilege: the jobs only read the repo.
+permissions:
+  contents: read
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # The README supports macOS, Windows and Linux, and better-sqlite3 builds
+    # natively on each, so every OS installs, tests and builds.
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
+      # Actions are pinned to commit SHAs; Dependabot keeps the pins and the
+      # version comments current.
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: ".nvmrc"
           cache: "npm"
@@ -22,7 +37,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Lint once: the result does not depend on the OS, and Windows
+      # checkouts get CRLF line endings.
       - name: Lint
+        if: runner.os == 'Linux'
         run: npm run lint
 
       - name: Test
