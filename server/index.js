@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import feedsRouter from './routes/feeds.js';
@@ -12,6 +12,7 @@ import summariesRouter from './routes/summaries.js';
 import highlightsRouter from './routes/highlights.js';
 import studioRouter from './routes/studio.js';
 import { localOnly, originAllowed } from './utils/loopback.js';
+import { contentSecurityPolicy, inlineScriptHashes, securityHeaders } from './utils/securityHeaders.js';
 import { appUrl, listenFailure, readyMessage } from './utils/startup.js';
 import collectionsRouter from './routes/collections.js';
 import ollamaRouter from './routes/ollama.js';
@@ -26,6 +27,20 @@ const PORT = Number(process.env.PORT) || 3001;
 // Bind to loopback by default so the no-auth API is not exposed to the LAN.
 // Override with HOST=0.0.0.0 only if you deliberately want network access.
 const HOST = process.env.HOST || '127.0.0.1';
+
+// Serve the built frontend (npm run build) so one process hosts the whole app.
+// Not under `npm run dev` (--dev): Vite serves the app then, and a dist/ left
+// from an earlier build would be stale. Otherwise a page names the address to open.
+const DEV = process.argv.includes('--dev');
+const URL_SHOWN = appUrl(HOST, PORT);
+const DIST_DIR = join(dirname(fileURLToPath(import.meta.url)), '../dist');
+const BUILT = !DEV && existsSync(join(DIST_DIR, 'index.html'));
+
+// Every response, a 403 included, says the page may not be framed and sets the
+// Content-Security-Policy. The built index.html's inline theme script is
+// allowed by its hash, read from the file that is actually served.
+const pageScripts = BUILT ? inlineScriptHashes(readFileSync(join(DIST_DIR, 'index.html'), 'utf8')) : [];
+app.use(securityHeaders(contentSecurityPolicy(pageScripts)));
 
 // This API has no auth by design (local, single-user), so only this machine
 // may use it. Any website the user visits could otherwise read or delete their
@@ -65,13 +80,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Serve the built frontend (npm run build) so one process hosts the whole app.
-// Not under `npm run dev` (--dev): Vite serves the app then, and a dist/ left
-// from an earlier build would be stale. Otherwise a page names the address to open.
-const DEV = process.argv.includes('--dev');
-const URL_SHOWN = appUrl(HOST, PORT);
-const DIST_DIR = join(dirname(fileURLToPath(import.meta.url)), '../dist');
-const BUILT = !DEV && existsSync(join(DIST_DIR, 'index.html'));
+// The built frontend (see BUILT above), or a page naming the address to open.
 if (BUILT) {
   // Generous cap — a single user loading the app never comes close — that
   // stops a runaway client from hammering the filesystem.

@@ -1,13 +1,12 @@
 import DOMPurify from 'dompurify';
+import { EMBED_HOSTS } from '../../../shared/embedHosts.js';
 import { giveAlt, nameEmptyLink } from './accessibleMarkup.js';
 
 // Feed HTML is untrusted. We allow <iframe> for legitimate video embeds only:
 // any iframe whose src is not on this host allowlist is dropped, so a malicious
 // feed cannot embed an arbitrary phishing/clickjacking frame in the trusted UI.
-const IFRAME_HOST_ALLOWLIST = [
-  'www.youtube.com', 'youtube.com', 'www.youtube-nocookie.com',
-  'player.vimeo.com', 'w.soundcloud.com',
-];
+// The server's Content-Security-Policy allows frames from the same hosts only.
+const IFRAME_HOST_ALLOWLIST = EMBED_HOSTS;
 
 DOMPurify.addHook('uponSanitizeElement', (node, data) => {
   if (data.tagName !== 'iframe') return;
