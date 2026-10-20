@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
@@ -33,6 +34,12 @@ export default defineConfig([
       'max-params': ['warn', 4],
       'max-nested-callbacks': ['warn', 3],
     },
+  },
+  {
+    // Accessibility rules for the React UI. Where a rule is wrong for one
+    // element, disable it inline with a reason; never turn a rule off here.
+    files: ['src/**/*.{js,jsx}'],
+    ...jsxA11y.flatConfigs.recommended,
   },
   {
     // Server code, scripts and the Vite config run on Node, not in the browser.

@@ -66,7 +66,7 @@ function MarkAllReadButton({ unreadCount, confirm }) {
   if (unreadCount === 0) return null;
   if (confirm.armed) {
     return (
-      <button type="button" onClick={confirm.trigger} title="Click again to confirm" className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md border-0 bg-[var(--danger)] px-2 text-xs text-white">
+      <button type="button" onClick={confirm.trigger} title="Click again to confirm" className="inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md border-0 bg-destructive px-2 text-xs text-destructive-foreground">
         <HiOutlineCheckCircle className="size-3.5" /> Mark {unreadCount.toLocaleString()} read?
       </button>
     );
@@ -116,6 +116,7 @@ export function SearchBar({ search, inputRef }) {
         aria-label="Search articles"
         value={search.query}
         onChange={(e) => search.setQuery(e.target.value)}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- search opens on "/" or its button, so focus belongs in it
         autoFocus
         className="h-7 min-w-0 flex-1 border-0 bg-transparent font-sans text-[13.5px] text-foreground shadow-none outline-none placeholder:text-[var(--text-tertiary)]"
       />

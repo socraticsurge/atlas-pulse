@@ -173,6 +173,8 @@ Each package ships as small, behavior-preserving pull requests that keep CodeSce
 
 ## 6. Sequencing with the roadmap
 
+_This is the release plan made before 2.0, kept for the record. Current plans are in [ROADMAP.md](../ROADMAP.md)._
+
 | Release | Scope |
 |---|---|
 | **v1.4.0** | On-device AI (Gemini Nano), optional Ollama, background service, AI context fix |

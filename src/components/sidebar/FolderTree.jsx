@@ -22,7 +22,7 @@ function FeedRow({ feed, unread, active, onViewChange, openMenu, nested }) {
       label={feed.title}
       count={unread}
       alert={refreshAlert(feed)}
-      className={cn(nested && 'pl-8 text-[12.5px]')}
+      className={cn(nested && 'pl-9 text-[12.5px]')}
     />
   );
 }
@@ -37,6 +37,7 @@ export function RenameInput({ initial, label = 'Folder name', onSubmit, onCancel
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
       onClick={(e) => e.stopPropagation()}
+      // eslint-disable-next-line jsx-a11y/no-autofocus -- the field opens from Rename or New collection, so focus belongs in it
       autoFocus
     />
   );
@@ -44,14 +45,15 @@ export function RenameInput({ initial, label = 'Folder name', onSubmit, onCancel
 
 function FolderRow({ folder, feeds, counts, open, renaming, tree }) {
   const toggle = (
-    <span
-      role="button"
-      aria-label={open ? 'Collapse folder' : 'Expand folder'}
-      onClick={(e) => { e.stopPropagation(); tree.toggleFolder(folder.id); }}
-      className={cn('absolute left-0 flex size-5 items-center justify-center text-[var(--text-tertiary)] transition-transform', open && 'rotate-90')}
+    <button
+      type="button"
+      aria-label={`${open ? 'Collapse' : 'Expand'} folder ${folder.name}`}
+      aria-expanded={open}
+      onClick={() => tree.toggleFolder(folder.id)}
+      className={cn('flex size-6 shrink-0 cursor-pointer items-center justify-center rounded border-0 bg-transparent p-0 text-[var(--text-tertiary)] outline-none transition-transform focus-visible:ring-1 focus-visible:ring-ring', open && 'rotate-90')}
     >
       <HiChevronRight className="size-3" />
-    </span>
+    </button>
   );
   return (
     <div>
@@ -66,7 +68,7 @@ function FolderRow({ folder, feeds, counts, open, renaming, tree }) {
           icon={<HiOutlineFolderOpen />}
           label={folder.name}
           count={folderUnread(feeds, counts.byFeed)}
-          className="pl-5"
+          className="pl-0"
         >
           {toggle}
         </NavRow>

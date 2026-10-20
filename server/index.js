@@ -11,13 +11,15 @@ import aiRouter from './routes/ai.js';
 import summariesRouter from './routes/summaries.js';
 import highlightsRouter from './routes/highlights.js';
 import studioRouter from './routes/studio.js';
-import { isLocalHostname } from './utils/loopback.js';
+import { localOnly, originAllowed } from './utils/loopback.js';
 import { appUrl, listenFailure, readyMessage } from './utils/startup.js';
 import collectionsRouter from './routes/collections.js';
 import ollamaRouter from './routes/ollama.js';
 import readerRouter from './routes/reader.js';
 import settingsRouter from './routes/settings.js';
 import faviconRouter from './routes/favicon.js';
+import refreshRouter from './routes/refresh.js';
+import { startAutoRefresh } from './refresh/autoRefresh.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -25,21 +27,18 @@ const PORT = Number(process.env.PORT) || 3001;
 // Override with HOST=0.0.0.0 only if you deliberately want network access.
 const HOST = process.env.HOST || '127.0.0.1';
 
-// This API has no auth by design (local, single-user). A wildcard CORS policy
-// would let any website the user visits read/delete their data cross-origin,
-// so only same-machine origins are allowed.
+// This API has no auth by design (local, single-user), so only this machine
+// may use it. Any website the user visits could otherwise read or delete their
+// data: cross-origin (another Origin), or by pointing its own name at
+// 127.0.0.1 (DNS rebinding: another Host). Both get a 403.
+app.use(localOnly(HOST));
 app.use(cors({
-  origin(origin, callback) {
-    // Allow non-browser clients (curl, same-origin server calls) with no Origin.
-    if (!origin) return callback(null, true);
-    try {
-      if (isLocalHostname(new URL(origin).hostname)) return callback(null, true);
-    } catch { /* fall through to rejection */ }
-    return callback(new Error('Not allowed by CORS'));
-  },
+  // CORS headers for pages on this machine; requests with no Origin (curl,
+  // same-origin) need none.
+  origin: (origin, callback) => callback(null, originAllowed(origin)),
 }));
-// Feed refreshes post whole articles; the client sends them in ~1 MB chunks,
-// and this route allows more so a single very long article still fits.
+// Adding a feed posts its current articles in one request, whole, so this
+// route allows more than the rest.
 app.use('/api/reader/articles/bulk-insert', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '2mb' }));
 // Express 5 leaves req.body undefined when a request has no JSON body; routes
@@ -59,6 +58,7 @@ app.use('/api/ollama', ollamaRouter);
 app.use('/api/reader', readerRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/favicon', faviconRouter);
+app.use('/api/refresh', refreshRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -103,4 +103,5 @@ app.listen(PORT, HOST, (err) => {
     process.exit(1);
   }
   console.log(readyMessage({ url: URL_SHOWN, dev: DEV, built: BUILT }));
+  startAutoRefresh();
 });

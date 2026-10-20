@@ -8,13 +8,17 @@ export const SiteIcon = ({ siteUrl, size = 'size-5' }) => (
   <img src={getFaviconUrl(siteUrl)} alt="" onError={hideOnError} className={cn('mt-0.5 shrink-0 rounded', size)} />
 );
 
-/** One feed in a list: icon, title, description, meta line, action. */
+/**
+ * One feed in a list: icon, title, description, meta line, action. `dim`
+ * (already added) fades the icon and mutes the title's color; text is never
+ * faded with opacity, so it keeps 4.5:1 contrast.
+ */
 export function FeedRow({ siteUrl, title, description, meta, children, dim }) {
   return (
-    <div className={cn('flex items-start gap-3 border-b border-border py-3 last:border-b-0', dim && 'opacity-60')}>
-      {siteUrl && <SiteIcon siteUrl={siteUrl} />}
+    <div className="flex items-start gap-3 border-b border-border py-3 last:border-b-0">
+      {siteUrl && <SiteIcon siteUrl={siteUrl} size={cn('size-5', dim && 'opacity-50')} />}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[13.5px] font-medium text-foreground">{title}</div>
+        <div className={cn('truncate text-[13.5px] font-medium', dim ? 'text-muted-foreground' : 'text-foreground')}>{title}</div>
         {description && <div className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{description}</div>}
         {meta && <div className="mt-1 font-mono text-[11px] text-[var(--text-tertiary)]">{meta}</div>}
       </div>

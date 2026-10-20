@@ -18,9 +18,31 @@ DOMPurify.addHook('uponSanitizeElement', (node, data) => {
   }
 });
 
+// "example.com/path" for a link's accessible name.
+function readableUrl(href) {
+  try {
+    const url = new URL(href, 'https://x.invalid');
+    return `${url.hostname}${url.pathname === '/' ? '' : url.pathname}`.slice(0, 80);
+  } catch { return 'link'; }
+}
+
+// A link with nothing to read (a heading's empty anchor, an image without
+// alt text) has no name for a screen reader: an image link is named by its
+// URL; a link that shows nothing at all leaves the tab order.
+function nameEmptyLink(a) {
+  if (a.textContent.trim() || a.querySelector('img[alt]:not([alt=""])')) return;
+  if (a.querySelector('img, svg, picture, video')) {
+    a.setAttribute('aria-label', `Link: ${readableUrl(a.getAttribute('href'))}`);
+    return;
+  }
+  a.setAttribute('aria-hidden', 'true');
+  a.setAttribute('tabindex', '-1');
+}
+
 // Runs after attribute sanitization, so the forced values survive and override
 // anything the feed set: iframes get a fixed sandbox; links open in a new tab,
-// so following one never navigates the app itself away.
+// so following one never navigates the app itself away. Code blocks scroll
+// sideways, so they take keyboard focus to be scrollable without a mouse.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'IFRAME') {
     node.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-presentation allow-popups');
@@ -28,7 +50,9 @@ DOMPurify.addHook('afterSanitizeAttributes', (node) => {
   if (node.tagName === 'A' && node.hasAttribute('href')) {
     node.setAttribute('target', '_blank');
     node.setAttribute('rel', 'noopener noreferrer');
+    nameEmptyLink(node);
   }
+  if (node.tagName === 'PRE') node.setAttribute('tabindex', '0');
 });
 
 // Feed HTML is shown inside the app, so it gets no interactive controls (a

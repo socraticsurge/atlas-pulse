@@ -47,6 +47,7 @@ const SummaryItem = memo(function SummaryItem({ row, onDelete, onOpenInReader })
         <span className="text-primary">{row.article_source || 'Unknown source'}</span> · {formatDate(row.created_at)}
       </div>
       <h3 className="m-0 mt-1.5 text-[15.5px] font-medium leading-snug text-foreground">{row.article_title || row.article_url || 'Untitled'}</h3>
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- pointer shortcut; the More/Less button below does the same from the keyboard */}
       <p
         className={cn('m-0 mt-2 cursor-pointer text-[15.5px] leading-relaxed text-[var(--text-secondary)]', !expanded && 'line-clamp-3')}
         style={{ fontFamily: 'var(--reader-font-family)' }}
