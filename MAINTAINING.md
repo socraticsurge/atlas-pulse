@@ -88,4 +88,4 @@ Several AI sessions can work at once. These rules keep them out of each other's 
 
 ## Changing this document
 
-Propose a change in a pull request that explains why. If [CLAUDE.md](CLAUDE.md) or the [pull request template](.github/PULL_REQUEST_TEMPLATE.md) repeat the rule, update them in the same pull request. Changes to GOVERNANCE.md follow GOVERNANCE.md: they start as a Discussion.
+Propose a change in a pull request that explains why. If [CLAUDE.md](CLAUDE.md) or the [pull request template](.github/PULL_REQUEST_TEMPLATE.md) repeat the rule, update them in the same pull request. Changes to GOVERNANCE.md, or to a project principle, follow the rule for them in [How decisions are made](GOVERNANCE.md#how-decisions-are-made).
