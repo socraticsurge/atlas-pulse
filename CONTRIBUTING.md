@@ -45,17 +45,28 @@ Use the [bug report template](https://github.com/socraticsurge/atlas-pulse/issue
 
 ## Proposing features
 
-Open a [feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) first, especially for larger changes, so we can agree on the approach before you invest time in code.
+Open a [feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) first, especially for larger changes, so we can agree on the approach before you invest time in code. [GOVERNANCE.md](GOVERNANCE.md) explains how decisions are made.
 
 ## Pull requests
 
 1. Fork the repo and create a branch from `master`: `feat/short-name` or `fix/short-name`.
 2. Keep PRs focused: one feature or fix per PR.
 3. Run `npm run lint` and `npm test`, and make sure the app starts cleanly with `npm run dev`.
-4. Test the affected flows manually, and add tests where practical (`node --test`; see `server/utils/urlGuard.test.js`).
+4. Add or update tests as described in [Tests](#tests), and test the affected flows manually.
 5. If you change user-facing behavior, update the README (features tables, shortcuts) and add a line to `CHANGELOG.md`.
 6. If you change a SQLite schema, add a new numbered migration in `server/db/migrations/`. Never edit a released migration, and never require users to delete their data.
 7. Keep `npm run lint` at zero warnings. The complexity rules (complexity 9, 70 lines per function, nesting depth 3, 4 parameters) are there to keep components small. Split the code rather than raising the limit.
+
+### Tests
+
+Changes that alter behavior come with automated tests:
+
+- **New features and bug fixes add or update tests.** A bug fix adds a regression test that fails without the fix. A new feature tests its logic: parsing, data handling, routes, state changes.
+- **Where tests live.** Tests use Node's built-in runner (`node --test`, run by `npm test`) and sit next to the code they cover as `*.test.js`, for example `server/utils/urlGuard.test.js` next to `server/utils/urlGuard.js`. CI runs them on Linux, macOS and Windows for every pull request, and they must pass before a merge.
+- **UI-only changes** (layout, styling, wording) need one of two things: a logic test, usually after moving the logic into a plain module the way `src/components/article-list/listLogic.js` does, or a note in the pull request on how you checked it by hand (browser, dark and light themes, the steps you took).
+- **Refactors** keep the existing tests passing without weakening them.
+
+A pull request that changes behavior without a test or a manual-check note will be asked for one before it is merged.
 
 ### Commit messages
 
@@ -77,4 +88,4 @@ refactor: Extract batch queue logic into hook
 
 ## Questions
 
-Open a [discussion](https://github.com/socraticsurge/atlas-pulse/discussions) or an issue. Happy building!
+Open a [discussion](https://github.com/socraticsurge/atlas-pulse/discussions) or an issue; [SUPPORT.md](SUPPORT.md) says where each kind of question goes. Happy building!
