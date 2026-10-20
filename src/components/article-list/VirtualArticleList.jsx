@@ -7,19 +7,21 @@ import DayHeading from '../shell/DayHeading.jsx';
 
 const GRID_COLUMNS = 3;
 const ROW = 'absolute top-0 left-0 w-full';
-// First-guess heights in px; items are then measured as they render.
+// First-guess heights in px (a day heading adds `header`); items are then
+// measured as they render.
 const ESTIMATES = { header: 30, rows: 58, magazine: 292, excerpt: 96, compact: 37 };
 // Load the next page when the rendered items come within this many of the end.
 const END_MARGIN = 15;
 
-// The virtualized items for a view mode. Rows: day headings (unless the list
-// is ranked by relevance, not date) and one article each. Grid: rows of three
-// cards. List and Compact: one card each.
+// The virtualized items for a view mode. Rows: one article each, under day
+// headings unless the list is ranked by relevance, not date. Grid: rows of
+// three cards. List and Compact: one card each. position: the index of the
+// item's (first) article in the list.
 function listItems(articles, viewMode, ranked, grouping) {
-  if (viewMode === 'rows' && ranked) return articles.map((article) => ({ type: 'article', key: article.id, article }));
+  if (viewMode === 'rows' && ranked) return articles.map((article, position) => ({ type: 'article', key: article.id, article, position }));
   if (viewMode === 'rows') return withDayHeaders(articles, new Date(), grouping);
   const columns = viewMode === 'magazine' ? GRID_COLUMNS : 1;
-  return chunkRows(articles, columns).map((cards) => ({ type: 'cards', key: cards[0].id, articles: cards }));
+  return chunkRows(articles, columns).map((cards, row) => ({ type: 'cards', key: cards[0].id, articles: cards, position: row * columns }));
 }
 
 // Index of the item that shows each article, for scrolling to it.
@@ -60,33 +62,42 @@ function useEndReached(lastRenderedIndex, count, onEndReached) {
   }, [lastRenderedIndex, count, onEndReached]);
 }
 
-function ItemContent({ item, viewMode, props }) {
+// One article in the list, numbered for screen readers ("3 of 3,624") since
+// only the rows near the viewport are in the page.
+function ListItem({ position, setSize, children }) {
+  return <div role="listitem" aria-posinset={position + 1} aria-setsize={setSize}>{children}</div>;
+}
+
+function ItemContent({ item, viewMode, setSize, props }) {
   const { feedMap, selectedArticleId, selection, onSelectArticle } = props;
-  if (item.type === 'header') return <DayHeading label={item.label} />;
   if (item.type === 'article') {
     const { article } = item;
     return (
-      <ArticleRow
+      <ListItem position={item.position} setSize={setSize}>
+        {item.heading && <DayHeading label={item.heading} />}
+        <ArticleRow
+          article={article}
+          feed={feedMap[article.feedId]}
+          active={selectedArticleId === article.id}
+          selected={selection.has(article.id)}
+          onOpen={() => onSelectArticle(article)}
+          onToggle={() => selection.toggle(article.id)}
+        />
+      </ListItem>
+    );
+  }
+  return item.articles.map((article, i) => (
+    <ListItem key={article.id} position={item.position + i} setSize={setSize}>
+      <ArticleCard
+        viewMode={viewMode}
         article={article}
         feed={feedMap[article.feedId]}
         active={selectedArticleId === article.id}
         selected={selection.has(article.id)}
-        onOpen={() => onSelectArticle(article)}
-        onToggle={() => selection.toggle(article.id)}
+        onSelectArticle={onSelectArticle}
+        onToggleSelect={selection.toggle}
       />
-    );
-  }
-  return item.articles.map((article) => (
-    <ArticleCard
-      key={article.id}
-      viewMode={viewMode}
-      article={article}
-      feed={feedMap[article.feedId]}
-      active={selectedArticleId === article.id}
-      selected={selection.has(article.id)}
-      onSelectArticle={onSelectArticle}
-      onToggleSelect={selection.toggle}
-    />
+    </ListItem>
   ));
 }
 
@@ -94,9 +105,10 @@ function ItemContent({ item, viewMode, props }) {
  * The articles, rendered only near the visible part of `scrollRef`; calls
  * onEndReached as the reader nears the end, to load the next page.
  * Rows (default) shows day headings and dense two-line rows; Grid lays out
- * rows of three cards; List and Compact one card per row.
+ * rows of three cards; List and Compact one card per row. A list named
+ * `label`, of `total` articles (loaded or not).
  */
-export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, grouping, onEndReached, ...props }) {
+export function VirtualArticleList({ scrollRef, articles, total = 0, label, viewMode, ranked, grouping, onEndReached, ...props }) {
   const items = useMemo(() => listItems(articles, viewMode, ranked, grouping), [articles, viewMode, ranked, grouping]);
   const indexById = useMemo(() => itemIndexById(items), [items]);
   const listRef = useRef(null);
@@ -106,7 +118,7 @@ export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, grou
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: (index) => ESTIMATES[items[index].type === 'header' ? 'header' : viewMode] ?? ESTIMATES.excerpt,
+    estimateSize: (index) => (ESTIMATES[viewMode] ?? ESTIMATES.excerpt) + (items[index].heading ? ESTIMATES.header : 0),
     getItemKey: (index) => items[index].key,
     overscan: 8,
     scrollMargin,
@@ -114,9 +126,10 @@ export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, grou
   useScrollToActive(virtualizer, indexById, props.selectedArticleId);
   const virtualItems = virtualizer.getVirtualItems();
   useEndReached(virtualItems.at(-1)?.index ?? -1, items.length, onEndReached);
+  const setSize = Math.max(total, articles.length);
 
   return (
-    <div ref={listRef} className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+    <div ref={listRef} role="list" aria-label={label} className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
       {virtualItems.map((virtualItem) => {
         const item = items[virtualItem.index];
         return (
@@ -127,7 +140,7 @@ export function VirtualArticleList({ scrollRef, articles, viewMode, ranked, grou
             className={item.type === 'cards' && viewMode === 'magazine' ? `${ROW} grid auto-rows-[280px] grid-cols-3 gap-3 pb-3` : ROW}
             style={{ transform: `translateY(${virtualItem.start - scrollMargin}px)` }}
           >
-            <ItemContent item={item} viewMode={viewMode} props={props} />
+            <ItemContent item={item} viewMode={viewMode} setSize={setSize} props={props} />
           </div>
         );
       })}

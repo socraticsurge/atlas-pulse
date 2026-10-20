@@ -47,8 +47,10 @@ test('dayGroup and withDayHeaders group a newest-first list by day', () => {
   assert.equal(dayGroup(at(11), now), 'Older');
   assert.equal(dayGroup('not a date', now), 'Older');
   const items = withDayHeaders([{ id: 1, publishedAt: at(18) }, { id: 2, publishedAt: at(18, 8) }, { id: 3, publishedAt: at(17) }, { id: 4, publishedAt: at(2) }], now);
-  assert.deepEqual(items.map((i) => (i.type === 'header' ? i.label : i.article.id)), ['Today', 1, 2, 'Yesterday', 3, 'Older', 4]);
+  assert.deepEqual(items.map((i) => [i.heading, i.article.id]), [['Today', 1], [undefined, 2], ['Yesterday', 3], ['Older', 4]]);
+  assert.deepEqual(items.map((i) => i.position), [0, 1, 2, 3], 'positions count articles only');
   assert.equal(new Set(items.map((i) => i.key)).size, items.length, 'keys are unique');
+  assert.notEqual(items[0].key, 1, 'a row with a heading is keyed apart from the same row without one');
 });
 
 test('shortTime is a clock time today, a weekday this week, a date before', () => {
@@ -88,7 +90,7 @@ test('lists of saves group under save-date headings', () => {
   const saves = [{ id: 1, savedAt: at(19), publishedAt: at(1) }, { id: 2, savedAt: at(16), publishedAt: at(18) }];
   assert.equal(groupingFor('saved'), BY_SAVED);
   assert.equal(groupingFor('all'), BY_PUBLISHED);
-  const labels = withDayHeaders(saves, now, BY_SAVED).filter((i) => i.type === 'header').map((i) => i.label);
+  const labels = withDayHeaders(saves, now, BY_SAVED).filter((i) => i.heading).map((i) => i.heading);
   assert.deepEqual(labels, ['Saved today', 'Saved this week']);
 });
 
