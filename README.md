@@ -72,7 +72,7 @@ Install Atlas Pulse as a login service so it is always at the same address, with
 npm run service install
 ```
 
-Then open **http://atlas-pulse.localhost:4317**. Chrome resolves every `*.localhost` name to your own machine, so no DNS or hosts-file changes are needed. Atlas Pulse ships a web app manifest and icons, so you can also install it from Chrome's menu to get its own window and dock icon.
+Then open **http://atlas-pulse.localhost:4317**. Chrome resolves every `*.localhost` name to your own machine, so no DNS or hosts-file changes are needed. The service keeps refreshing your feeds while no browser is open, so fast feeds don't lose stories overnight. Atlas Pulse ships a web app manifest and icons, so you can also install it from Chrome's menu to get its own window and dock icon.
 
 | Command | What it does |
 |---------|--------------|
@@ -133,7 +133,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **AI rail** | Press `a` for the side rail: Summary, Analysis, Chat and Highlights tabs, the model picker, and an "Ask AI about this article" bar |
 | **Summary and analysis** | A 3–4 sentence summary, and a classification across sentiment, urgency, frame, tone and depth with topic tags. A summary you ask for is kept; background runs never overwrite it |
 | **Your voice** | Nine reading personas, tone (voice, energy, angle) and custom instructions, applied to every response, including background runs |
-| **Background processing** | Summarizes and analyzes new articles after each refresh while the app is open. The ✨ button runs it on recent articles any time, and the queue can be cleared |
+| **Background processing** | Queues new articles after each refresh and summarizes and analyzes them while the app is open. The ✨ button runs it on recent articles any time, and the queue can be cleared |
 | **Multi-article actions** | Select articles and choose **AI**: Compare Sources (2–5), Generate Newsletter (3–15, as a Daily Digest, Weekly Roundup or Executive Brief) or Briefing (2–15, any question answered from just those articles). Export to Markdown or Word, email it, or save it to Studio |
 | **Editable prompts** | In **Power** mode, **Settings → Prompts** lets you read and change every prompt and character budget the app uses |
 
@@ -144,7 +144,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **Add a feed four ways** | Paste a URL (feeds are discovered from the page), search Google News, browse the Popular catalog, or follow the Google Alerts steps |
 | **OPML** | Import and export your feeds and folders in **Settings → Data**; imported feeds fetch right away |
 | **Feed health** | A feed that fails shows a warning with the reason; refresh it on its own from its menu |
-| **Auto-refresh** | Off, 15 min, 30 min, 1 h or 2 h. A refresh fetches only what's new |
+| **Auto-refresh** | Off, 15 min, 30 min, 1 h or 2 h. The local server refreshes on its own, so feeds keep updating with the app closed (not while the computer sleeps). A refresh fetches only what's new |
 
 ### Appearance and settings
 
@@ -227,7 +227,7 @@ Installed models appear in the model picker automatically. Models that reason be
 
 ### Background processing
 
-In **Settings → AI engines**, choose a model (**Auto** uses Gemini Nano when available), what to generate (summary, analysis or both) and how many articles per run, then turn on **Background processing**. New articles are processed after each refresh while the app is open. Click ✨ in the list header to process recent articles now.
+In **Settings → AI engines**, choose a model (**Auto** uses Gemini Nano when available), what to generate (summary, analysis or both) and how many articles per run, then turn on **Background processing**. New articles are queued after each refresh, also when the app is closed, and processed while it is open. Click ✨ in the list header to process recent articles now.
 
 ---
 

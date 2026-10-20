@@ -3,6 +3,12 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
+## Unreleased
+
+### Fixed
+
+- **Feeds refresh with the app closed.** Auto-refresh ran in the browser tab, so nothing was fetched once the tab was closed, unloaded by Chrome, or the browser quit. A feed lists only its latest items, so fast ones lost stories for good: Techmeme keeps about 8 hours, arXiv a single day. The local server now refreshes every feed on the Auto-refresh interval by itself, and the app picks up what it found within a minute. The Refresh buttons ask the server too, and a refresh it is already running is joined rather than repeated. New articles are queued for background processing after each refresh, as before; processing still needs the app open. A sleeping computer still refreshes nothing; the first check after it wakes catches up.
+
 ## 2.1.0 (2026-10-19)
 
 Setup and first use, made clearer. Atlas Pulse now says what is wrong and how to fix it: an unsupported Node, a taken port, a stopped server, or an AI engine it can't use. Medium articles come through with their images and without the page clutter, and installs no longer report security warnings.

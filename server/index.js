@@ -18,6 +18,8 @@ import ollamaRouter from './routes/ollama.js';
 import readerRouter from './routes/reader.js';
 import settingsRouter from './routes/settings.js';
 import faviconRouter from './routes/favicon.js';
+import refreshRouter from './routes/refresh.js';
+import { startAutoRefresh } from './refresh/autoRefresh.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
@@ -38,8 +40,8 @@ app.use(cors({
     return callback(new Error('Not allowed by CORS'));
   },
 }));
-// Feed refreshes post whole articles; the client sends them in ~1 MB chunks,
-// and this route allows more so a single very long article still fits.
+// Adding a feed posts its current articles in one request, whole, so this
+// route allows more than the rest.
 app.use('/api/reader/articles/bulk-insert', express.json({ limit: '8mb' }));
 app.use(express.json({ limit: '2mb' }));
 // Express 5 leaves req.body undefined when a request has no JSON body; routes
@@ -59,6 +61,7 @@ app.use('/api/ollama', ollamaRouter);
 app.use('/api/reader', readerRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/favicon', faviconRouter);
+app.use('/api/refresh', refreshRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -103,4 +106,5 @@ app.listen(PORT, HOST, (err) => {
     process.exit(1);
   }
   console.log(readyMessage({ url: URL_SHOWN, dev: DEV, built: BUILT }));
+  startAutoRefresh();
 });
