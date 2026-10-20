@@ -53,9 +53,12 @@ Open a [feature request](https://github.com/socraticsurge/atlas-pulse/issues/new
 2. Keep PRs focused: one feature or fix per PR.
 3. Run `npm run lint` and `npm test`, and make sure the app starts cleanly with `npm run dev`.
 4. Add or update tests as described in [Tests](#tests), and test the affected flows manually.
-5. If you change user-facing behavior, update the README (features tables, shortcuts) and add a line to `CHANGELOG.md`.
+5. If you change user-facing behavior, update the README (features tables, shortcuts) and add a line under `## Unreleased` in `CHANGELOG.md` that ends with your PR number. If the change crosses a trust boundary, update [docs/SECURITY-DESIGN.md](docs/SECURITY-DESIGN.md#keeping-this-document-current) in the same PR.
 6. If you change a SQLite schema, add a new numbered migration in `server/db/migrations/`. Never edit a released migration, and never require users to delete their data.
 7. Keep `npm run lint` at zero warnings. The complexity rules (complexity 9, 70 lines per function, nesting depth 3, 4 parameters) are there to keep components small. Split the code rather than raising the limit.
+8. AI tools are welcome. If you used one, say so in the PR; [AI-assisted work](MAINTAINING.md#ai-assisted-work) sets out what that means.
+
+A PR is merged once it meets the [definition of done](MAINTAINING.md#definition-of-done) in MAINTAINING.md.
 
 ### Tests
 
