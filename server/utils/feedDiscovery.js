@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { assertPublicHttpUrl, safeFetch } from './urlGuard.js';
+import { assertPublicHttpUrl, guardedRequest, safeFetch } from './urlGuard.js';
 
 const COMMON_FEED_PATHS = [
   '/feed',
@@ -50,7 +50,7 @@ export function feedsInHtml(html, baseUrl) {
   return addUnique(feeds, anchors);
 }
 
-async function fetchPageFeeds(baseUrl) {
+async function fetchPageFeeds(baseUrl, request) {
   try {
     const response = await safeFetch(baseUrl.href, {
       headers: {
@@ -58,21 +58,21 @@ async function fetchPageFeeds(baseUrl) {
         'Accept': 'text/html,application/xhtml+xml',
       },
       signal: AbortSignal.timeout(10000),
-    });
+    }, request);
     return response.ok ? feedsInHtml(await response.text(), baseUrl) : [];
   } catch {
     return []; // HTML fetch failed; the caller falls back to probing
   }
 }
 
-async function probePath(path, baseUrl) {
+async function probePath(path, baseUrl, request) {
   const probeUrl = new URL(path, baseUrl).href;
   try {
     const resp = await safeFetch(probeUrl, {
       method: 'HEAD',
       headers: { 'User-Agent': 'RSS-Feed-Reader/1.0' },
       signal: AbortSignal.timeout(5000),
-    });
+    }, request);
     const contentType = resp.headers.get('content-type') || '';
     if (resp.ok && isFeedContentType(contentType)) return { url: probeUrl, title: '', type: 'probed' };
   } catch {
@@ -84,12 +84,13 @@ async function probePath(path, baseUrl) {
 /**
  * Discover RSS/Atom feed URLs from a given website URL: feeds the page
  * advertises, or else whichever common feed paths respond like a feed.
+ * `request` is the single-hop HTTP call, as in safeFetch (tests pass a stub).
  */
-export async function discoverFeeds(websiteUrl) {
+export async function discoverFeeds(websiteUrl, request = guardedRequest) {
   // Rejects loopback/private/link-local targets before any server-side fetch.
   const baseUrl = await assertPublicHttpUrl(websiteUrl);
-  const feeds = await fetchPageFeeds(baseUrl);
+  const feeds = await fetchPageFeeds(baseUrl, request);
   if (feeds.length > 0) return feeds;
-  const probed = await Promise.all(COMMON_FEED_PATHS.map((path) => probePath(path, baseUrl)));
+  const probed = await Promise.all(COMMON_FEED_PATHS.map((path) => probePath(path, baseUrl, request)));
   return addUnique([], probed.filter(Boolean));
 }
