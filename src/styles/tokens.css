@@ -29,6 +29,11 @@
   --text-tertiary: #96938d;
   --text-muted: #6a6863;
 
+  /* Toolbars and action rows that stay quiet until hovered or focused rest
+     at this opacity. Their text still reaches 4.5:1 on the page and panel
+     surfaces at this value (tokens.test.js checks); 0.85 did not. */
+  --dimmed-opacity: 0.9;
+
   /* One accent color; its hover, muted and border shades derive from it, so
      a preset or custom accent only sets --accent. */
   --accent: #e8a33d;

@@ -26,11 +26,16 @@ const contrast = (a, b) => {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 };
-// --accent-muted: the accent at 15% over the page (selected rows).
+// A color at `amount` opacity over the page; --accent-muted is the accent at 15% (selected rows).
 const tint = (accent, page, amount = 0.15) => rgb(accent).map((v, i) => amount * v + (1 - amount) * rgb(page)[i]);
 
 // Every surface text can sit on: page, panels, hovered, active and selected rows, dialogs.
 const SURFACES = ['bg-primary', 'bg-secondary', 'bg-tertiary', 'bg-hover', 'bg-active', 'bg-surface', 'bg-modal'];
+
+// Dimmed toolbars and action rows rest on a pane (the page, a panel, the
+// reader); hovered or focused, they're fully opaque again.
+const DIMMED = Number(css.match(/--dimmed-opacity:\s*([\d.]+);/)?.[1]);
+const PANES = ['bg-primary', 'bg-secondary', 'bg-surface'];
 
 // "name on surface = ratio" for each pair below AA.
 function failures(fg, tokens, extra = {}) {
@@ -45,6 +50,7 @@ test('the token blocks parse', () => {
   for (const tokens of Object.values(THEMES)) for (const name of [...SURFACES, 'text-tertiary', 'danger']) assert.match(tokens[name], /^#/);
   assert.equal(Object.keys(accentPresets('dark')).length, 6);
   assert.equal(Object.keys(accentPresets('light')).length, 6);
+  assert.ok(DIMMED > 0 && DIMMED <= 1, `--dimmed-opacity (${DIMMED})`);
 });
 
 for (const [theme, tokens] of Object.entries(THEMES)) {
@@ -59,6 +65,15 @@ for (const [theme, tokens] of Object.entries(THEMES)) {
       const selected = { 'accent-muted': tint(accent, tokens['bg-primary']) };
       assert.deepEqual(failures(accent, tokens, selected), [], `${preset} accent ${accent}`);
       assert.ok(contrast(rgb(tokens['accent-foreground']), rgb(accent)) >= AA, `--accent-foreground on ${preset}`);
+    }
+  });
+
+  test(`${theme}: dimmed text keeps 4.5:1 on the panes it rests on`, () => {
+    for (const name of ['text-primary', 'text-secondary', 'text-tertiary', 'danger']) {
+      for (const pane of PANES) {
+        const ratio = contrast(tint(tokens[name], tokens[pane], DIMMED), rgb(tokens[pane]));
+        assert.ok(ratio >= AA, `--${name} at ${DIMMED} on --${pane}: ${ratio.toFixed(2)}:1`);
+      }
     }
   });
 

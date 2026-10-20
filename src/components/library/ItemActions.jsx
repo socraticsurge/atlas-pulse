@@ -29,7 +29,7 @@ export function DeleteButton({ onDelete, what }) {
   );
 }
 
-/** A row of actions, quiet until the item is hovered or focused (85%: text stays at 4.5:1). */
+/** A row of actions, quiet until the item is hovered or focused (--dimmed-opacity: text stays at 4.5:1). */
 export function ActionRow({ children }) {
-  return <div className="mt-2 -ml-2 flex flex-wrap gap-0.5 opacity-85 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{children}</div>;
+  return <div className="mt-2 -ml-2 flex flex-wrap gap-0.5 opacity-[var(--dimmed-opacity)] transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">{children}</div>;
 }
