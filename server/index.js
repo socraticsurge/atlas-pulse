@@ -11,7 +11,7 @@ import aiRouter from './routes/ai.js';
 import summariesRouter from './routes/summaries.js';
 import highlightsRouter from './routes/highlights.js';
 import studioRouter from './routes/studio.js';
-import { isLocalHostname } from './utils/loopback.js';
+import { localOnly, originAllowed } from './utils/loopback.js';
 import { appUrl, listenFailure, readyMessage } from './utils/startup.js';
 import collectionsRouter from './routes/collections.js';
 import ollamaRouter from './routes/ollama.js';
@@ -27,18 +27,15 @@ const PORT = Number(process.env.PORT) || 3001;
 // Override with HOST=0.0.0.0 only if you deliberately want network access.
 const HOST = process.env.HOST || '127.0.0.1';
 
-// This API has no auth by design (local, single-user). A wildcard CORS policy
-// would let any website the user visits read/delete their data cross-origin,
-// so only same-machine origins are allowed.
+// This API has no auth by design (local, single-user), so only this machine
+// may use it. Any website the user visits could otherwise read or delete their
+// data: cross-origin (another Origin), or by pointing its own name at
+// 127.0.0.1 (DNS rebinding: another Host). Both get a 403.
+app.use(localOnly(HOST));
 app.use(cors({
-  origin(origin, callback) {
-    // Allow non-browser clients (curl, same-origin server calls) with no Origin.
-    if (!origin) return callback(null, true);
-    try {
-      if (isLocalHostname(new URL(origin).hostname)) return callback(null, true);
-    } catch { /* fall through to rejection */ }
-    return callback(new Error('Not allowed by CORS'));
-  },
+  // CORS headers for pages on this machine; requests with no Origin (curl,
+  // same-origin) need none.
+  origin: (origin, callback) => callback(null, originAllowed(origin)),
 }));
 // Adding a feed posts its current articles in one request, whole, so this
 // route allows more than the rest.
