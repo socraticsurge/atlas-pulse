@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useFeeds } from '../hooks/useFeeds.js';
 import { useFolders } from '../hooks/useFolders.js';
 import * as api from '../utils/api.js';
-import { getAutoRefreshMinutes } from '../utils/constants.js';
-import { refreshSummary } from '../utils/feedSync.js';
+import { usePolling } from '../hooks/usePolling.js';
+import { refreshNews, refreshSummary } from '../utils/feedSync.js';
 import { serverStatus } from './serverStatus.js';
 import { useToast } from './ToastContext.jsx';
 
@@ -37,17 +37,48 @@ function useRefreshKeys() {
   return { articlesKey, countsKey, bumpArticles, bumpCounts };
 }
 
-// Refreshes all feeds every `minutes` (0 = off) once there are feeds.
-function useAutoRefresh(feedCount, refreshAllFeeds) {
-  const [minutes, setMinutes] = useState(getAutoRefreshMinutes);
-  const intervalRef = useRef(null);
-  useEffect(() => {
-    clearInterval(intervalRef.current);
-    if (feedCount === 0 || minutes === 0) return undefined;
-    intervalRef.current = setInterval(() => { refreshAllFeeds().catch(console.error); }, minutes * 60 * 1000);
-    return () => clearInterval(intervalRef.current);
-  }, [feedCount, minutes, refreshAllFeeds]);
-  return setMinutes;
+const REFRESH_WATCH_MS = 60 * 1000;
+
+// The server refreshes feeds on its own schedule; this checks once a minute
+// and shows what a finished run brought (see refreshNews). Returns catchUp(),
+// which notes the latest run without acting on it: for after a refresh this
+// app asked for and has already shown.
+function useServerRefreshes(reloadFeeds, bumpArticles) {
+  const seen = useRef(undefined);
+  const check = useCallback(async () => {
+    const status = await api.fetchRefreshStatus().catch(() => null);
+    if (!status) return;
+    const news = refreshNews(seen.current, status);
+    seen.current = status.lastFinishedAt;
+    if (news.reloadFeeds) reloadFeeds();
+    if (news.reloadArticles) bumpArticles();
+  }, [reloadFeeds, bumpArticles]);
+  usePolling(check, REFRESH_WATCH_MS);
+  return useCallback(async () => {
+    const status = await api.fetchRefreshStatus().catch(() => null);
+    if (status) seen.current = status.lastFinishedAt;
+  }, []);
+}
+
+// Refresh all (the toolbar button and ⌘K), with a toast, plus the scheduled
+// runs the server does on its own.
+function useRefreshing({ refreshAllFeeds, reloadFeeds, bumpArticles, showToast }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const catchUpRefreshes = useServerRefreshes(reloadFeeds, bumpArticles);
+  const refreshAll = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const tally = await refreshAllFeeds();
+      await catchUpRefreshes();
+      const { message, type } = refreshSummary(tally);
+      showToast(message, type);
+    } catch {
+      showToast('Refreshing failed', 'error');
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshAllFeeds, catchUpRefreshes, showToast]);
+  return { refreshing, refreshAll };
 }
 
 // Folder deletes and Clear All Data. The server moves or deletes feeds as a
@@ -112,8 +143,7 @@ function useLibraryState(onViewRemoved) {
   const { feeds, reloadFeeds, addFeed: addFeedRaw, removeFeed: removeFeedRaw, updateFeedFolder, refreshFeed, refreshAllFeeds, importFeedsFromOPML: importRaw } = useFeeds(bumpArticles);
   const { folders, reloadFolders, addFolder, renameFolder, deleteFolder: deleteFolderRaw, deleteFolderAndFeeds: deleteFolderAndFeedsRaw } = useFolders();
   const { removedFeeds, reloadRemovedFeeds } = useRemovedFeeds();
-  const [refreshing, setRefreshing] = useState(false);
-  const setAutoRefreshMinutes = useAutoRefresh(feeds.length, refreshAllFeeds);
+  const { refreshing, refreshAll } = useRefreshing({ refreshAllFeeds, reloadFeeds, bumpArticles, showToast });
   useReloadOnReconnect({ reloadFeeds, reloadFolders, reloadRemovedFeeds, bumpCounts });
 
   // An OPML import can create folders, so reload them along with the feeds.
@@ -149,18 +179,6 @@ function useLibraryState(onViewRemoved) {
     showToast(`Moved to ${folder ? folder.name : 'Uncategorized'}`);
   }, [updateFeedFolder, folders, showToast]);
 
-  const refreshAll = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const { message, type } = refreshSummary(await refreshAllFeeds());
-      showToast(message, type);
-    } catch {
-      showToast('Refreshing failed', 'error');
-    } finally {
-      setRefreshing(false);
-    }
-  }, [refreshAllFeeds, showToast]);
-
   const refreshOneFeed = useCallback(async (feedId) => {
     const title = feeds.find((f) => f.id === feedId)?.title || 'Feed';
     const { inserted, failed } = await refreshFeed(feedId);
@@ -180,11 +198,11 @@ function useLibraryState(onViewRemoved) {
   return useMemo(() => ({
     feeds, sourceFeeds, folders, existingFeedUrls, refreshing,
     articlesRefreshKey: articlesKey, countsRefreshKey: countsKey, bumpCounts,
-    setAutoRefreshMinutes, importFeedsFromOPML,
+    importFeedsFromOPML,
     onAddFeed: addFeed, onRemoveFeed: removeFeed, onMoveFeed: moveFeed, onRefreshAll: refreshAll, onRefreshFeed: refreshOneFeed,
     onAddFolder: addFolder, onRenameFolder: renameFolder,
     onDeleteFolder: deleteFolder, onDeleteFolderAndFeeds: deleteFolderAndFeeds, onClearAll: clearAll,
-  }), [feeds, sourceFeeds, folders, existingFeedUrls, refreshing, articlesKey, countsKey, bumpCounts, setAutoRefreshMinutes,
+  }), [feeds, sourceFeeds, folders, existingFeedUrls, refreshing, articlesKey, countsKey, bumpCounts,
     importFeedsFromOPML, addFeed, removeFeed, moveFeed, refreshAll, refreshOneFeed, addFolder, renameFolder, deleteFolder, deleteFolderAndFeeds, clearAll]);
 }
 

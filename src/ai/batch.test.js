@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { batchStatus, batchUpdates, hasManualSummary, IDLE_PROGRESS, newestFirst, parseScope, pickBatchModel, progressAfter, progressStarted } from './batch.js';
+import { batchStatus, batchUpdates, hasManualSummary, IDLE_PROGRESS, newestFirst, pickBatchModel, progressAfter, progressStarted } from './batch.js';
 
 const models = [{ name: 'gemini-nano' }, { name: 'llama3.2' }];
 
@@ -40,13 +40,6 @@ test('batchUpdates keeps a summary the reader asked for and adds only the analys
   assert.equal(hasManualSummary(mine), true);
   assert.equal(hasManualSummary({ aiSummarySource: 'batch' }), false);
   assert.equal(hasManualSummary(undefined), false);
-});
-
-test('parseScope reads all, feed, and folder scopes', () => {
-  assert.deepEqual(parseScope('all'), { type: 'all', id: null });
-  assert.deepEqual(parseScope(undefined), { type: 'all', id: null });
-  assert.deepEqual(parseScope('feed:12'), { type: 'feed', id: 12 });
-  assert.deepEqual(parseScope('folder:3'), { type: 'folder', id: 3 });
 });
 
 test('progress tracks started, done, failed, and drained', () => {

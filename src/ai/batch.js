@@ -34,12 +34,6 @@ export function batchUpdates(parsed, features = 'both', article = {}) {
   return updates;
 }
 
-/** Parses a batch scope setting: 'all' | 'folder:<id>' | 'feed:<id>'. */
-export function parseScope(scope) {
-  const [type, id] = (scope || 'all').split(':');
-  return { type, id: id ? parseInt(id, 10) : null };
-}
-
 /** Progress once an item starts, with `queued` items (including it) waiting. */
 export function progressStarted(p, queued) {
   return { ...p, running: true, total: Math.max(p.total, p.done + p.failed + queued) };
