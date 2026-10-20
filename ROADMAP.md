@@ -43,7 +43,6 @@ The goal is the [OpenSSF Best Practices](https://www.bestpractices.dev/) passing
 
 Maintenance and hardening work that may happen if time allows:
 
-- **Refresh feeds on the server.** Today the browser fetches each feed through the server and posts the new articles back in chunks. Refreshing on the server would remove that round trip ([docs/TECH-DEBT.md](docs/TECH-DEBT.md), second round).
 - **Page the summaries and highlights lists.** Both still load in full, as the article list did before it was paged ([docs/TECH-DEBT.md](docs/TECH-DEBT.md), section 3.3).
 - **A Content-Security-Policy for the app page,** as a second layer behind the HTML sanitizer.
 - **Tests for the HTML sanitizer.** Its rules have no automated test yet, because the test runner has no DOM.
