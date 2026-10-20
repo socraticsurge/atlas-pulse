@@ -54,6 +54,7 @@ export function SearchTab({ query, onQueryChange, googleNews, loading, adder }) 
         aria-label="Search curated feeds"
         value={query}
         onChange={(e) => { onQueryChange(e.target.value); googleNews.reset(); }}
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- the field opens with its Add feed tab, so focus belongs in it
         autoFocus
       />
       {!hasQuery && <Hint>Search <strong className="text-foreground">150+ curated feeds</strong> across 24 categories. Try “AI”, “climate”, “design”.</Hint>}

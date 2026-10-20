@@ -70,6 +70,12 @@ function useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, 
   return { on, exit: () => setOn(false), toggle: () => setOn((z) => !z) };
 }
 
+// Click outside the overlay reader to close it (or leave focus mode).
+function Backdrop({ className, onClick }) {
+  // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- pointer-only backdrop; Esc does the same from the keyboard (useReaderKeyboard)
+  return <div className={className} onClick={onClick} />;
+}
+
 export default function ArticleReader({
   article, isOpen, isModalOpen, onClose, onNavigate, hasNext, hasPrev, currentIndex, totalCount,
   width, onResize, onSummarySaved, onArticleChanged,
@@ -103,7 +109,7 @@ export default function ArticleReader({
 
   return (
     <>
-      <div className={`reader-overlay-backdrop ${panel.stateClasses}`} onClick={zen.on ? zen.exit : onClose} />
+      <Backdrop className={`reader-overlay-backdrop ${panel.stateClasses}`} onClick={zen.on ? zen.exit : onClose} />
 
       <div className={panel.className} style={panel.style}>
         <div className="reading-progress-bar" style={{ width: `${progress}%` }} />
