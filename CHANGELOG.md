@@ -3,11 +3,15 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
-## Unreleased
+## 2.2.0 (2026-10-20)
+
+Feeds keep refreshing with the app closed, the reader works from the keyboard and with a screen reader, and two security holes in the local server are closed. Text in both themes now meets the WCAG 2.2 AA contrast minimum.
+
+**Upgrading:** after pulling, run `npm ci`; with the background service, `npm run service restart` does that for you. The server now answers only requests addressed to `localhost`, a `*.localhost` name, an IP address, or the `HOST` it was started with. If you open Atlas Pulse under another name, such as your computer's network name, start it with `HOST` set to that name.
 
 ### Fixed
 
-- **Feeds refresh with the app closed.** Auto-refresh ran in the browser tab, so nothing was fetched once the tab was closed, unloaded by Chrome, or the browser quit. A feed lists only its latest items, so fast ones lost stories for good: Techmeme keeps about 8 hours, arXiv a single day. The local server now refreshes every feed on the Auto-refresh interval by itself, and the app picks up what it found within a minute. The Refresh buttons ask the server too, and a refresh it is already running is joined rather than repeated. New articles are queued for background processing after each refresh, as before; processing still needs the app open. A sleeping computer still refreshes nothing; the first check after it wakes catches up.
+- **Feeds refresh with the app closed.** Auto-refresh ran in the browser tab, so nothing was fetched once the tab was closed, unloaded by Chrome, or the browser quit. A feed lists only its latest items, so fast ones lost stories for good: Techmeme keeps about 8 hours, arXiv a single day. The local server now refreshes every feed on the Auto-refresh interval by itself, and the app picks up what it found within a minute. The Refresh buttons ask the server too, and a refresh it is already running is joined rather than repeated. New articles are queued for background processing after each refresh, as before; processing still needs the app open. A sleeping computer still refreshes nothing; the first check after it wakes catches up (#137).
 - **Accessibility: readable text in both themes.** An axe-core audit against WCAG 2.2 AA found text below the 4.5:1 contrast minimum: secondary details such as counts, times and sources (in both themes), accent-coloured text in the light theme, red Delete buttons, and toolbars faded at rest. The colours were adjusted to pass on every background, with a test that checks each theme's colours (#139).
 - **Accessibility: everything works from the keyboard.** Articles in the list can be reached with `Tab` and opened with `Enter`; sidebar rows no longer nest buttons inside buttons; folders expand from the keyboard; the sidebar's "…" menu opens under its button with focus inside it; every menu follows the arrow keys, `Home`, `End` and `Esc`. Screen readers get a valid state on the Save button, names for image-only links in articles, and scrollable code blocks they can reach. `npm run lint` now includes the jsx-a11y rules (#139).
 - **Accessibility: screen readers can find their way around.** The app has one main landmark (everything right of the sidebar), so a screen reader can jump straight to the content. The article list is announced as a list, with each article's place in the whole view ("3 of 3,624"), loaded or not. Heading levels no longer skip in the AI rail, the Google Alerts tab or the Prompts settings, and the command palette's hidden title no longer stays in the page after the palette closes (#143).
@@ -17,6 +21,13 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 - **The address check covers every way of writing an IPv6 address.** Before it fetches a feed, an article or a site icon, the server refuses loopback, private and cloud-metadata addresses. An IPv6 address that carries an IPv4 one (IPv4-mapped like `[::ffff:127.0.0.1]`, IPv4-compatible, NAT64 or 6to4) was let through, so a feed's article link, a redirect or a page's icon could make the server send a request to a service on your own machine or network. Such addresses are now judged by the IPv4 address inside them, and IPv6 addresses outside the public range are refused (#140).
 - **Other websites can't read your library by pointing their name at your computer.** A page could make its own domain resolve to 127.0.0.1 (DNS rebinding) and then read the local API as if it were the same site, since such requests carry no `Origin` for the origin check to refuse. The server now answers only requests addressed to `localhost`, a `*.localhost` name, an IP address, or the `HOST` it was started with; anything else gets 403. Requests from another site's page also get 403 now, instead of 500 (#140).
+
+### Under the hood
+
+- CI installs, tests and builds on Linux, macOS and Windows. Workflows run with read-only tokens and actions pinned to commit SHAs, and `master` accepts a change only once CI and CodeQL pass (#132).
+- [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/socraticsurge/atlas-pulse) rates the project on every push, with a badge in the README (#133).
+- 404 tests, up from 292 in 2.1.0: the API routes and server startup now have their own (#138). `npm run test:coverage` reports statement coverage for the whole codebase, and CI shows it on every run (#135).
+- [GOVERNANCE.md](GOVERNANCE.md), [SUPPORT.md](SUPPORT.md) and a written test policy in CONTRIBUTING.md (#134); [ROADMAP.md](ROADMAP.md) and a security assurance case in [docs/SECURITY-DESIGN.md](docs/SECURITY-DESIGN.md) (#136, #141). [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) assigns every file to a component again (#142).
 
 ## 2.1.0 (2026-10-19)
 

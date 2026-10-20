@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.1.0-f26b1d" alt="Version 2.1.0">
+  <img src="https://img.shields.io/badge/version-2.2.0-f26b1d" alt="Version 2.2.0">
   <img src="https://img.shields.io/badge/license-MIT-0b3b6f" alt="License: MIT">
   <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
   <img src="https://img.shields.io/badge/node-22.13%2B%20%7C%2024%2B-0b3b6f" alt="Node 22.13+ or 24+">
@@ -344,6 +344,8 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the proje
 [MIT](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 ## Changelog
+
+**2.2.0** keeps feeds refreshing with the app closed, makes the reader work from the keyboard and with a screen reader, brings text in both themes up to WCAG 2.2 AA contrast, and closes two security holes in the local server. If you open Atlas Pulse under a name other than `localhost`, see the upgrading note in the changelog.
 
 **2.1.0** makes setup and first use clearer: Atlas Pulse says what is wrong and how to fix it (an old Node, a taken port, a stopped server, an AI engine it can't use), Medium articles come through with their images and without page clutter, and installs no longer report security warnings. It needs Node.js 22.13+ or 24+.
 
