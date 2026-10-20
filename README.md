@@ -11,6 +11,7 @@
   <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
   <img src="https://img.shields.io/badge/node-22.13%2B%20%7C%2024%2B-0b3b6f" alt="Node 22.13+ or 24+">
   <img src="https://img.shields.io/badge/PRs-welcome-f26b1d" alt="PRs welcome">
+  <a href="https://scorecard.dev/viewer/?uri=github.com/socraticsurge/atlas-pulse"><img src="https://api.scorecard.dev/projects/github.com/socraticsurge/atlas-pulse/badge" alt="OpenSSF Scorecard"></a>
 </p>
 
 Atlas Pulse is an RSS reader for people who read a lot and want to keep what matters. Scan hundreds of articles in dense rows, read in a calm docked reader, save the good ones with a note on why, and file them into collections you can send to NotebookLM or turn into a newsletter.
