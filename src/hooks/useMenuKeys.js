@@ -2,13 +2,22 @@ import { useCallback, useEffect, useRef } from 'react';
 
 const ITEMS = '[role^="menuitem"]:not(:disabled)';
 
-// Index of the item to focus for a navigation key, given the current index and count.
 const MOVES = {
   ArrowDown: (i, n) => (i + 1) % n,
   ArrowUp: (i, n) => (i - 1 + n) % n,
   Home: () => 0,
   End: (i, n) => n - 1,
 };
+
+/**
+ * Index of the item to focus after `key`, from item `index` (-1 when focus
+ * is outside the menu) of `count`; arrows wrap around. Undefined for keys
+ * that don't move, or an empty menu.
+ */
+export function menuMoveIndex(key, index, count) {
+  if (count === 0 || !MOVES[key]) return undefined;
+  return MOVES[key](Math.max(index, key === 'ArrowUp' ? 0 : -1), count);
+}
 
 // Puts focus back where it was before the menu opened, unless something
 // else has taken it since (a rename field the menu item opened, say).
@@ -38,11 +47,11 @@ export function useMenuKeys(open, onClose) {
       onClose();
       return;
     }
-    const move = MOVES[e.key];
     const items = [...(ref.current?.querySelectorAll(ITEMS) || [])];
-    if (!move || items.length === 0) return;
+    const next = menuMoveIndex(e.key, items.indexOf(document.activeElement), items.length);
+    if (next === undefined) return;
     e.preventDefault();
-    items[move(items.indexOf(document.activeElement), items.length)].focus();
+    items[next].focus();
   }, [onClose]);
   return [ref, onKeyDown];
 }
