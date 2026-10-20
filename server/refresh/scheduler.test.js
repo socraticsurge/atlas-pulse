@@ -3,13 +3,32 @@ import assert from 'node:assert/strict';
 import { createRefresher, DEFAULT_MINUTES, isDue, refreshMinutes } from './scheduler.js';
 
 const MIN = 60 * 1000;
-const quiet = { log() {}, error() {} };
+const flush = () => new Promise((resolve) => { setImmediate(resolve); });
 
-// A refresh run the test finishes by hand.
-function controlledRun() {
+/**
+ * A refresher on a hand-set clock (`clock.now`, in ms). Its runs wait until
+ * the test calls finish(tally), unless `refreshAll` is given; logged errors
+ * collect in `errors`.
+ */
+function setup({ minutes = 15, refreshAll } = {}) {
+  const clock = { now: 0 };
   const calls = [];
-  const refreshAll = () => new Promise((resolve) => { calls.push(resolve); });
-  return { refreshAll, calls, finish: (tally) => calls.at(-1)(tally) };
+  const errors = [];
+  const refresher = createRefresher({
+    refreshAll: refreshAll ?? (() => new Promise((resolve) => { calls.push(resolve); })),
+    readMinutes: () => minutes,
+    now: () => clock.now,
+    log: { log() {}, error: (...args) => errors.push(args) },
+  });
+  return { refresher, clock, calls, errors, finish: (tally) => calls.at(-1)(tally) };
+}
+
+// Ticks at `minute`; resolves to how many runs have started so far.
+async function tickAt(t, minute) {
+  t.clock.now = minute * MIN;
+  t.refresher.tick();
+  await flush();
+  return t.calls.length;
 }
 
 test('refreshMinutes reads the setting: 0 is off, missing or unreadable is the default', () => {
@@ -31,42 +50,28 @@ test('isDue: never while off or running; at once before the first run; then afte
 });
 
 test('tick starts a run only when one is due', async () => {
-  let clock = 0;
-  const run = controlledRun();
-  const refresher = createRefresher({ refreshAll: run.refreshAll, readMinutes: () => 15, now: () => clock, log: quiet });
-  refresher.tick();
-  await Promise.resolve();
-  assert.equal(run.calls.length, 1);
-  refresher.tick();
-  await Promise.resolve();
-  assert.equal(run.calls.length, 1, 'not while running');
-  run.finish({ inserted: 2, failed: [] });
-  await new Promise((r) => setImmediate(r));
-  clock = 10 * MIN;
-  refresher.tick();
-  await Promise.resolve();
-  assert.equal(run.calls.length, 1, 'not before the interval');
-  clock = 15 * MIN;
-  refresher.tick();
-  await Promise.resolve();
-  assert.equal(run.calls.length, 2);
+  const t = setup();
+  assert.equal(await tickAt(t, 0), 1);
+  assert.equal(await tickAt(t, 1), 1, 'not while running');
+  t.finish({ inserted: 2, failed: [] });
+  await flush();
+  assert.equal(t.refresher.status().running, false);
+  assert.equal(await tickAt(t, 10), 1, 'not before the interval');
+  assert.equal(await tickAt(t, 15), 2);
 });
 
 test('runAll joins a run in progress and reports it in status', async () => {
-  let clock = 5 * MIN;
-  const run = controlledRun();
-  const refresher = createRefresher({ refreshAll: run.refreshAll, readMinutes: () => 0, now: () => clock, log: quiet });
-  assert.deepEqual(refresher.status(), { running: false, lastStartedAt: null, lastFinishedAt: null, lastInserted: 0, lastFailed: [] });
-  const a = refresher.runAll();
-  const b = refresher.runAll();
-  assert.equal(a, b);
-  await Promise.resolve();
-  assert.equal(run.calls.length, 1);
-  assert.equal(refresher.status().running, true);
-  clock = 6 * MIN;
-  run.finish({ inserted: 4, failed: ['Techmeme'] });
-  assert.deepEqual(await a, { inserted: 4, failed: ['Techmeme'] });
-  assert.deepEqual(refresher.status(), {
+  const t = setup({ minutes: 0 });
+  t.clock.now = 5 * MIN;
+  assert.deepEqual(t.refresher.status(), { running: false, lastStartedAt: null, lastFinishedAt: null, lastInserted: 0, lastFailed: [] });
+  const run = t.refresher.runAll();
+  assert.equal(t.refresher.runAll(), run, 'a second call joins the first');
+  await flush();
+  assert.deepEqual([t.calls.length, t.refresher.status().running], [1, true]);
+  t.clock.now = 6 * MIN;
+  t.finish({ inserted: 4, failed: ['Techmeme'] });
+  assert.deepEqual(await run, { inserted: 4, failed: ['Techmeme'] });
+  assert.deepEqual(t.refresher.status(), {
     running: false,
     lastStartedAt: new Date(5 * MIN).toISOString(),
     lastFinishedAt: new Date(6 * MIN).toISOString(),
@@ -75,20 +80,12 @@ test('runAll joins a run in progress and reports it in status', async () => {
   });
 });
 
-test('a run that fails rejects, logs from tick, and lets the next run start', async () => {
-  const errors = [];
+test('a run that fails rejects, is logged by tick instead of crashing, and the next run still starts', async () => {
   let attempts = 0;
-  let clock = 0;
-  const refreshAll = () => { attempts += 1; throw new Error('database is locked'); };
-  const refresher = createRefresher({ refreshAll, readMinutes: () => 15, now: () => clock, log: { log() {}, error: (...a) => errors.push(a) } });
-  await assert.rejects(refresher.runAll(), /database is locked/);
-  assert.equal(refresher.status().running, false);
-  assert.equal(refresher.status().lastFinishedAt, null);
-  await assert.rejects(refresher.runAll(), /database is locked/);
+  const t = setup({ refreshAll: () => { attempts += 1; throw new Error('database is locked'); } });
+  await assert.rejects(t.refresher.runAll(), /database is locked/);
+  assert.deepEqual([t.refresher.status().running, t.refresher.status().lastFinishedAt], [false, null]);
+  await tickAt(t, 15);
   assert.equal(attempts, 2);
-  clock = 15 * MIN;
-  refresher.tick();
-  await new Promise((r) => setImmediate(r));
-  assert.equal(attempts, 3);
-  assert.equal(errors.length, 1, 'tick logs the failure instead of crashing the server');
+  assert.equal(t.errors.length, 1);
 });
