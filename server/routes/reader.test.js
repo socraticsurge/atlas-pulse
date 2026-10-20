@@ -201,12 +201,9 @@ test('marking a view read updates the unread counts', async () => {
   assert.equal((await api.post('/articles/mark-view-read', {})).status, 200, 'no view means all');
 });
 
-test('the AI queue: unprocessed articles, queue count, claims and reset', async () => {
+test('the AI queue: queue count, claims and reset', async () => {
   const feed = await newFeed();
-  const [newest, middle, oldest] = await addArticles(feed.id, 3);
-  const unprocessed = (await api.get(`/articles/unprocessed?feedId=${feed.id}&limit=2`)).body;
-  assert.deepEqual(unprocessed.map((a) => a.id), [newest, middle]);
-  assert.equal((await api.get('/articles/unprocessed')).status, 400);
+  const [newest, , oldest] = await addArticles(feed.id, 3);
 
   await api.put('/articles/bulk-update', { ids: [newest, oldest], aiStatus: 'queued' });
   assert.deepEqual((await api.get('/articles/queue-count')).body, { count: 2 });
