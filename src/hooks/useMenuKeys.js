@@ -27,6 +27,31 @@ function restoreFocus(opener) {
   if (unclaimed && opener?.isConnected) opener.focus();
 }
 
+// Focuses the menu's first item; the returned cleanup restores focus on close.
+function focusOnOpen(menu) {
+  const opener = document.activeElement;
+  menu?.querySelector(ITEMS)?.focus();
+  return () => restoreFocus(opener);
+}
+
+// Escape and Tab close the menu; Escape stops there, so it doesn't also clear
+// the list selection or close the reader. Returns whether the key closed it.
+function closeOnKey(e, onClose) {
+  if (e.key !== 'Escape' && e.key !== 'Tab') return false;
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
+  onClose();
+  return true;
+}
+
+// Arrows, Home and End move focus between the menu's items.
+function moveFocus(e, menu) {
+  const items = [...(menu?.querySelectorAll(ITEMS) || [])];
+  const next = menuMoveIndex(e.key, items.indexOf(document.activeElement), items.length);
+  if (next === undefined) return;
+  e.preventDefault();
+  items[next].focus();
+}
+
 /**
  * Keyboard for a role="menu" popup (the WAI-ARIA menu pattern): while `open`,
  * focus starts on the first item, arrows and Home/End move between items,
@@ -35,23 +60,9 @@ function restoreFocus(opener) {
  */
 export function useMenuKeys(open, onClose) {
   const ref = useRef(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const opener = document.activeElement;
-    ref.current?.querySelector(ITEMS)?.focus();
-    return () => restoreFocus(opener);
-  }, [open]);
+  useEffect(() => (open ? focusOnOpen(ref.current) : undefined), [open]);
   const onKeyDown = useCallback((e) => {
-    if (e.key === 'Escape' || e.key === 'Tab') {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); }
-      onClose();
-      return;
-    }
-    const items = [...(ref.current?.querySelectorAll(ITEMS) || [])];
-    const next = menuMoveIndex(e.key, items.indexOf(document.activeElement), items.length);
-    if (next === undefined) return;
-    e.preventDefault();
-    items[next].focus();
+    if (!closeOnKey(e, onClose)) moveFocus(e, ref.current);
   }, [onClose]);
   return [ref, onKeyDown];
 }
