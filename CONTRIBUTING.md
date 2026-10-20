@@ -63,6 +63,7 @@ Changes that alter behavior come with automated tests:
 
 - **New features and bug fixes add or update tests.** A bug fix adds a regression test that fails without the fix. A new feature tests its logic: parsing, data handling, routes, state changes.
 - **Where tests live.** Tests use Node's built-in runner (`node --test`, run by `npm test`) and sit next to the code they cover as `*.test.js`, for example `server/utils/urlGuard.test.js` next to `server/utils/urlGuard.js`. CI runs them on Linux, macOS and Windows for every pull request, and they must pass before a merge.
+- **Coverage.** `npm run test:coverage` runs the same suite under [c8](https://github.com/bcoe/c8) and prints statement coverage for `server/`, `shared/`, `src/` and `scripts/`. Files that no test loads, including every `.jsx` component, count as 0%, so the number covers the whole codebase and not only the files the tests reach. CI shows it in the Linux job's summary. The target is 80%; CI doesn't fail below it yet. For per-file numbers, run `npx c8 report --reporter=text` afterwards.
 - **UI-only changes** (layout, styling, wording) need one of two things: a logic test, usually after moving the logic into a plain module the way `src/components/article-list/listLogic.js` does, or a note in the pull request on how you checked it by hand (browser, dark and light themes, the steps you took).
 - **Refactors** keep the existing tests passing without weakening them.
 
