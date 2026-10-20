@@ -28,7 +28,7 @@ Atlas Pulse runs on the user's own machine, for one user:
    Internet: publishers' feeds,                  Other websites open
    pages, icons and redirects                    in the same browser
               │                                           │
- ════ B1 ═════╪═ safeFetch (SSRF guard) ═══  ════ B2 ═════╪═ Origin check ═════
+ ════ B1 ═════╪═ safeFetch (SSRF guard) ═══  ════ B2 ═════╪═ Host + Origin ════
               ▼                                           ▼
  ┌──────────────────────────── Express on 127.0.0.1 ────────────────────────────┐
  │  ingestion ─► parsers (text only)          storage ─► data/reader.db (B5)    │
@@ -72,7 +72,7 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 | | Boundary | What crosses it | How it is guarded |
 |---|---|---|---|
 | **B1** | Internet → server | Every feed, page, icon and redirect the server fetches | All server-side fetches of untrusted URLs go through `safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js), with size and time limits from [server/utils/fetchText.js](../server/utils/fetchText.js). The parsers (rss-parser, @extractus/article-extractor, cheerio) only receive the fetched text, so they make no requests of their own. |
-| **B2** | Other websites → local API | Requests a browser sends from another site | The server binds to `127.0.0.1` ([server/index.js](../server/index.js)). Its CORS policy admits only origins on this machine (`isLocalHostname` in [server/utils/loopback.js](../server/utils/loopback.js)). A request whose `Origin` is anywhere else is refused before it reaches a route. |
+| **B2** | Other websites → local API | Requests a browser sends from another site | The server binds to `127.0.0.1` ([server/index.js](../server/index.js)). `localOnly` in [server/utils/loopback.js](../server/utils/loopback.js) refuses (403) a request whose `Host` names another site or whose `Origin` is anywhere else, before it reaches a route. CORS headers go only to origins on this machine. |
 | **B3** | Untrusted HTML → the app's DOM | Article and feed HTML; Studio Markdown | The app inserts raw HTML only in the reader and in Studio templates, and both sanitize it first: [src/components/reader/sanitize.js](../src/components/reader/sanitize.js) and [src/components/studio/markdown.js](../src/components/studio/markdown.js). Everything else, including what the AI rail shows, is rendered as text by React. |
 | **B4** | Server → other programs | Ollama requests; `ollama serve`; headless Chrome | Fixed commands and binaries, with no request data on a command line ([server/routes/ollama.js](../server/routes/ollama.js), [server/utils/ollamaHost.js](../server/utils/ollamaHost.js)). The Ollama address comes from the environment, never from a request. Headless Chrome only opens the app's own print page ([server/routes/pageExport.js](../server/routes/pageExport.js)). |
 | **B5** | Requests → database and settings file | JSON bodies from the app | Prepared statements with bound parameters ([server/db/](../server/db/)); request bodies checked against fixed fields and limits before storage. |
@@ -93,20 +93,23 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 
 `safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js) is the only path for server-side fetches of untrusted URLs: feeds (`feedParser.js`), feed discovery (`feedDiscovery.js`), full-text extraction (`articleExtractor.js`) and site icons (`favicon.js`), mostly through `fetchText.js`. It makes three checks:
 
-1. **Before the request:** the URL must be `http:` or `https:`, and every address its host resolves to must be public. The blocked ranges are listed in `BLOCKED_V4` and `isBlockedIpv6`: loopback, private, carrier-grade NAT, link-local (including `169.254.169.254`, the cloud metadata address), multicast and reserved. Anything not recognized as an IP address is refused.
+1. **Before the request:** the URL must be `http:` or `https:`, and every address its host resolves to must be public. The blocked ranges are listed in `BLOCKED_V4`, `V6_WITH_V4` and `BLOCKED_V6`: loopback, private, carrier-grade NAT, link-local (including `169.254.169.254`, the cloud metadata address), multicast and reserved. IPv6 addresses are read as numbers, so every spelling of an address is judged alike. An IPv6 address that carries an IPv4 one (IPv4-mapped `::ffff:0:0/96`, IPv4-compatible `::/96`, NAT64 `64:ff9b::/96`, 6to4 `2002::/16`) is judged by that IPv4 address, and any other IPv6 address outside global unicast (`2000::/3`) is refused, as are Teredo and documentation ranges. An IP address written in the URL involves no DNS, so this is the only check it meets. Anything not recognized as an IP address is refused.
 2. **At connect time:** the connection resolves the hostname again through `guardedLookup`, which refuses blocked addresses. A DNS server that answers "public" for the first check and "127.0.0.1" for the connection (DNS rebinding) is caught here.
 3. **On every redirect:** redirects are followed by hand (`redirect: 'manual'`, at most 5), and each target is checked again before it is requested.
 
 The favicon route accepts only a plain DNS name (`isValidHostname`: no IP addresses, ports, paths or credentials) and builds the URL itself.
 
-Tests: [server/utils/urlGuard.test.js](../server/utils/urlGuard.test.js) covers blocked schemes and ranges, redirects into private addresses and a host that rebinds to loopback; [server/utils/favicon.test.js](../server/utils/favicon.test.js) covers hostname checks.
+Tests: [server/utils/urlGuard.test.js](../server/utils/urlGuard.test.js) covers blocked schemes and ranges, IPv6 spellings of private IPv4 addresses (including a fetch through `[::ffff:127.0.0.1]` to a server on `127.0.0.1`), redirects into private addresses and a host that rebinds to loopback; [server/utils/favicon.test.js](../server/utils/favicon.test.js) covers hostname checks.
 
 ### Other websites and the local network (B2)
 
 - **Loopback only.** The server listens on `127.0.0.1` unless `HOST` says otherwise. The macOS background service sets `HOST=127.0.0.1` explicitly ([scripts/service.sh](../scripts/service.sh)).
-- **Local origins only.** Browsers attach an `Origin` header to cross-origin requests. The CORS policy refuses any origin that isn't on this machine, so another site can neither read responses nor make the server act on a request. Requests with no `Origin` (curl, same-origin page loads) are allowed.
+- **Addressed to this machine.** `localOnly` ([server/utils/loopback.js](../server/utils/loopback.js)) answers 403 unless the `Host` header is `localhost`, a `*.localhost` name, an IP address, or the `HOST` the server was started with. A page on another site can point its own name at `127.0.0.1` (DNS rebinding) and then call the API as the same origin, with no `Origin` header; its `Host` still names that site, so it is refused.
+- **Local origins only.** Browsers attach an `Origin` header to cross-origin requests. `localOnly` refuses (403) any origin that isn't on this machine, and CORS headers go only to local origins, so another site can neither read responses nor make the server act on a request. Requests with no `Origin` (curl, same-origin page loads) are allowed; the `Host` check covers the same-origin case.
 - **JSON bodies.** Routes that take data read JSON (`express.json`), which a plain HTML form on another site can't send.
 - **Studio export** only renders an origin that passes `localOrigin` ([server/routes/studioInput.js](../server/routes/studioInput.js), tested in `pageExport.test.js`), so a request cannot point headless Chrome at an arbitrary site.
+
+Tests: [server/utils/loopback.test.js](../server/utils/loopback.test.js) covers the `Host` and `Origin` decisions, and the middleware over HTTP with another site's `Host` and `Origin`.
 
 ### Injection into SQLite (B5)
 
@@ -147,8 +150,8 @@ An article can contain text written to steer the model. The AI has no tools: it 
 How the classic principles (Saltzer and Schroeder) and a few practical ones are applied:
 
 - **Economy of mechanism.** One fetch path (`safeFetch`), one sanitizer module per HTML sink, one database module with prepared statements. There is no login system to get wrong, because there is one user on one machine.
-- **Fail-safe defaults.** Loopback unless told otherwise; an unrecognized or unresolvable address is refused; an iframe is dropped unless its host is allowlisted; an origin is refused unless it is local; an unknown settings key is rejected.
-- **Complete mediation.** Every redirect hop is checked again, every connection's DNS answer is checked, and every request passes the origin check.
+- **Fail-safe defaults.** Loopback unless told otherwise; an unrecognized or unresolvable address is refused; an iframe is dropped unless its host is allowlisted; a `Host` or origin is refused unless it is local; an unknown settings key is rejected.
+- **Complete mediation.** Every redirect hop is checked again, every connection's DNS answer is checked, and every request passes the `Host` and origin checks.
 - **Open design.** All code and this document are public. Nothing depends on a secret: there are no keys, tokens or hosted services.
 - **Separation of privilege.** The `master` branch ruleset has no bypass, so the maintainer can't land a change until CI and CodeQL pass either. With one maintainer, those checks are the second pair of eyes.
 - **Least privilege.** The server runs as the user, never as root. The parsing libraries get text and no network access. Embedded iframes are sandboxed. Headless Chrome runs without extensions and only opens the app's print page. CI tokens are read-only.
@@ -163,8 +166,8 @@ How the classic principles (Saltzer and Schroeder) and a few practical ones are 
 |---|---|---|
 | CWE-79 Cross-site scripting | DOMPurify on every raw-HTML sink; React escaping everywhere else | (no DOM in the test runner yet; see [Known limits](#known-limits-and-accepted-risks)) |
 | CWE-1021 UI redress, clickjacking | Forms, inputs and inline styles removed; iframe host allowlist and fixed sandbox | n/a |
-| CWE-918 Server-side request forgery | `safeFetch`: scheme allowlist, blocked ranges, connect-time DNS check, re-checked redirects | `urlGuard.test.js`, `favicon.test.js` |
-| CWE-352 Cross-site request forgery | Loopback binding; CORS admits local origins only; JSON bodies | `loopback.test.js`, `pageExport.test.js` |
+| CWE-918 Server-side request forgery | `safeFetch`: scheme allowlist, blocked ranges in every IPv6 spelling, connect-time DNS check, re-checked redirects | `urlGuard.test.js`, `favicon.test.js` |
+| CWE-352 Cross-site request forgery | Loopback binding; `localOnly` refuses another site's `Host` (DNS rebinding) and `Origin`; JSON bodies | `loopback.test.js`, `pageExport.test.js` |
 | CWE-89 SQL injection | Prepared statements with bound parameters; SQL fragments only from code | `server/db/*.test.js` |
 | CWE-78 OS command injection | Fixed commands; `spawn` with an argument array; no request data on a command line | n/a: no request data reaches a command |
 | CWE-1236 CSV injection | Formula prefixes neutralized | `shared/csv.test.js` |
@@ -202,6 +205,6 @@ Update this document in the same pull request when a change:
 - inserts raw HTML anywhere new, or changes `sanitize.js` or `markdown.js`;
 - starts a process, or changes how Ollama or Chrome is reached;
 - builds SQL from anything other than fixed fragments;
-- changes the server's binding, CORS policy or request limits.
+- changes the server's binding, its Host or Origin checks, or its request limits.
 
 The maintainer also reviews it at each minor release, with [ROADMAP.md](../ROADMAP.md) and [TECH-DEBT.md](TECH-DEBT.md).
