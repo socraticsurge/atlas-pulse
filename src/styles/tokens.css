@@ -22,7 +22,8 @@
   --rail-active: #24262a;
 
   /* Text tokens stay at 4.5:1 or more (WCAG AA) on every surface, --bg-active
-     included; --text-muted is for disabled text and decoration only. */
+     included (tokens.test.js checks); --text-muted is for disabled text and
+     decoration only. */
   --text-primary: #e8e6e1;
   --text-secondary: #b4b1aa;
   --text-tertiary: #96938d;
@@ -37,8 +38,8 @@
   /* Text and icons drawn on an accent-colored background. */
   --accent-foreground: #121315;
 
-  --danger: #e5534b;
-  --danger-muted: rgba(229, 83, 75, 0.15);
+  --danger: #ec6a62;
+  --danger-muted: rgba(236, 106, 98, 0.15);
   /* Text on a danger-colored background (destructive buttons). */
   --danger-foreground: #121315;
   --warning: #f0b455;
@@ -77,20 +78,20 @@
   --font-mono: 'IBM Plex Mono', 'JetBrains Mono Variable', 'Courier New', monospace;
 }
 
-/* Accent presets (Settings → Appearance). Amber is the default. Light-theme
-   accents are dark enough for 4.5:1 accent-colored text on light surfaces. */
+/* Accent presets (Settings → Appearance). Amber is the default. Each keeps
+   accent-colored text at 4.5:1 on every surface of its theme (tokens.test.js). */
 :root[data-theme="dark"][data-color="amber"] { --accent: #e8a33d; }
 :root[data-theme="dark"][data-color="emerald"] { --accent: #2bc4a0; }
 :root[data-theme="dark"][data-color="blue"] { --accent: #5b9cf2; }
 :root[data-theme="dark"][data-color="purple"] { --accent: #a88bf5; }
 :root[data-theme="dark"][data-color="orange"] { --accent: #f08a4b; }
 :root[data-theme="dark"][data-color="rose"] { --accent: #ef6b82; }
-:root[data-theme="light"][data-color="amber"] { --accent: #8f5b14; }
-:root[data-theme="light"][data-color="emerald"] { --accent: #0a735b; }
-:root[data-theme="light"][data-color="blue"] { --accent: #1d5bd8; }
-:root[data-theme="light"][data-color="purple"] { --accent: #7444d4; }
-:root[data-theme="light"][data-color="orange"] { --accent: #a8460c; }
-:root[data-theme="light"][data-color="rose"] { --accent: #b82c48; }
+:root[data-theme="light"][data-color="amber"] { --accent: #875613; }
+:root[data-theme="light"][data-color="emerald"] { --accent: #096c56; }
+:root[data-theme="light"][data-color="blue"] { --accent: #1c57cf; }
+:root[data-theme="light"][data-color="purple"] { --accent: #6f41cc; }
+:root[data-theme="light"][data-color="orange"] { --accent: #a1430c; }
+:root[data-theme="light"][data-color="rose"] { --accent: #b12a45; }
 
 /* Text color variants */
 [data-theme="dark"][data-text="warm"] { --text-primary: #f0ead6; }
@@ -117,11 +118,11 @@
   --text-tertiary: #63605a;
   --text-muted: #a8a59e;
 
-  --accent: #8f5b14;
+  --accent: #875613;
   --accent-foreground: #ffffff;
 
-  --danger: #b8322c;
-  --danger-muted: rgba(184, 50, 44, 0.12);
+  --danger: #b2302a;
+  --danger-muted: rgba(178, 48, 42, 0.12);
   --danger-foreground: #ffffff;
 
   --border: #e2e0db;
