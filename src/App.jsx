@@ -58,6 +58,19 @@ function DetailPanel({ multiPanel, onCloseMulti, reader, layout }) {
   );
 }
 
+// The page's one main landmark: everything right of the sidebar. A library
+// screen (Summaries, Highlights, Studio) when one is open, else the children
+// (the list and the reader). edge: the sidebar's resize handle, which sits
+// on main's leading edge so that it, too, is inside a landmark.
+function MainArea({ edge, library, children }) {
+  return (
+    <main className="flex min-w-0 flex-1">
+      {edge}
+      {library ? <Suspense fallback={<div className="flex-1" />}>{library}</Suspense> : children}
+    </main>
+  );
+}
+
 function useBatchActions(batch) {
   const showToast = useToast();
   const trigger = useCallback(async () => {
@@ -141,33 +154,32 @@ function Workspace({ activeView, setActiveView, selectedArticle, setSelectedArti
         librarySummaryCount={summaryCount}
         style={{ width: layout.effectiveSidebarWidth, minWidth: layout.effectiveSidebarWidth }}
       />
-      {layout.sidebarMode === 'expanded' && <ResizableHandle onResize={layout.resizeSidebar} />}
-
-      {LibraryScreen ? <Suspense fallback={<div className="flex-1" />}><LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} selectedId={activeView.id} onSelect={selectStudioItem} /></Suspense> : (
-        <>
-          <ArticleList
-            activeView={activeView}
-            selectedArticleId={selectedArticle?.id}
-            onSelectArticle={setSelectedArticle}
-            onArticlesLoaded={setVisibleArticles}
-            batch={{ status: batch.status, pauseReason: batch.pauseReason, queuedCount: batch.queuedCount, onTrigger: batchActions.trigger, onClear: batchActions.clear }}
-            onOpenAIPanel={(articles, operation) => { setMultiPanel({ articles, operation }); setSelectedArticle(null); }}
-            refreshKey={library.articlesRefreshKey}
-            onCountChanged={library.bumpCounts}
-            changedArticle={changedArticle}
-          />
-          <DetailPanel
-            multiPanel={multiPanel}
-            onCloseMulti={() => setMultiPanel(null)}
-            layout={layout}
-            reader={{
-              article: selectedArticle, isModalOpen: overlayOpen, onClose: closeReader, onArticleChanged,
-              onNavigate: nav.navigate, hasPrev: nav.hasPrev, hasNext: nav.hasNext, currentIndex: nav.index,
-              totalCount: visibleArticles.length, onSummarySaved: refreshSummaryCount,
-            }}
-          />
-        </>
-      )}
+      <MainArea
+        edge={layout.sidebarMode === 'expanded' && <ResizableHandle onResize={layout.resizeSidebar} />}
+        library={LibraryScreen && <LibraryScreen onOpenArticle={openFromLibrary} onChanged={onLibraryChanged} selectedId={activeView.id} onSelect={selectStudioItem} />}
+      >
+        <ArticleList
+          activeView={activeView}
+          selectedArticleId={selectedArticle?.id}
+          onSelectArticle={setSelectedArticle}
+          onArticlesLoaded={setVisibleArticles}
+          batch={{ status: batch.status, pauseReason: batch.pauseReason, queuedCount: batch.queuedCount, onTrigger: batchActions.trigger, onClear: batchActions.clear }}
+          onOpenAIPanel={(articles, operation) => { setMultiPanel({ articles, operation }); setSelectedArticle(null); }}
+          refreshKey={library.articlesRefreshKey}
+          onCountChanged={library.bumpCounts}
+          changedArticle={changedArticle}
+        />
+        <DetailPanel
+          multiPanel={multiPanel}
+          onCloseMulti={() => setMultiPanel(null)}
+          layout={layout}
+          reader={{
+            article: selectedArticle, isModalOpen: overlayOpen, onClose: closeReader, onArticleChanged,
+            onNavigate: nav.navigate, hasPrev: nav.hasPrev, hasNext: nav.hasNext, currentIndex: nav.index,
+            totalCount: visibleArticles.length, onSummarySaved: refreshSummaryCount,
+          }}
+        />
+      </MainArea>
 
       <OnceOpened open={paletteOpen}><PaletteHost
         open={paletteOpen} onOpenChange={setPaletteOpen} view={LibraryScreen ? ALL_ARTICLES : activeView}
