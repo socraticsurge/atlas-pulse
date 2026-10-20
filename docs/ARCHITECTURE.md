@@ -9,7 +9,7 @@ For the history and remaining debt, see [TECH-DEBT.md](TECH-DEBT.md).
 Atlas Pulse has three runtime parts:
 
 1. **A React single-page app** in the browser.
-2. **An Express server** on `127.0.0.1`. It fetches feeds and articles for the browser and owns the SQLite databases.
+2. **An Express server** on `127.0.0.1`. It refreshes feeds on a schedule (with or without a browser open), fetches articles for the browser and owns the SQLite databases.
 3. **An AI engine.** By default this is Gemini Nano, which runs inside Chrome through the Prompt API. Ollama is an optional alternative, reached through the server.
 
 ```
@@ -25,7 +25,8 @@ Browser ────────────────────────
   Library            library/ (Summaries, Highlights)       │
         │ /api/*                                            │
 Server ─┼───────────────────────────────────────────────────┼────────
-  Ingestion          routes/{feeds,discover,articles}, utils│
+  Ingestion          routes/{feeds,discover,articles,refresh}│
+                     refresh/ (schedule), utils             │
   Storage            db/*  (SQLite + migrations + FTS5)     │
   AI bridge          routes/{ai,ollama} ◄───────────────────┘
 ```
@@ -89,16 +90,16 @@ These are also the architectural components in CodeScene (project 86144, which a
 
 | Layer | Component | Paths | Owns |
 |---|---|---|---|
-| Server | **Ingestion** | `server/routes/{feeds,discover,articles,favicon}.js`, `server/utils/{articleExtractor,articleFields,favicon,feedDiscovery,feedParser,feedText,fetchText,text,urlGuard}.js` | Fetching, parsing and extracting feeds and articles, and favicons. Every outbound URL passes `assertPublicHttpUrl` / `safeFetch` (SSRF guard). |
+| Server | **Ingestion** | `server/routes/{feeds,discover,articles,favicon,refresh,refreshInput}.js`, `server/refresh/**`, `server/utils/{articleExtractor,articleFields,favicon,feedDiscovery,feedParser,feedText,fetchText,text,urlGuard}.js` | Fetching, parsing and extracting feeds and articles, and favicons. Refreshing feeds on the auto-refresh schedule and on request (`server/refresh/`). Every outbound URL passes `assertPublicHttpUrl` / `safeFetch` (SSRF guard). |
 | | **Storage** | `server/db/**`, `server/routes/{reader,summaries,highlights}.js`, `server/routes/{studio,collections}*.js` | SQLite access, migrations, list views, full-text search. New stored data (such as newsletters) gets its route here. |
 | | **AI bridge** | `server/routes/{ai,ollama}.js`, `server/utils/stream.js` | Optional proxy to a local Ollama, plus its install and start helpers. |
 | | **Platform** | `server/index.js`, `scripts/**`, `experiments/**`, `.github/**`, `vite.config.js`, `eslint.config.js`, `jsconfig.json`, `package.json`, `index.html`, `print.html`, `server/utils/loopback.js`, `.gitignore` | Server wiring, the background service, build and CI. The installer goes here. |
-| Shared | **Shared** | `shared/{searchQuery,search,aiFilters,csv}.js` | Search tokenizing and ranking, the AI-analysis filters, and CSV export: pure rules the server applies when it pages the list. |
+| Shared | **Shared** | `shared/{searchQuery,search,aiFilters,csv,feedItems,batchScope}.js` | Search tokenizing and ranking, the AI-analysis filters, and CSV export: pure rules the server applies when it pages the list. The stored shape of a feed item and its canonical link (`feedItems`), and the background-AI settings and scope (`batchScope`), which the browser and the server both use. |
 | Client | **API client** | `src/utils/api.js`, `src/lib/queryClient.js` | The only place the client talks to the server, and the TanStack Query client that caches its results. Every feature touches it, so it is a hotspot by design. |
 | | **Shell** | `src/App.jsx`, `src/main.jsx`, `src/app/**`, `src/lib/appEvents.js`, `src/components/Sidebar.jsx`, `src/components/{shell,sidebar}/**`, `src/utils/{helpers,constants}.js` | Layout, panes, the app rail, the ⌘K palette, navigation, and the app-wide contexts (Appearance, Toast, Library). |
 | | **Design system** | `src/components/ui/**`, `src/lib/utils.js`, `components.json`, `src/index.css`, `src/styles/{tokens,base,fonts,tailwind}.css`, `src/hooks/{useClickOutside,useConfirmAction,useDebouncedValue,useOnKeyChange,usePolling,keys}.js`, `public/**` | Tailwind v4 and shadcn/ui primitives, tokens, fonts, the page frame, and generic hooks. |
 | | **Settings** | `src/components/settings/**`, `src/settings/**`, `src/utils/{aiSettings,batchSettings,readerSettings,storage}.js`, `shared/settingsKeys.js`, `server/settings.js`, `server/routes/settings.js` | The settings registry and screen (Simple/Power), the `data/settings.json` sync, and safe `localStorage`. |
-| | **Feeds** | `src/components/FeedFavicon.jsx`, `src/components/add-feed/**`, `src/hooks/{useFeeds,useFolders}.js`, `src/utils/{feedSync,opml}.js` | Subscriptions, folders, refresh, OPML import and export. `feedSync.js` holds the operations; `useFeeds` wraps them in React state. |
+| | **Feeds** | `src/components/FeedFavicon.jsx`, `src/components/add-feed/**`, `src/hooks/{useFeeds,useFolders}.js`, `src/utils/{feedSync,opml}.js` | Subscriptions, folders, OPML import and export, and asking the server to refresh. `feedSync.js` holds the operations; `useFeeds` wraps them in React state. |
 | | **Reading** | `src/components/{ArticleList,ArticleReader}.jsx`, `src/components/{article-list,reader,highlights}/**`, `src/styles/{article-list,reader}.css` | The list, the reader, highlights and search. |
 | | **AI engines** | `src/utils/chromeAI.js`, `src/components/ollama/**` | Gemini Nano and the Ollama setup. `streamChat()` is still in `api.js`; it moves here with the Engine port. |
 | | **AI tasks** | `src/ai/**` | Prompts, the prompt registry, article context, output parsing and the batch helpers. One module per concern; no React. |
@@ -139,7 +140,7 @@ In the browser, server data for the list goes through TanStack Query (`src/lib/q
 
 ## Request flows
 
-**Refreshing a feed.** `useFeeds.refreshFeed` → `refreshOne` (`src/utils/feedSync.js`) → `POST /api/feeds/parse` (Ingestion fetches and normalizes the feed) → `bulkInsertArticles` (Storage skips known GUIDs and canonical links, writes rows, excerpts and FTS entries) → new articles in scope are queued for batch AI.
+**Refreshing feeds.** The server does it, so feeds keep updating with no browser open (a feed lists only its latest items, and whatever scrolls off while nothing checks is lost). `server/refresh/scheduler.js` checks once a minute and refreshes every feed when the `atlas-pulse-auto-refresh` interval in `settings.json` has passed; the Refresh buttons call `POST /api/refresh` (every feed, joining a scheduled run under way) or `POST /api/refresh/feeds/:id`. Each feed goes through `refreshFeed` (`server/refresh/feedRefresh.js`): `parseFeed` (Ingestion fetches and normalizes it) → `toArticle` (`shared/feedItems.js`) → `bulkInsertArticles` (Storage skips known GUIDs and canonical links, writes rows, excerpts and FTS entries) → new articles in scope are queued for batch AI → the feed's refresh time, or the reason it failed, is saved. The browser polls `GET /api/refresh` once a minute and reloads the feeds and lists after a run that found articles. A sleeping computer runs nothing; the first check after it wakes catches up.
 
 **Summarizing an article.** `useArticleSummary` → `summaryMessages()` (`src/ai/tasks.js`) → `streamChat` → Gemini Nano or Ollama → tokens are batched to the UI with `useTokenBuffer` → the user saves → `POST /api/summaries`.
 
