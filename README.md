@@ -330,8 +330,9 @@ The code is a modular monolith: feature folders under `src/components/` and `ser
 
 ## Contributing
 
-Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, on-device AI only), setup and pull request guidelines; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is organized; and [docs/TECH-DEBT.md](docs/TECH-DEBT.md) for open maintenance work. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the project principles (local-first, privacy-first, on-device AI only), setup, pull request and test guidelines; [GOVERNANCE.md](GOVERNANCE.md) for who maintains the project and how decisions are made; [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is organized; and [docs/TECH-DEBT.md](docs/TECH-DEBT.md) for open maintenance work. By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
+- **Have a question?** See [SUPPORT.md](SUPPORT.md) or ask in [Discussions → Q&A](https://github.com/socraticsurge/atlas-pulse/discussions/categories/q-a)
 - **Found a bug?** [Open a bug report](https://github.com/socraticsurge/atlas-pulse/issues/new?template=bug_report.yml)
 - **Have an idea?** [Open a feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) or start a [discussion](https://github.com/socraticsurge/atlas-pulse/discussions)
 - **Security issue?** Report it privately: see [SECURITY.md](SECURITY.md)
