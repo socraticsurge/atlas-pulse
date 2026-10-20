@@ -7,8 +7,8 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ### Fixed
 
-- **Accessibility: readable text in both themes.** An axe-core audit against WCAG 2.2 AA found text below the 4.5:1 contrast minimum: secondary details such as counts, times and sources (in both themes), accent-coloured text in the light theme, red Delete buttons, and toolbars faded at rest. The colours were adjusted to pass on every background, with a test that checks each theme's colours.
-- **Accessibility: everything works from the keyboard.** Articles in the list can be reached with `Tab` and opened with `Enter`; sidebar rows no longer nest buttons inside buttons; folders expand from the keyboard; the sidebar's "…" menu opens under its button with focus inside it; every menu follows the arrow keys, `Home`, `End` and `Esc`. Screen readers get a valid state on the Save button, names for image-only links in articles, and scrollable code blocks they can reach. `npm run lint` now includes the jsx-a11y rules.
+- **Accessibility: readable text in both themes.** An axe-core audit against WCAG 2.2 AA found text below the 4.5:1 contrast minimum: secondary details such as counts, times and sources (in both themes), accent-coloured text in the light theme, red Delete buttons, and toolbars faded at rest. The colours were adjusted to pass on every background, with a test that checks each theme's colours (#139).
+- **Accessibility: everything works from the keyboard.** Articles in the list can be reached with `Tab` and opened with `Enter`; sidebar rows no longer nest buttons inside buttons; folders expand from the keyboard; the sidebar's "…" menu opens under its button with focus inside it; every menu follows the arrow keys, `Home`, `End` and `Esc`. Screen readers get a valid state on the Save button, names for image-only links in articles, and scrollable code blocks they can reach. `npm run lint` now includes the jsx-a11y rules (#139).
 
 ## 2.1.0 (2026-10-19)
 
