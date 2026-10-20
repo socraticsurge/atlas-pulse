@@ -190,7 +190,7 @@ CodeQL (`javascript-typescript`) scans every pull request, every push to `master
 
 - **No authentication on the API.** Any program running as the user can call it, and could read `data/` directly anyway. This is accepted for a single-user, local app.
 - **No Content-Security-Policy on the app page.** DOMPurify is the only layer between article HTML and the DOM. A CSP is a [roadmap candidate](../ROADMAP.md#candidates).
-- **The sanitizer rules have no automated test.** The test runner has no DOM. Changes to `sanitize.js` are checked by hand until that changes ([roadmap candidate](../ROADMAP.md#candidates)).
+- **The sanitizer rules have no automated test.** The test runner has no DOM, and DOMPurify does not run under the lightweight DOM already installed (linkedom): it returns its input unchanged. Changes to `sanitize.js` are checked by hand until that changes ([roadmap candidate](../ROADMAP.md#candidates)). The names it gives links and images for screen readers are plain functions in `accessibleMarkup.js`, which do have tests.
 - **Publishers see article opens.** Images and allowlisted video embeds load from the publisher's servers when the user opens an article, as they would on the publisher's site.
 - **Data is not encrypted at rest.** `data/` relies on the operating system's account permissions and disk encryption.
 - **A remote Ollama receives article text in plain HTTP.** Only if the user points `OLLAMA_HOST` at another machine.
