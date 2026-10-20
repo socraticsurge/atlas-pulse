@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { canonicalizeUrl } from '../../src/utils/helpers.js';
+import { canonicalizeUrl } from '../../shared/feedItems.js';
 
 let reader;
 let pages;
@@ -14,7 +14,7 @@ before(async () => {
   pages = await import('./articlePages.js');
 });
 
-// An article as the client sends it (toArticle in src/utils/feedSync.js).
+// An article as it is stored (toArticle in shared/feedItems.js).
 const item = (fields) => ({ title: 'T', summary: '', content: '', ...fields, canonicalLink: canonicalizeUrl(fields.link || '') });
 const newFeed = (name) => reader.createFeed({ title: name, url: `https://${name}.example/rss` });
 

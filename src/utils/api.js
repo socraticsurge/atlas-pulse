@@ -211,6 +211,18 @@ export async function storeFeed(data) { return readerFetch('/feeds', json(data))
 export async function patchFeed(id, data) { return readerFetch(`/feeds/${id}`, json(data, 'PUT')); }
 export async function removeFeed(id) { return readerFetch(`/feeds/${id}`, { method: 'DELETE' }); }
 
+// Refreshing: the server fetches feeds on its own schedule; these ask it to now.
+/** Refreshes one feed: { inserted, failed, feed }. */
+export async function refreshFeedNow(id) {
+  return request(`/refresh/feeds/${id}`, 'Failed to refresh feed', { method: 'POST' });
+}
+/** Refreshes every feed, or only `feedIds`: { inserted, failed: [feed titles] }. */
+export async function refreshFeeds(feedIds) {
+  return request('/refresh', 'Failed to refresh feeds', json(feedIds ? { feedIds } : {}));
+}
+/** The scheduled refreshes: { running, lastStartedAt, lastFinishedAt, lastInserted, lastFailed }. */
+export async function fetchRefreshStatus() { return request('/refresh', 'Failed to check for new articles'); }
+
 // Articles
 /**
  * One page of a view's articles: { articles, total, unread, facets, nextOffset }.
@@ -245,9 +257,6 @@ export async function bulkInsertArticles(feedId, articles) {
 export async function fetchArticlesByAiStatus(status) {
   const s = Array.isArray(status) ? status.join(',') : status;
   return readerFetch(`/articles/by-ai-status?status=${encodeURIComponent(s)}`);
-}
-export async function fetchUnprocessedForFeed(feedId, limit) {
-  return readerFetch(`/articles/unprocessed?feedId=${feedId}&limit=${limit}`);
 }
 export async function fetchQueueCount() {
   const { count } = await readerFetch('/articles/queue-count');
