@@ -108,33 +108,3 @@ export function normalizeUrl(url) {
   }
   return url;
 }
-
-const TRACKING_PARAMS = new Set([
-  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
-  'fbclid', 'gclid', 'msclkid', '_ga', 'mc_cid', 'mc_eid', 'ref', 'source',
-]);
-
-/**
- * Produce a canonical URL for cross-feed deduplication.
- * Strips tracking params and the www prefix, sorts params, and drops a
- * trailing slash. The #fragment is kept: feeds such as changelogs give each
- * item the same page with a different anchor (/changelog#v1.3, #v1.4), and
- * dropping it made every item after the first look like a duplicate.
- */
-export function canonicalizeUrl(url) {
-  if (!url) return '';
-  try {
-    const u = new URL(url);
-    u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
-    for (const key of [...u.searchParams.keys()]) {
-      if (TRACKING_PARAMS.has(key.toLowerCase())) u.searchParams.delete(key);
-    }
-    u.searchParams.sort();
-    if (u.pathname !== '/' && u.pathname.endsWith('/')) {
-      u.pathname = u.pathname.slice(0, -1);
-    }
-    return u.toString();
-  } catch {
-    return url;
-  }
-}

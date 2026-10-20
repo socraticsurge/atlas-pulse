@@ -4,7 +4,7 @@ import {
   findFolderByName,
   createFeed, listFeeds, listRemovedFeeds, getFeed, updateFeed, removeFeed,
   bulkInsertArticles, getArticleById, findArticleByLink,
-  updateArticle, bulkUpdateArticles, getArticlesByAiStatus, getUnprocessedForFeed,
+  updateArticle, bulkUpdateArticles, getArticlesByAiStatus,
   getQueueCount, resetProcessingToQueued, claimNextQueued, getCounts, clearAll,
   DB_PATH,
 } from '../db/reader.js';
@@ -130,14 +130,6 @@ router.get('/articles/by-ai-status', (req, res) => {
   const { status } = req.query;
   if (!status) return res.status(400).json({ error: 'status is required' });
   try { res.json(getArticlesByAiStatus(status.split(','))); }
-  catch (err) { sendDbError(res, err); }
-});
-
-router.get('/articles/unprocessed', (req, res) => {
-  const feedId = Number(req.query.feedId);
-  const limit = Math.min(Math.max(Number.parseInt(req.query.limit, 10) || 10, 1), 500);
-  if (!Number.isInteger(feedId)) return res.status(400).json({ error: 'feedId is required' });
-  try { res.json(getUnprocessedForFeed(feedId, limit)); }
   catch (err) { sendDbError(res, err); }
 });
 
