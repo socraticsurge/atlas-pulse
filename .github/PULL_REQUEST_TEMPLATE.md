@@ -20,7 +20,7 @@
 - [ ] Works in both dark and light themes (for UI changes)
 - [ ] README updated (features table, shortcuts) if user-facing behavior changed
 - [ ] `CHANGELOG.md` has a line under `## Unreleased` ending with this PR's number (user-facing changes)
-- [ ] `docs/SECURITY-DESIGN.md` updated in this PR if the change crosses a trust boundary: a new way to fetch a URL, new raw HTML or a sanitizer change, starting a process, building SQL, or the server's binding, Host or Origin checks or limits
+- [ ] `docs/SECURITY-DESIGN.md` updated in this PR if the change crosses a trust boundary: a new way to fetch a URL, new raw HTML or a sanitizer change, starting a process, building SQL, or the server's binding, Host or Origin checks, security headers or limits
 - [ ] SQLite schema changes migrate existing databases in place (if applicable)
 - [ ] Respects the project principles: local-first, privacy-first, on-device AI only (Gemini Nano or Ollama)
 - [ ] AI-assisted work is said so here and carries a `Co-Authored-By:` trailer (if applicable)

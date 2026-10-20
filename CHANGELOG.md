@@ -5,6 +5,10 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ## Unreleased
 
+### Security
+
+- **Other websites can't show Atlas Pulse in a frame.** A page on another site could load the app in a hidden frame and trick you into clicking something like "Delete all". Every response now forbids framing, and the built app sends a Content-Security-Policy that runs only its own scripts, takes video embeds only from YouTube, Vimeo and SoundCloud, and talks only to its own server: a second layer behind the HTML sanitizer (#148).
+
 ### Under the hood
 
 - [MAINTAINING.md](MAINTAINING.md) sets out the definition of done, the merge routine, the release checklist and the rules for AI-assisted work, and [CLAUDE.md](CLAUDE.md) points every Claude Code session in the repository to it. The pull request template gains CHANGELOG, security-design and AI-disclosure boxes (#146).

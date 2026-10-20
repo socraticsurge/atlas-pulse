@@ -104,6 +104,19 @@ test('pages on this machine may call the API; other sites may not', async () => 
   }
 });
 
+test('every response, refusals included, forbids framing and sniffing and carries the CSP', async () => {
+  const responses = [
+    await request('/api/health'),
+    await request('/some/page'),
+    await request('/api/health', { headers: { Origin: 'https://evil.example' } }),
+  ];
+  for (const res of responses) {
+    assert.equal(res.headers.get('x-frame-options'), 'DENY', res.status);
+    assert.equal(res.headers.get('x-content-type-options'), 'nosniff', res.status);
+    assert.match(res.headers.get('content-security-policy') || '', /frame-ancestors 'none'/, res.status);
+  }
+});
+
 test('bad JSON is a 400 in JSON, and a request without a body reads as empty', async () => {
   const bad = await postJson('/api/reader/folders', '{"name": ');
   assert.equal(bad.status, 400);

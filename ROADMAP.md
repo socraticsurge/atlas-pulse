@@ -44,7 +44,6 @@ The goal is the [OpenSSF Best Practices](https://www.bestpractices.dev/) passing
 Maintenance and hardening work that may happen if time allows:
 
 - **Page the summaries and highlights lists.** Both still load in full, as the article list did before it was paged ([docs/TECH-DEBT.md](docs/TECH-DEBT.md), section 3.3).
-- **A Content-Security-Policy for the app page,** as a second layer behind the HTML sanitizer.
 - **Tests for the HTML sanitizer.** Its rules have no automated test yet, because the test runner has no DOM.
 - **Signed release tags.** This needs a signing key that the maintainer, and later the backup maintainer, keeps safe. GOVERNANCE.md would change to list it.
 

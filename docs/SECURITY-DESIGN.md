@@ -72,8 +72,8 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 | | Boundary | What crosses it | How it is guarded |
 |---|---|---|---|
 | **B1** | Internet → server | Every feed, page, icon and redirect the server fetches | All server-side fetches of untrusted URLs go through `safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js), with size and time limits from [server/utils/fetchText.js](../server/utils/fetchText.js). The parsers (rss-parser, @extractus/article-extractor, cheerio) only receive the fetched text, so they make no requests of their own. |
-| **B2** | Other websites → local API | Requests a browser sends from another site | The server binds to `127.0.0.1` ([server/index.js](../server/index.js)). `localOnly` in [server/utils/loopback.js](../server/utils/loopback.js) refuses (403) a request whose `Host` names another site or whose `Origin` is anywhere else, before it reaches a route. CORS headers go only to origins on this machine. |
-| **B3** | Untrusted HTML → the app's DOM | Article and feed HTML; Studio Markdown | The app inserts raw HTML only in the reader and in Studio templates, and both sanitize it first: [src/components/reader/sanitize.js](../src/components/reader/sanitize.js) and [src/components/studio/markdown.js](../src/components/studio/markdown.js). Everything else, including what the AI rail shows, is rendered as text by React. |
+| **B2** | Other websites → local API | Requests a browser sends from another site | The server binds to `127.0.0.1` ([server/index.js](../server/index.js)). `localOnly` in [server/utils/loopback.js](../server/utils/loopback.js) refuses (403) a request whose `Host` names another site or whose `Origin` is anywhere else, before it reaches a route. CORS headers go only to origins on this machine. Every response forbids framing ([server/utils/securityHeaders.js](../server/utils/securityHeaders.js)). |
+| **B3** | Untrusted HTML → the app's DOM | Article and feed HTML; Studio Markdown | The app inserts raw HTML only in the reader and in Studio templates, and both sanitize it first: [src/components/reader/sanitize.js](../src/components/reader/sanitize.js) and [src/components/studio/markdown.js](../src/components/studio/markdown.js). Everything else, including what the AI rail shows, is rendered as text by React. The built app's Content-Security-Policy is a second layer. |
 | **B4** | Server → other programs | Ollama requests; `ollama serve`; headless Chrome | Fixed commands and binaries, with no request data on a command line ([server/routes/ollama.js](../server/routes/ollama.js), [server/utils/ollamaHost.js](../server/utils/ollamaHost.js)). The Ollama address comes from the environment, never from a request. Headless Chrome only opens the app's own print page ([server/routes/pageExport.js](../server/routes/pageExport.js)). |
 | **B5** | Requests → database and settings file | JSON bodies from the app | Prepared statements with bound parameters ([server/db/](../server/db/)); request bodies checked against fixed fields and limits before storage. |
 | **B6** | Contributors → repository | Pull requests, dependency updates, CI | Required checks on `master`, CodeQL, pinned actions and read-only CI tokens; see [Supply chain and process](#supply-chain-and-process). |
@@ -84,7 +84,8 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 
 - **Sanitized with DOMPurify** before insertion: `sanitizeArticleHtml` for extracted articles and `sanitizeFeedHtml` for the feed preview ([src/components/reader/sanitize.js](../src/components/reader/sanitize.js)). DOMPurify removes script, event handlers and `javascript:` URLs.
 - **No fake controls.** `form`, `input`, `button`, `select`, `option`, `textarea` and `style` elements are removed, and so are `style`, `action` and `formaction` attributes. A feed cannot draw a "sign in again" form or a full-window overlay.
-- **Video embeds only from an allowlist.** An `iframe` stays only if its host is YouTube, youtube-nocookie, Vimeo's player or SoundCloud's widget, and every kept iframe gets a fixed `sandbox` that overrides whatever the feed set.
+- **Video embeds only from an allowlist.** An `iframe` stays only if its host is YouTube, youtube-nocookie, Vimeo's player or SoundCloud's widget, and every kept iframe gets a fixed `sandbox` that overrides whatever the feed set. The host list is [shared/embedHosts.js](../shared/embedHosts.js), which the CSP's `frame-src` uses too.
+- **A Content-Security-Policy behind the sanitizer.** The built app (`npm start` and the background service) is served with a policy that runs scripts only from the app itself, plus the inline theme script in `index.html`, allowed by its hash. It also loads no plugins (`object-src 'none'`), takes frames only from the embed hosts, and makes network requests only to its own server (`connect-src 'self'`). A script that got past DOMPurify would not run. Styles allow `'unsafe-inline'`, because Radix dialogs inject a `<style>` element, and the sanitizer already strips style attributes from article HTML. Images and media may load from any http(s) host, as articles need ([server/utils/securityHeaders.js](../server/utils/securityHeaders.js)).
 - **Links can't navigate the app.** Every link gets `target="_blank"` and `rel="noopener noreferrer"`.
 - **Studio** renders newsletter Markdown through `marked` and its own DOMPurify instance, so its link rule cannot change the reader's configuration.
 - **AI output is text.** The AI rail shows summaries, analysis and chat as React text, never as HTML.
@@ -107,9 +108,10 @@ Tests: [server/utils/urlGuard.test.js](../server/utils/urlGuard.test.js) covers 
 - **Addressed to this machine.** `localOnly` ([server/utils/loopback.js](../server/utils/loopback.js)) answers 403 unless the `Host` header is `localhost`, a `*.localhost` name, an IP address, or the `HOST` the server was started with. A page on another site can point its own name at `127.0.0.1` (DNS rebinding) and then call the API as the same origin, with no `Origin` header; its `Host` still names that site, so it is refused.
 - **Local origins only.** Browsers attach an `Origin` header to cross-origin requests. `localOnly` refuses (403) any origin that isn't on this machine, and CORS headers go only to local origins, so another site can neither read responses nor make the server act on a request. Requests with no `Origin` (curl, same-origin page loads) are allowed; the `Host` check covers the same-origin case.
 - **JSON bodies.** Routes that take data read JSON (`express.json`), which a plain HTML form on another site can't send.
+- **Not framed, not sniffed.** Every response, a 403 included, carries `X-Frame-Options: DENY` and `frame-ancestors 'none'`, so another site can't show the app in a hidden frame and trick a click on something like "Delete all" (clickjacking). `X-Content-Type-Options: nosniff` stops a browser from running a response as a type it wasn't served as. Under `npm run dev` and `npm run preview`, Vite sends the same anti-framing headers ([vite.config.js](../vite.config.js)). A route that needs a stricter policy, such as site icons, replaces these headers.
 - **Studio export** only renders an origin that passes `localOrigin` ([server/routes/studioInput.js](../server/routes/studioInput.js), tested in `pageExport.test.js`), so a request cannot point headless Chrome at an arbitrary site.
 
-Tests: [server/utils/loopback.test.js](../server/utils/loopback.test.js) covers the `Host` and `Origin` decisions, and the middleware over HTTP with another site's `Host` and `Origin`.
+Tests: [server/utils/loopback.test.js](../server/utils/loopback.test.js) covers the `Host` and `Origin` decisions, and the middleware over HTTP with another site's `Host` and `Origin`. [server/utils/securityHeaders.test.js](../server/utils/securityHeaders.test.js) covers the policy and the headers, and [server/index.test.js](../server/index.test.js) checks that every response carries them, refusals included.
 
 ### Injection into SQLite (B5)
 
@@ -164,8 +166,8 @@ How the classic principles (Saltzer and Schroeder) and a few practical ones are 
 
 | Weakness | Countered by | Tested in |
 |---|---|---|
-| CWE-79 Cross-site scripting | DOMPurify on every raw-HTML sink; React escaping everywhere else | (no DOM in the test runner yet; see [Known limits](#known-limits-and-accepted-risks)) |
-| CWE-1021 UI redress, clickjacking | Forms, inputs and inline styles removed; iframe host allowlist and fixed sandbox | n/a |
+| CWE-79 Cross-site scripting | DOMPurify on every raw-HTML sink; React escaping everywhere else; a CSP that runs only the app's own scripts | `securityHeaders.test.js` for the CSP; the sanitizer has no DOM in the test runner yet (see [Known limits](#known-limits-and-accepted-risks)) |
+| CWE-1021 UI redress, clickjacking | `X-Frame-Options: DENY` and `frame-ancestors 'none'` on every response; forms, inputs and inline styles removed; iframe host allowlist and fixed sandbox | `securityHeaders.test.js`, `index.test.js` |
 | CWE-918 Server-side request forgery | `safeFetch`: scheme allowlist, blocked ranges in every IPv6 spelling, connect-time DNS check, re-checked redirects | `urlGuard.test.js`, `favicon.test.js` |
 | CWE-352 Cross-site request forgery | Loopback binding; `localOnly` refuses another site's `Host` (DNS rebinding) and `Origin`; JSON bodies | `loopback.test.js`, `pageExport.test.js` |
 | CWE-89 SQL injection | Prepared statements with bound parameters; SQL fragments only from code | `server/db/*.test.js` |
@@ -189,7 +191,8 @@ CodeQL (`javascript-typescript`) scans every pull request, every push to `master
 ## Known limits and accepted risks
 
 - **No authentication on the API.** Any program running as the user can call it, and could read `data/` directly anyway. This is accepted for a single-user, local app.
-- **No Content-Security-Policy on the app page.** DOMPurify is the only layer between article HTML and the DOM. A CSP is a [roadmap candidate](../ROADMAP.md#candidates).
+- **The dev server has no script policy.** Under `npm run dev`, Vite serves the app with the anti-framing headers only, because its hot reload needs inline scripts. The built app has the full policy.
+- **The CSP doesn't limit images or media.** Articles load them from any http(s) host, so the policy's protection comes from refusing to run scripts, not from limiting where the page can load from.
 - **The sanitizer rules have no automated test.** The test runner has no DOM, and DOMPurify does not run under the lightweight DOM already installed (linkedom): it returns its input unchanged. Changes to `sanitize.js` are checked by hand until that changes ([roadmap candidate](../ROADMAP.md#candidates)). The names it gives links and images for screen readers are plain functions in `accessibleMarkup.js`, which do have tests.
 - **Publishers see article opens.** Images and allowlisted video embeds load from the publisher's servers when the user opens an article, as they would on the publisher's site.
 - **Data is not encrypted at rest.** `data/` relies on the operating system's account permissions and disk encryption.
@@ -205,6 +208,7 @@ Update this document in the same pull request when a change:
 - inserts raw HTML anywhere new, or changes `sanitize.js` or `markdown.js`;
 - starts a process, or changes how Ollama or Chrome is reached;
 - builds SQL from anything other than fixed fragments;
-- changes the server's binding, its Host or Origin checks, or its request limits.
+- changes the server's binding, its Host or Origin checks, or its request limits;
+- changes the security headers, the Content-Security-Policy or the embed hosts.
 
 The maintainer also reviews it at each minor release, with [ROADMAP.md](../ROADMAP.md) and [TECH-DEBT.md](TECH-DEBT.md).
