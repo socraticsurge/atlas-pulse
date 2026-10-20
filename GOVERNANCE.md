@@ -9,6 +9,7 @@ Atlas Pulse is a single-maintainer project. This document says who decides what,
 - reviews and merges pull requests, and triages issues and Discussions;
 - decides what goes into the project, following the process below;
 - cuts releases: bumps the version, updates `CHANGELOG.md`, tags `vX.Y.Z` and publishes a GitHub release;
+- keeps the [roadmap](ROADMAP.md) and the [security design](docs/SECURITY-DESIGN.md) current;
 - handles vulnerability reports as described in [SECURITY.md](SECURITY.md);
 - enforces the [Code of Conduct](CODE_OF_CONDUCT.md);
 - keeps CI, the `master` branch ruleset and dependency updates working.
@@ -24,6 +25,7 @@ There are no other roles today. A contributor with a record of sustained, carefu
 - **Small changes** (bug fixes, docs, small improvements): open a pull request. The maintainer reviews it and merges it once the required checks pass: lint, tests and build on Linux, macOS and Windows, plus CodeQL.
 - **Larger changes** (a new feature, a new dependency, a SQLite schema change, a change to how AI or storage works): open an [issue](https://github.com/socraticsurge/atlas-pulse/issues/new/choose) or a [Discussion](https://github.com/socraticsurge/atlas-pulse/discussions) first, so the approach is agreed before anyone writes code. A pull request for a larger change that skipped this step may be asked to start there.
 - **The project principles are binding.** The [guiding principles in CONTRIBUTING.md](CONTRIBUTING.md#guiding-principles) (local-first, on-device AI only, one styling system, privacy over convenience) are not traded off case by case. A change that breaks one is not merged, whoever proposes it, the maintainer included.
+- **The roadmap.** [ROADMAP.md](ROADMAP.md) says what the project plans for the next year and what it will not do. Adding to it follows the same process as any larger change.
 - **Changing a principle or this document** is a larger change: it starts as a Discussion and lands as a pull request that links to it.
 - **Final call.** The maintainer makes the final call and gives the reasoning in the issue or pull request. If you disagree, say so there; a decision can be revisited when new information turns up. The MIT License also leaves you free to fork.
 
