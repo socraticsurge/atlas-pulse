@@ -96,22 +96,23 @@ export const isSaveList = (viewType) => SAVE_ORDERED_VIEWS.has(viewType);
 export const groupingFor = (viewType) => (isSaveList(viewType) ? BY_SAVED : BY_PUBLISHED);
 
 /**
- * The list as rows for the Rows view: a heading before each run of articles
- * from the same day group. Assumes newest-first order (by the grouping's
- * date); a group that recurs later (unusual sort) simply gets another heading.
+ * The list as rows for the Rows view: one item per article (position is its
+ * index in the list), the first of each run from the same day group carrying
+ * that group's heading. The heading rides on its article, not on an item of
+ * its own, so every item is a list item for screen readers. Assumes
+ * newest-first order (by the grouping's date); a group that recurs later
+ * (unusual sort) simply gets another heading.
  */
 export function withDayHeaders(articles, now = new Date(), grouping = BY_PUBLISHED) {
-  const items = [];
   let current = null;
-  for (const article of articles) {
+  return articles.map((article, position) => {
+    const item = { type: 'article', key: article.id, article, position };
     const label = grouping.label(dayGroup(grouping.dateOf(article), now));
-    if (label !== current) {
-      items.push({ type: 'header', key: `h-${items.length}-${label}`, label });
-      current = label;
-    }
-    items.push({ type: 'article', key: article.id, article });
-  }
-  return items;
+    if (label === current) return item;
+    current = label;
+    // Its own key: the virtualizer caches heights by key, and this row is taller.
+    return { ...item, key: `${article.id}-h`, heading: label };
+  });
 }
 
 /** Compact time for a row: "19:12" today, a weekday this week, else "Oct 3" (or "Oct 3, 2025"). */

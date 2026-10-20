@@ -117,24 +117,25 @@ function Sources({ sources }) {
 /**
  * A newsletter page. design: { className, Masthead, options }; issue: from
  * parseIssue; presentation: from rules.js; meta: masthead lines (pageMeta);
- * sources: the Studio item's sources.
+ * sources: the Studio item's sources. An <article>, not a <main>: in Studio
+ * the page sits inside the app's main landmark.
  */
 export default function NewsletterPage({ design, issue, presentation, meta, sources }) {
   const { Masthead, options } = design;
   const opening = issue.standfirst && { ...issue.standfirst, label: undefined };
   return (
-    <div className={`nl ${design.className}`}>
+    <article className={`nl ${design.className}`}>
       <Masthead meta={meta} />
       <Front issue={issue} />
-      <main className="nl-column">
+      <div className="nl-column">
         {opening && isLongOpening(issue) && <section className="nl-section nl-role-lede"><Paragraph block={opening} className="nl-p nl-lede" /></section>}
         {issue.sections.map((s) => (
           <section key={s.id} className={`nl-section nl-role-${presentation.roles[s.id]}`}>
             <Section section={s} role={presentation.roles[s.id]} options={options} />
           </section>
         ))}
-      </main>
+      </div>
       <Sources sources={sources} />
-    </div>
+    </article>
   );
 }

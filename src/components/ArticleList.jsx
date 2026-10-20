@@ -186,6 +186,8 @@ export default function ArticleList({
           scrollRef={scrollRef}
           loading={data.loading && !serverDown}
           articles={visible}
+          total={data.total}
+          label={title}
           empty={empty}
           viewMode={viewMode}
           feedMap={data.feedMap}

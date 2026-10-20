@@ -30,7 +30,7 @@ function Header({ ai, onClose }) {
   return (
     <div className="flex h-[var(--pane-header-height)] shrink-0 items-center gap-2 border-b border-border pr-2 pl-4">
       <HiOutlineSparkles className="size-4 text-primary" />
-      <span className="mr-auto text-[13.5px] font-semibold text-foreground">AI</span>
+      <h2 className="m-0 mr-auto text-[13.5px] font-semibold text-foreground">AI</h2>
       {!ai.checked && <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground"><Spinner className="size-3 border-[1.5px]" /> checking</span>}
       {ai.ready && <ModelPicker models={ai.models} selectedModel={ai.selectedModel} onSelect={ai.setSelectedModel} />}
       <button type="button" onClick={onClose} title="Close AI rail (a)" aria-label="Close AI rail" className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground">

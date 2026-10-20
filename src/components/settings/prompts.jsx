@@ -40,7 +40,7 @@ export function PromptsEditor() {
     <div className="flex flex-col gap-6">
       {GROUPS.map((group) => (
         <section key={group}>
-          <h4 className="m-0 mb-1 font-mono text-[11px] font-normal uppercase tracking-wider text-[var(--text-tertiary)]">{group}</h4>
+          <h3 className="m-0 mb-1 font-mono text-[11px] font-normal uppercase tracking-wider text-[var(--text-tertiary)]">{group}</h3>
           {PROMPTS.filter((p) => p.group === group).map((p) => <PromptField key={p.id} prompt={p} />)}
         </section>
       ))}

@@ -11,7 +11,7 @@ export function SetupCard({ emoji, title, compact, children }) {
     <div className={cn('flex gap-3 rounded-lg border border-border bg-[var(--bg-primary)]', compact ? 'p-3' : 'p-4')}>
       <div className="text-xl leading-none">{emoji}</div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 text-[13px] leading-relaxed text-muted-foreground [&_p]:m-0">
-        <h4 className="m-0 text-[13.5px] font-semibold text-foreground">{title}</h4>
+        <h3 className="m-0 text-[13.5px] font-semibold text-foreground">{title}</h3>
         {children}
       </div>
     </div>

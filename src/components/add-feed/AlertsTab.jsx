@@ -17,7 +17,7 @@ export function AlertsTab({ url, onUrlChange, onSubmit }) {
   return (
     <div className="flex flex-col gap-4">
       <Card>
-        <h4 className="m-0 mb-2 flex items-center gap-2 text-[13.5px] font-semibold text-foreground"><HiOutlineBell className="size-4 text-primary" /> Google Alerts as RSS</h4>
+        <h3 className="m-0 mb-2 flex items-center gap-2 text-[13.5px] font-semibold text-foreground"><HiOutlineBell className="size-4 text-primary" /> Google Alerts as RSS</h3>
         <ol className="m-0 flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-relaxed text-muted-foreground">
           {STEPS.map((step, i) => <li key={i}>{step}</li>)}
         </ol>
