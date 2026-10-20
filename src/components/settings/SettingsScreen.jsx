@@ -50,6 +50,22 @@ function SearchResults({ settings }) {
   ));
 }
 
+// The open section's settings, or the ones matching a search. The pane scrolls
+// when the window is short or zoomed, so it takes keyboard focus itself: a
+// section with nothing to tab to (About) could not be scrolled otherwise.
+function SettingsPane({ query, visible, sections, section, mode }) {
+  const label = query ? 'Matching settings' : sections.find((s) => s.id === section).label;
+  return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scrolling region has to be focusable to scroll from the keyboard, and About has nothing else to focus
+    <section tabIndex={0} aria-label={label} className="min-h-0 overflow-y-auto px-6 py-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
+      {query
+        ? <SearchResults settings={searchSettings(visible, query)} />
+        : <SettingRows settings={visible.filter((s) => s.section === section)} />}
+      {mode === 'simple' && !query && <p className="mt-4 text-xs text-muted-foreground">More settings, including every AI prompt, are in Power mode.</p>}
+    </section>
+  );
+}
+
 function Header({ mode, onMode, query, onQuery, onClose }) {
   return (
     <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
@@ -91,13 +107,7 @@ export default function SettingsScreen({ isOpen, onClose, availableModels = [], 
           <Header mode={mode} onMode={setMode} query={query} onQuery={setQuery} onClose={onClose} />
           <div className="grid min-h-0 flex-1 grid-cols-[200px_1fr]">
             <SectionNav sections={sections} current={query ? null : section} onSelect={(id) => { setQuery(''); setCurrent(id); }} />
-            {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- the pane scrolls in short windows, and a section like About has nothing focusable, so the pane itself takes focus to scroll from the keyboard */}
-            <section tabIndex={0} aria-label={query ? 'Matching settings' : sections.find((s) => s.id === section).label} className="min-h-0 overflow-y-auto px-6 py-2 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring">
-              {query
-                ? <SearchResults settings={searchSettings(visible, query)} />
-                : <SettingRows settings={visible.filter((s) => s.section === section)} />}
-              {mode === 'simple' && !query && <p className="mt-4 text-xs text-muted-foreground">More settings, including every AI prompt, are in Power mode.</p>}
-            </section>
+            <SettingsPane query={query} visible={visible} sections={sections} section={section} mode={mode} />
           </div>
         </SettingsEnv.Provider>
       </DialogContent>
