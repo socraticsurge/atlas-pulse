@@ -93,7 +93,7 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 
 ### Server-side request forgery (B1)
 
-`safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js) is the only path for server-side fetches of untrusted URLs: feeds (`feedParser.js`), feed discovery (`feedDiscovery.js`), full-text extraction (`articleExtractor.js`) and site icons (`favicon.js`), mostly through `fetchText.js`. It makes three checks:
+`safeFetch` in [server/utils/urlGuard.js](../server/utils/urlGuard.js) is the only path for server-side fetches of untrusted URLs: feeds (`feedParser.js`), feed discovery (`feedDiscovery.js`), full-text extraction (`articleExtractor.js`, with Google News decoding in `googleNewsLink.js`) and site icons (`favicon.js`), mostly through `fetchText.js`. It makes three checks:
 
 1. **Before the request:** the URL must be `http:` or `https:`, and every address its host resolves to must be public. The blocked ranges are listed in `BLOCKED_V4`, `V6_WITH_V4` and `BLOCKED_V6`: loopback, private, carrier-grade NAT, link-local (including `169.254.169.254`, the cloud metadata address), multicast and reserved. IPv6 addresses are read as numbers, so every spelling of an address is judged alike. An IPv6 address that carries an IPv4 one (IPv4-mapped `::ffff:0:0/96`, IPv4-compatible `::/96`, NAT64 `64:ff9b::/96`, 6to4 `2002::/16`) is judged by that IPv4 address, and any other IPv6 address outside global unicast (`2000::/3`) is refused, as are Teredo and documentation ranges. An IP address written in the URL involves no DNS, so this is the only check it meets. Anything not recognized as an IP address is refused.
 2. **At connect time:** the connection resolves the hostname again through `guardedLookup`, which refuses blocked addresses. A DNS server that answers "public" for the first check and "127.0.0.1" for the connection (DNS rebinding) is caught here.
@@ -101,7 +101,9 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 
 The favicon route accepts only a plain DNS name (`isValidHostname`: no IP addresses, ports, paths or credentials) and builds the URL itself.
 
-Tests: [server/utils/urlGuard.test.js](../server/utils/urlGuard.test.js) covers blocked schemes and ranges, IPv6 spellings of private IPv4 addresses (including a fetch through `[::ffff:127.0.0.1]` to a server on `127.0.0.1`), redirects into private addresses and a host that rebinds to loopback; [server/utils/favicon.test.js](../server/utils/favicon.test.js) covers hostname checks.
+**Google News links** (`googleNewsLink.js`). Google News feeds link to `news.google.com/rss/articles/<id>`, which holds no article. When extraction gets such a link, it first asks Google for the publisher's URL: a GET of the article page for a signature and timestamp, then a POST to Google's `batchexecute` endpoint. Both go to fixed `news.google.com` URLs. The id must be base64url characters only, so it can't change the path. Both requests go through `fetchText` and `safeFetch`, with a 10-second timeout each. The answer is used only if it is an `http:` or `https:` URL, and that URL is then fetched like any other article link, through `safeFetch`. Decoding runs only when an article is opened, never during a feed refresh. Any failure falls back to the original link. Decoded ids are kept in memory, at most 500.
+
+Tests: [server/utils/urlGuard.test.js](../server/utils/urlGuard.test.js) covers blocked schemes and ranges, IPv6 spellings of private IPv4 addresses (including a fetch through `[::ffff:127.0.0.1]` to a server on `127.0.0.1`), redirects into private addresses and a host that rebinds to loopback; [server/utils/favicon.test.js](../server/utils/favicon.test.js) covers hostname checks; [server/utils/googleNewsLink.test.js](../server/utils/googleNewsLink.test.js) covers which links count as Google News article ids and that only an http(s) answer is used.
 
 ### Other websites and the local network (B2)
 
@@ -169,7 +171,7 @@ How the classic principles (Saltzer and Schroeder) and a few practical ones are 
 |---|---|---|
 | CWE-79 Cross-site scripting | DOMPurify on every raw-HTML sink; React escaping everywhere else; a CSP that runs only the app's own scripts | `securityHeaders.test.js` for the CSP; the sanitizer has no DOM in the test runner yet (see [Known limits](#known-limits-and-accepted-risks)) |
 | CWE-1021 UI redress, clickjacking | `X-Frame-Options: DENY` and `frame-ancestors 'none'` on every response; forms, inputs and inline styles removed; iframe host allowlist and fixed sandbox | `securityHeaders.test.js`, `index.test.js` |
-| CWE-918 Server-side request forgery | `safeFetch`: scheme allowlist, blocked ranges in every IPv6 spelling, connect-time DNS check, re-checked redirects | `urlGuard.test.js`, `favicon.test.js` |
+| CWE-918 Server-side request forgery | `safeFetch`: scheme allowlist, blocked ranges in every IPv6 spelling, connect-time DNS check, re-checked redirects | `urlGuard.test.js`, `favicon.test.js`, `googleNewsLink.test.js` |
 | CWE-352 Cross-site request forgery | Loopback binding; `localOnly` refuses another site's `Host` (DNS rebinding) and `Origin`; JSON bodies | `loopback.test.js`, `pageExport.test.js` |
 | CWE-89 SQL injection | Prepared statements with bound parameters; SQL fragments only from code | `server/db/*.test.js` |
 | CWE-78 OS command injection | Fixed commands; `spawn` with an argument array; no request data on a command line | n/a: no request data reaches a command |
@@ -195,6 +197,7 @@ CodeQL (`javascript-typescript`) scans every pull request, every push to `master
 - **The dev server has no script policy.** Under `npm run dev`, Vite serves the app with the anti-framing headers only, because its hot reload needs inline scripts. The built app has the full policy.
 - **The CSP doesn't limit images or media.** Articles load them from any http(s) host, so the policy's protection comes from refusing to run scripts, not from limiting where the page can load from.
 - **The sanitizer rules have no automated test.** The test runner has no DOM, and DOMPurify does not run under the lightweight DOM already installed (linkedom): it returns its input unchanged. Changes to `sanitize.js` are checked by hand until that changes ([roadmap candidate](../ROADMAP.md#candidates)). The names it gives links and images for screen readers are plain functions in `accessibleMarkup.js`, which do have tests.
+- **Google sees which Google News articles you open.** Decoding a Google News link sends its article id to Google, as clicking the link in a browser would. The endpoint is undocumented. If Google changes it, Google News articles fall back to the feed's summary.
 - **Publishers see article opens.** Images and allowlisted video embeds load from the publisher's servers when the user opens an article, as they would on the publisher's site.
 - **Data is not encrypted at rest.** `data/` relies on the operating system's account permissions and disk encryption.
 - **A remote Ollama receives article text in plain HTTP.** Only if the user points `OLLAMA_HOST` at another machine.

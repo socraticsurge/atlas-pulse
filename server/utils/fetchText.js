@@ -27,11 +27,12 @@ export function decodeBody(bytes, contentType) {
 }
 
 /**
- * GETs `url` and resolves to { text, url } (url = the final URL after
+ * Requests `url` (a GET unless `method` says otherwise, with an optional
+ * `body`) and resolves to { text, url } (url = the final URL after
  * redirects). Throws on a non-2xx status, a timeout, or a body over maxBytes.
  */
-export async function fetchText(url, { headers = {}, timeoutMs = 15000, maxBytes = DEFAULT_MAX_BYTES } = {}) {
-  const res = await safeFetch(url, { headers, signal: AbortSignal.timeout(timeoutMs) });
+export async function fetchText(url, { method, headers = {}, body, timeoutMs = 15000, maxBytes = DEFAULT_MAX_BYTES } = {}) {
+  const res = await safeFetch(url, { method, headers, body, signal: AbortSignal.timeout(timeoutMs) });
   if (!res.ok) throw new Error(`Status code ${res.status}`);
   if (Number(res.headers.get('content-length')) > maxBytes) throw new Error('Response too large');
   const bytes = new Uint8Array(await res.arrayBuffer());

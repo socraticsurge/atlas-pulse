@@ -1,6 +1,7 @@
 import { extractFromHtml } from '@extractus/article-extractor';
 import * as cheerio from 'cheerio';
 import { fetchText } from './fetchText.js';
+import { publisherUrl } from './googleNewsLink.js';
 
 /**
  * Extract the full article content from a URL.
@@ -85,10 +86,13 @@ export function prepareForExtraction(html) {
 }
 
 // The page is fetched by fetchText (SSRF-guarded on every redirect, with our
-// User-Agent and a real timeout), then parsed from the HTML string.
-export async function extractArticle(url) {
+// User-Agent and a real timeout), then parsed from the HTML string. A Google
+// News link is first decoded to the publisher's URL (googleNewsLink.js).
+// `fetchPage` is fetchText's signature (tests pass a stub).
+export async function extractArticle(url, fetchPage = fetchText) {
   try {
-    const page = await fetchText(url, { headers: { 'User-Agent': USER_AGENT }, timeoutMs: EXTRACTION_TIMEOUT_MS });
+    const target = await publisherUrl(url, fetchPage);
+    const page = await fetchPage(target, { headers: { 'User-Agent': USER_AGENT }, timeoutMs: EXTRACTION_TIMEOUT_MS });
     const article = await extractFromHtml(prepareForExtraction(page.text), page.url);
     if (!article) throw new Error('Could not extract article content');
     return toExtracted(article, url);
