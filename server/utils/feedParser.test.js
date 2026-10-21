@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { escapeBareAmpersands, extractImageUrl, normalizeFeed, normalizeItem, NOT_A_FEED, parseFeedText } from './feedParser.js';
+import { escapeBareAmpersands, extractImageUrl, googleNewsTitle, normalizeFeed, normalizeItem, NOT_A_FEED, parseFeedText } from './feedParser.js';
 import { toExtracted } from './articleExtractor.js';
 
 test('extractImageUrl prefers media tags, then image enclosures, then the first <img>', () => {
@@ -39,6 +39,17 @@ test('normalizeFeed fills feed defaults', () => {
     title: 'Untitled Feed', description: '', link: 'https://e.com/rss', feedUrl: 'https://e.com/rss',
     language: '', image: 'pod.jpg', items: [],
   });
+});
+
+test('a Google News search feed is titled with the search as typed', () => {
+  const url = 'https://news.google.com/rss/search?q=%22Anthropic%22%20site%3Areuters.com&hl=en-IN&gl=IN&ceid=IN:en';
+  assert.equal(googleNewsTitle(url), '"Anthropic" site:reuters.com - Google News');
+  assert.equal(normalizeFeed({ title: '""Anthropic" site:reuters.com" - Google News' }, url).title, '"Anthropic" site:reuters.com - Google News');
+  assert.equal(googleNewsTitle('https://news.google.com/rss/search?q=%20&hl=en'), '');
+  assert.equal(googleNewsTitle('https://news.google.com/rss/topics/CAAqJggKIiBDQkFTRWdvSUwyMHZNRGRqTVhZU0FtVnVHZ0pWVXlnQVAB'), '');
+  assert.equal(googleNewsTitle('https://example.com/rss/search?q=AI'), '');
+  assert.equal(googleNewsTitle('not a url'), '');
+  assert.equal(normalizeFeed({ title: 'Blog' }, 'https://e.com/rss').title, 'Blog');
 });
 
 test('toExtracted maps extractor fields with defaults', () => {

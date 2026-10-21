@@ -28,10 +28,27 @@ export function normalizeItem(item) {
   };
 }
 
+/**
+ * The title for a Google News search feed: the search as typed, then
+ * "- Google News". Google's own title quotes the search, which doubles the
+ * quotes of a search that has its own (""AI"" - Google News). '' for any
+ * other feed.
+ */
+export function googleNewsTitle(feedUrl) {
+  try {
+    const url = new URL(feedUrl);
+    const isSearch = url.hostname === 'news.google.com' && url.pathname === '/rss/search';
+    const query = isSearch ? (url.searchParams.get('q') || '').trim() : '';
+    return query ? `${query} - Google News` : '';
+  } catch {
+    return '';
+  }
+}
+
 /** Normalizes an rss-parser feed. */
 export function normalizeFeed(feed, feedUrl) {
   return {
-    title: feed.title || 'Untitled Feed',
+    title: firstOf(googleNewsTitle(feedUrl), feed.title, 'Untitled Feed'),
     description: feed.description || '',
     link: feed.link || feedUrl,
     feedUrl,

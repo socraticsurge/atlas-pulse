@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import * as api from '../../utils/api.js';
 import { normalizeUrl } from '../../utils/helpers.js';
-import { googleNewsUrl } from './catalog.js';
+import { defaultEdition, googleNewsUrl } from './googleNews.js';
 
 const NO_FEEDS = 'No RSS feeds found for this URL. Try pasting a direct RSS feed URL, or use the Search tab to find feeds by keyword.';
 
@@ -62,32 +62,38 @@ export function useFeedDiscovery(status) {
   return { url, setUrl, preview, discovered, discover, previewFeed, clear };
 }
 
-/** Search tab: a subscribable Google News feed for the query. */
+const browserLocale = () => (typeof navigator === 'undefined' ? '' : navigator.language);
+
+/**
+ * Google News tab: the search (query, site, edition) and a preview of its
+ * feed. `search(changes)` applies changes to the search, then previews it.
+ */
 export function useGoogleNews(status) {
+  const [form, setForm] = useState(() => ({ query: '', site: '', edition: defaultEdition(browserLocale()).id }));
   const [result, setResult] = useState(null);
 
-  const fetchFor = useCallback((rawQuery) => {
-    const query = rawQuery.trim();
-    if (!query) return;
+  const update = useCallback((changes) => {
+    setForm((prev) => ({ ...prev, ...changes }));
     setResult(null);
-    const feedUrl = googleNewsUrl(query);
+  }, []);
+
+  const search = useCallback((changes = {}) => {
+    const next = { ...form, ...changes };
+    const feedUrl = googleNewsUrl(next);
+    if (!feedUrl) return;
+    setForm(next);
+    setResult(null);
     status.run(async () => {
       const feed = await api.parseFeed(feedUrl);
       if (!feed?.items?.length) {
-        status.setError(`No results found for "${query}". Try a different search term.`);
+        status.setError(`Google News has no articles for "${next.query.trim()}". Try fewer or broader terms.`);
         return;
       }
-      setResult({
-        query,
-        feedUrl,
-        title: `Google News: ${query}`,
-        articleCount: feed.items.length,
-        sampleArticles: feed.items.slice(0, 3),
-      });
+      setResult({ feedUrl, title: feed.title, articleCount: feed.items.length, sampleArticles: feed.items.slice(0, 5) });
     }, (err) => `Search failed: ${err.message}`);
-  }, [status]);
+  }, [form, status]);
 
-  return { result, fetchFor, reset: () => setResult(null) };
+  return { form, update, result, search };
 }
 
 /** Which feeds are already added, which is being added, and the add action. */
