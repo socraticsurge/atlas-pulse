@@ -5,6 +5,10 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ## Unreleased
 
+### New
+
+- **APA citations for everything you keep.** A saved article shows its APA 7 citation under your note in the reader. Saved rows get a copy button on hover, and each saved AI summary shows its citation. A collection's **Copy citations** copies them all as a reference list, A to Z. Copies paste into a word processor with their italics. The NotebookLM sources file adds a citation to each article, and a Studio draft from a collection ends with a References section. arXiv papers are cited as preprints with their arXiv ID; missing authors and dates follow APA's rules, and messy author fields (e-mail wrappers, LaTeX accents, affiliations, aggregator "via" lines) are cleaned up (#149).
+
 ### Security
 
 - **Other websites can't show Atlas Pulse in a frame.** A page on another site could load the app in a hidden frame and trick you into clicking something like "Delete all". Every response now forbids framing, and the built app sends a Content-Security-Policy that runs only its own scripts, takes video embeds only from YouTube, Vimeo and SoundCloud, and talks only to its own server: a second layer behind the HTML sanitizer (#148).
