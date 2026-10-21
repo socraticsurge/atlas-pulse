@@ -108,8 +108,9 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **Save with a note** | `b` saves an article; `n` saves it and opens a note on why it caught your eye. Saved lists your saves newest first under "today", "yesterday", "this week" and "earlier", with each note in place of the preview |
 | **Collections** | `c` opens the collection picker: add the article to one or more collections, or type a name to create one. Adding an article saves it; unsaving removes it from every collection. Rename or delete from the sidebar (deleting a collection keeps its saves) |
 | **Unsorted** | Saves that aren't in any collection yet: a filing queue. Press `c` to file one, and `j` moves on to the next |
-| **Send to NotebookLM** | From a collection: download its articles as one Markdown file (title, source, dates, your note and the text of each) to upload as a source, copy the links to paste as website sources, or open NotebookLM |
-| **Start a Studio draft** | Turns a collection into a newsletter draft, one section per article with your note as "Why it matters" |
+| **Send to NotebookLM** | From a collection: download its articles as one Markdown file (title, source, dates, APA citation, your note and the text of each) to upload as a source, copy the links to paste as website sources, or open NotebookLM |
+| **Start a Studio draft** | Turns a collection into a newsletter draft, one section per article with your note as "Why it matters", and a reference list at the end |
+| **APA citations** | Every saved article carries an APA 7 citation: under your note in the reader, on each saved summary, and behind a copy button on saved rows (hover). A collection's **Copy citations** copies them all as a reference list, A to Z. Copies paste into a word processor with their italics. arXiv papers are cited as preprints with their arXiv ID; missing authors and dates follow APA's rules |
 | **Folders** | Group feeds into folders; right-click a feed to refresh it, move it or remove it |
 | **Search** | Full-text search over everything you've fetched, ranked title › source › AI topics › body. Words match as prefixes; "quoted phrases" match exactly. Press `/` |
 | **Filters** | The **Filters** button reveals AI-analyzed-only and content filters (sentiment, urgency, frame, tone, depth) |

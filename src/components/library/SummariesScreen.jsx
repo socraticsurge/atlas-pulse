@@ -1,8 +1,11 @@
 import { memo, useState } from 'react';
 import { HiOutlineSparkles } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
+import { useLibrary } from '../../app/LibraryContext.jsx';
 import { deleteSummary, fetchDBPath, fetchSummaries, getSummariesExportURL } from '../../utils/api.js';
 import { PERSONAS } from '../../utils/aiSettings.js';
+import { Citation } from './Citation.jsx';
+import { summaryCitationSource } from './citationModel.js';
 import { ActionRow, DeleteButton, OpenInReaderButton, OriginalLink } from './ItemActions.jsx';
 import { LibraryBody, LibraryHeader, LibraryScreen } from './LibraryChrome.jsx';
 import { useLibraryCollection, useOpenInReader } from './useLibraryCollection.js';
@@ -39,7 +42,7 @@ function Provenance({ row }) {
   );
 }
 
-const SummaryItem = memo(function SummaryItem({ row, onDelete, onOpenInReader }) {
+const SummaryItem = memo(function SummaryItem({ row, feeds, onDelete, onOpenInReader }) {
   const [expanded, setExpanded] = useState(false);
   return (
     <article className="group border-b border-border py-5">
@@ -57,6 +60,7 @@ const SummaryItem = memo(function SummaryItem({ row, onDelete, onOpenInReader })
         {row.summary_text}
       </p>
       {expanded && <Provenance row={row} />}
+      <Citation source={summaryCitationSource(row, feeds)} className="mt-3" />
       <ActionRow>
         <button type="button" onClick={() => setExpanded((e) => !e)} className="inline-flex h-7 cursor-pointer items-center rounded-md border-0 bg-transparent px-2 text-xs text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground">
           {expanded ? 'Less' : 'More'}
@@ -69,15 +73,16 @@ const SummaryItem = memo(function SummaryItem({ row, onDelete, onOpenInReader })
   );
 });
 
-/** Saved AI summaries: search, read, open the article, delete, export. */
+/** Saved AI summaries: search, read, cite, open the article, delete, export. */
 export default function SummariesScreen({ onOpenArticle, onChanged }) {
   const collection = useLibraryCollection({ fetchRows: fetchSummaries, fetchDbPath: fetchDBPath, deleteRow: deleteSummary, searchFields: SEARCH_FIELDS, onChanged });
   const openInReader = useOpenInReader(onOpenArticle);
+  const { sourceFeeds } = useLibrary();
   return (
     <LibraryScreen>
       <LibraryHeader Icon={HiOutlineSparkles} title="AI Summaries" collection={collection} exportUrl={getSummariesExportURL()} exportTitle="Export all summaries as CSV" placeholder="Search summaries" />
       <LibraryBody collection={collection} empty={EMPTY}>
-        {collection.filtered.map((row) => <SummaryItem key={row.id} row={row} onDelete={collection.remove} onOpenInReader={openInReader} />)}
+        {collection.filtered.map((row) => <SummaryItem key={row.id} row={row} feeds={sourceFeeds} onDelete={collection.remove} onOpenInReader={openInReader} />)}
       </LibraryBody>
     </LibraryScreen>
   );

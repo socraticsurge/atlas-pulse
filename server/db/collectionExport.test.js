@@ -23,7 +23,7 @@ test('htmlToParagraphs keeps paragraph breaks and cuts long text', () => {
 test('a collection exports as Markdown: header, then each article with its note and text', () => {
   const feed = reader.createFeed({ title: 'Field Notes', url: 'https://notes.example/rss' });
   reader.bulkInsertArticles(feed.id, [
-    { guid: 'x', title: 'PGlite in the browser', link: 'https://notes.example/pglite', content: '<p>Postgres, embedded.</p>', publishedAt: '2026-10-01T00:00:00Z' },
+    { guid: 'x', title: 'PGlite in the browser', link: 'https://notes.example/pglite', author: 'Ann Lee', content: '<p>Postgres, embedded.</p>', publishedAt: '2026-10-01T00:00:00Z' },
     { guid: 'y', title: 'No body', link: 'https://notes.example/empty', content: '' },
   ]);
   const ids = reader.findArticleByLink('https://notes.example/pglite').id;
@@ -35,7 +35,7 @@ test('a collection exports as Markdown: header, then each article with its note 
   const { name, markdown } = exporter.collectionMarkdown(c.id, new Date('2026-10-19T12:00:00Z'));
   assert.equal(name, 'Local-first stack');
   assert.match(markdown, /^# Local-first stack\n\nDatabases that ship inside the app\n\nCollected in Atlas Pulse: 2 articles, exported 2026-10-19\./);
-  assert.match(markdown, /## PGlite in the browser\n\n- Source: Field Notes \(https:\/\/notes\.example\/pglite\)\n- Published 2026-10-01 · saved \d{4}-\d\d-\d\d\n- My note: could replace our SQLite server\n\nPostgres, embedded\./);
+  assert.match(markdown, /## PGlite in the browser\n\n- Source: Field Notes \(https:\/\/notes\.example\/pglite\)\n- Published 2026-10-01 · saved \d{4}-\d\d-\d\d\n- Cite \(APA 7\): Lee, A\. \(2026, October 1\)\. PGlite in the browser\. \*Field Notes\*\. https:\/\/notes\.example\/pglite\n- My note: could replace our SQLite server\n\nPostgres, embedded\./);
   assert.match(markdown, /## No body[\s\S]*_No text was stored for this article; see the link above\._/);
   assert.equal(exporter.collectionMarkdown(99999), null);
 });

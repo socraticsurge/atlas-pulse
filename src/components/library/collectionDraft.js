@@ -1,6 +1,10 @@
+import { referencesMarkdown } from '../../../shared/citation.js';
+import { articleReferences } from './citationModel.js';
+
 // A Studio draft from a collection: the collection's name as the headline,
-// its description (or a prompt) as the opening, and one section per article
-// with your note as "Why it matters", a line of its text, and the link.
+// its description (or a prompt) as the opening, one section per article
+// with your note as "Why it matters", a line of its text, and the link, and
+// last the articles as an APA reference list.
 // Studio keeps up to 50 sources; the newest saves come first.
 
 export const DRAFT_MAX_ARTICLES = 50;
@@ -24,12 +28,14 @@ function section(article, source) {
 
 /**
  * { title, bodyMd, sources } for POST /api/studio from a collection and its
- * articles (list rows, newest save first); sourceOf(article) names its feed.
+ * articles (list rows, newest save first); feedOf(article) is its feed.
  */
-export function collectionDraft(collection, articles, sourceOf) {
+export function collectionDraft(collection, articles, feedOf) {
   const picked = articles.slice(0, DRAFT_MAX_ARTICLES);
+  const sourceOf = (a) => feedOf(a)?.title || '';
   const opening = oneLine(collection.description) || `A draft from your ${collection.name} collection. Write the opening here.`;
-  const bodyMd = [`# ${collection.name}`, opening, ...picked.map((a) => section(a, sourceOf(a)))].join('\n\n') + '\n';
+  const references = picked.length ? ['## References', referencesMarkdown(articleReferences(picked, feedOf))] : [];
+  const bodyMd = [`# ${collection.name}`, opening, ...picked.map((a) => section(a, sourceOf(a))), ...references].join('\n\n') + '\n';
   const sources = picked.map((a) => ({ articleId: a.id, url: a.link || null, title: a.title || null, source: sourceOf(a) || null }));
   return { kind: 'newsletter', title: collection.name, bodyMd, sources };
 }

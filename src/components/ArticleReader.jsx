@@ -18,14 +18,15 @@ import { useNoteEditing } from './reader/useNoteEditing.js';
 import { useReaderKeyboard } from './reader/useReaderKeyboard.js';
 import { useReaderScroll } from './reader/useReaderScroll.js';
 
-// Title of the article's feed (for the meta line, AI context, and highlights).
-function useFeedTitle(feedId) {
+// The article's feed (its site is in the citation) and its title (for the
+// meta line, AI context, highlights and the citation).
+function useFeed(feedId) {
   const [feed, setFeed] = useState(null);
   useOnKeyChange(feedId, () => setFeed(null));
   useEffect(() => {
     if (feedId) api.fetchFeed(feedId).then(setFeed).catch(() => setFeed(null));
   }, [feedId]);
-  return feed?.title || null;
+  return { feed, title: feed?.title || null };
 }
 
 // Slide-in animation: becomes visible just after opening, hidden on close.
@@ -89,7 +90,7 @@ export default function ArticleReader({
   const current = live.current;
   const extraction = useArticleExtraction(articleId, link);
   const { highlights, reload: reloadHighlights, remove: removeHighlight } = useArticleHighlights(articleId, link);
-  const feedTitle = useFeedTitle(feedId);
+  const { feed, title: feedTitle } = useFeed(feedId);
   const progress = useReaderScroll(contentRef, articleId, isOpen, extraction.settled);
   const visible = useSlideIn(isOpen);
   const note = useNoteEditing(articleId, live);
@@ -130,7 +131,7 @@ export default function ArticleReader({
             <ReaderBody
               article={article} note={{ article: current, focusRequest: note.request, onSave: live.saveNote }}
               brief={briefOf(current, article)}
-              feedTitle={feedTitle}
+              feed={feed}
               extracting={extraction.extracting}
               previewHtml={previewHtml}
               html={html}

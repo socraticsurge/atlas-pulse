@@ -89,6 +89,7 @@ The trust boundaries B1–B6 are described [below](#trust-boundaries).
 - **Links can't navigate the app.** Every link gets `target="_blank"` and `rel="noopener noreferrer"`.
 - **Studio** renders newsletter Markdown through `marked` and its own DOMPurify instance, so its link rule cannot change the reader's configuration.
 - **AI output is text.** The AI rail shows summaries, analysis and chat as React text, never as HTML.
+- **Citations are text.** An APA citation is built from a feed's author, title and link, and the app shows it as React text. The copy that goes to the clipboard as rich text (`text/html`, for word processors) escapes `&`, `<`, `>` and `"` in every part, so a feed can't put markup into a document the user pastes it into ([shared/citation.js](../shared/citation.js), tested).
 
 ### Server-side request forgery (B1)
 
