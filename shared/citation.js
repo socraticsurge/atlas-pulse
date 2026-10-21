@@ -53,6 +53,14 @@ function namesHost(part, host) {
   return name.length >= 3 && labels.some((label) => name.includes(label) || label.includes(name));
 }
 
+// Whether the article is on another site than its feed's: the feed is an
+// aggregator such as Hacker News. Unknown when either host is missing.
+function linksElsewhere(host, siteUrl) {
+  const siteHost = hostOf(siteUrl);
+  if (!host || !siteHost) return false;
+  return registrableDomain(host) !== registrableDomain(siteHost);
+}
+
 /**
  * The site the article was published on: the feed's title without its
  * tagline, or the article's host when the feed links elsewhere (Hacker News,
@@ -60,8 +68,7 @@ function namesHost(part, host) {
  */
 export function siteName({ siteName: title, siteUrl, link }) {
   const host = hostOf(link);
-  const siteHost = siteUrl ? hostOf(siteUrl) : '';
-  if (host && siteHost && registrableDomain(host) !== registrableDomain(siteHost)) return host;
+  if (linksElsewhere(host, siteUrl)) return host;
   const parts = oneLine(title).split(TAGLINE).filter(Boolean);
   return parts.find((part) => namesHost(part, host)) ?? parts[0] ?? host;
 }
@@ -129,8 +136,8 @@ const escapeHtml = (text) => text.replace(/[&<>"]/g, (c) => HTML_ESCAPES[c]);
 /** The reference as plain text (no italics). */
 export const citationText = (runs) => runs.map((run) => run.text).join('');
 
-/** The reference as Markdown, italics as *…*. */
-export const citationMarkdown = (runs) => runs.map((run) => (run.italic ? `*${run.text.replace(/[*_]/g, '\\$&')}*` : run.text)).join('');
+/** The reference as Markdown, italics as *…* (with \, * and _ inside them escaped). */
+export const citationMarkdown = (runs) => runs.map((run) => (run.italic ? `*${run.text.replace(/[\\*_]/g, '\\$&')}*` : run.text)).join('');
 
 /** The reference as HTML, italics as <i>, for pasting into a word processor. */
 export const citationHtml = (runs) => runs.map((run) => (run.italic ? `<i>${escapeHtml(run.text)}</i>` : escapeHtml(run.text))).join('');

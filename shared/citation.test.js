@@ -137,6 +137,11 @@ test('the URL loses tracking parameters and keeps the rest', () => {
 test('Markdown escapes emphasis marks inside italics; HTML escapes markup', () => {
   const runs = apaCitation(article({ siteName: 'A_B*C', title: 'Fish & <chips>' }));
   assert.match(citationMarkdown(runs), /\*A\\_B\\\*C\*/);
+  // A backslash is escaped too, so "\*" in a title can't close the italics early.
+  assert.equal(
+    markdown(article({ author: '', title: 'Back\\*slash', link: 'https://arxiv.org/abs/2610.00001' })),
+    '*Back\\\\\\*slash* (arXiv:2610.00001). (2026). arXiv. https://arxiv.org/abs/2610.00001',
+  );
   assert.equal(
     citationHtml(runs),
     'Malik, A. (2026, October 20). Fish &amp; &lt;chips&gt;. <i>A_B*C</i>. https://techcrunch.com/2026/10/20/tiktok-staff/',

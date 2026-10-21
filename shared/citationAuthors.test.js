@@ -91,6 +91,8 @@ test('apaAuthors keeps a group or handle whole, as written', () => {
 test('apaAuthors reads "Surname, Given" as one person', () => {
   assert.deepEqual(apaAuthors('Smith, John'), ['Smith, J.']);
   assert.deepEqual(apaAuthors('Synced, Inc'), ['Synced, Inc']);
+  // A credential is never read as a given name ("Doe, P.").
+  assert.deepEqual(apaAuthors('Doe, PhD'), ['Doe, PhD']);
 });
 
 test('apaAuthors is empty when the field names no one', () => {

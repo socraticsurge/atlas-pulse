@@ -104,11 +104,16 @@ export function personName(name) {
   return `${cased.slice(start).join(' ')}, ${initials}${suffix ? `, ${suffix}` : ''}`;
 }
 
+// A suffix or credential after a comma ("King, Jr.", "Doe, PhD"), not a given name.
+const isNameSuffix = (word) => SUFFIXES.has(bare(word)) || CREDENTIALS.has(bare(word));
+
 // "Smith, John": one comma between two single words is a name written surname first.
 function invertedName(text) {
   const match = text.match(/^(\p{Lu}[\p{L}'’-]+),\s*(\p{Lu}[\p{L}.'’-]*)$/u);
-  if (!match || ORG_WORDS.test(text) || SUFFIXES.has(bare(match[2])) || CREDENTIALS.has(bare(match[2]))) return null;
-  return `${match[1]}, ${initialsOf(match[2])}`;
+  if (!match) return null;
+  const [, surname, given] = match;
+  if (ORG_WORDS.test(text) || isNameSuffix(given)) return null;
+  return `${surname}, ${initialsOf(given)}`;
 }
 
 const PIPE = /\s*\|\s*/;
