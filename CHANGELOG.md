@@ -3,7 +3,11 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
-## Unreleased
+## 2.3.0 (2026-10-22)
+
+Follow a Google News search across news sites, in any of 23 editions, and read its articles in full. Saved articles, collections and summaries carry APA 7 citations. When the reader can only show a feed's text, it says why. And other websites can no longer show Atlas Pulse inside a frame.
+
+**Upgrading:** nothing beyond pulling; no dependencies changed. With the background service, `npm run service restart` picks up the new server code.
 
 ### New
 
@@ -25,6 +29,7 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 ### Under the hood
 
 - [MAINTAINING.md](MAINTAINING.md) sets out the definition of done, the merge routine, the release checklist and the rules for AI-assisted work, and [CLAUDE.md](CLAUDE.md) points every Claude Code session in the repository to it. The pull request template gains CHANGELOG, security-design and AI-disclosure boxes (#146).
+- 461 tests, up from 404 in 2.2.0.
 
 ## 2.2.0 (2026-10-20)
 

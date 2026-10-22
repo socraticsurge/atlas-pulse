@@ -1,6 +1,6 @@
 # Technical Debt & Maintainability Assessment
 
-_Assessed: 15 October 2026, at v1.4.0. Updated: 18 October 2026, after the second round. Owner: maintainers. Review this document at each minor release._
+_Assessed: 15 October 2026, at v1.4.0. Updated: 18 October 2026, after the second round. Reviewed at v2.3.0 (22 October 2026). Owner: maintainers. Review this document at each minor release._
 
 This document records where Atlas Pulse's maintainability stands, why, and the planned work to improve it. It draws on three independent sources:
 
@@ -61,6 +61,17 @@ The second round fixed the items left open by the first, plus issues found while
 - `api.js` routes every request through one `send()`/`request()` pair, and `docx.js` uses a rule table for markdown lines. These were the last two files below 10.0, at 9.1 and 9.69.
 - Removed the unused batch endpoint `POST /api/feeds/refresh`, the third file below 10.0 (9.69).
 
+
+## At v2.3.0 (22 October 2026)
+
+**Paid down:**
+- Every 2.3.0 pull request merged with CodeScene's check passing. The findings raised on #150 and #152 (one module's mean complexity, two complex methods) were fixed, not suppressed.
+- CodeScene's architectural components (project 86144) cover the files added since 2.2.0: `googleNewsLink`, `securityHeaders`, `citation*` and `embedHosts`. That makes 131 patterns in 17 components, with every JavaScript file in exactly one.
+
+**Added, knowingly:**
+- **Google News decoding uses an undocumented Google endpoint** (`server/utils/googleNewsLink.js`). The tests run on captured responses, so a change on Google's side doesn't fail CI. It shows in the reader instead, as "Google News didn't give the publisher's link" on every Google News article.
+- **The decoded publisher URL isn't stored.** Citations, "open original" and duplicate detection still use the `news.google.com` link.
+- **Bot checks are recognised by page markers** from five services (Cloudflare, AWS WAF, SiteGround, DataDome, PerimeterX). A site that uses another kind is reported as having no article.
 
 ## 1. File-level Code Health (CodeScene)
 

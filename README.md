@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.2.0-f26b1d" alt="Version 2.2.0">
+  <img src="https://img.shields.io/badge/version-2.3.0-f26b1d" alt="Version 2.3.0">
   <img src="https://img.shields.io/badge/license-MIT-0b3b6f" alt="License: MIT">
   <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
   <img src="https://img.shields.io/badge/node-22.13%2B%20%7C%2024%2B-0b3b6f" alt="Node 22.13+ or 24+">
@@ -94,7 +94,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 |---------|---------|
 | **Four list views** | **Rows** (default: dense two-line rows with day headings), Grid, List and Compact. Switch in the list header, in **Settings → Reading**, or with ⌘K |
 | **Docked reader** | A third pane on wide windows (1100 px and up); on narrower ones it slides over the list. Hide the sidebar with `[` and the list with `]` for more room |
-| **Full text, automatically** | The full article is extracted from the source when you open it; the reader shows whether you're reading the full article or the feed's text |
+| **Full text, automatically** | The full article is extracted from the source when you open it, Google News articles included; the reader shows whether you're reading the full article or the feed's text, and says why when it's the feed's text |
 | **Reading comfort** | Newsreader serif by default, with font, size, spacing and width in the **Aa** menu; a progress bar; focus mode (`f`); your scroll position is remembered |
 | **In brief** | When an article has an AI summary, it appears at the top of the reader |
 | **Highlights** | Select text to highlight it in one of four colours; browse and search them all in **Highlights**, and export as CSV |
@@ -345,6 +345,8 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the proje
 [MIT](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 ## Changelog
+
+**2.3.0** adds Google News: follow a search across news sites in any of 23 editions, and read its articles in full. Saved articles, collections and summaries carry APA 7 citations, the reader says why when it can only show a feed's text, and other websites can no longer show Atlas Pulse in a frame.
 
 **2.2.0** keeps feeds refreshing with the app closed, makes the reader work from the keyboard and with a screen reader, brings text in both themes up to WCAG 2.2 AA contrast, and closes two security holes in the local server. If you open Atlas Pulse under a name other than `localhost`, see the upgrading note in the changelog.
 
