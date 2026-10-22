@@ -17,15 +17,15 @@ async function fetchOrUnreachable(url, opts) {
   }
 }
 
-// Sends a request; on failure throws the server's error message, or `fallback`.
-// A failure without one (no answer, or the proxy's empty 502) may mean the
-// server is gone, so serverStatus checks.
+// Sends a request; on failure throws the server's error message, or `fallback`,
+// with the error body as `details`. A failure without a message (no answer, or
+// the proxy's empty 502) may mean the server is gone, so serverStatus checks.
 async function send(path, fallback, opts = {}) {
   const res = await fetchOrUnreachable(`${API_BASE}${path}`, opts);
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     if (!err.error && res.status >= 500) serverStatus.reportFailure();
-    throw new Error(err.error || (GATEWAY.has(res.status) ? UNREACHABLE : fallback));
+    throw Object.assign(new Error(err.error || (GATEWAY.has(res.status) ? UNREACHABLE : fallback)), { details: err });
   }
   return res;
 }

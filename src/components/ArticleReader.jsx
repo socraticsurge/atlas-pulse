@@ -2,12 +2,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../utils/api.js';
 import { on } from '../lib/appEvents.js';
 import { getReaderCSSVars, getReaderSettings } from '../utils/readerSettings.js';
+import { htmlToText } from '../utils/helpers.js';
 import { useOnKeyChange } from '../hooks/useOnKeyChange.js';
 import AIRail from './ai-drawer/AIRail.jsx';
 import HighlightToolbar from './reader/HighlightToolbar.jsx';
 import ResizableHandle from './shell/ResizableHandle.jsx';
 import ReaderBody from './reader/ReaderBody.jsx';
 import ReaderToolbar from './reader/ReaderToolbar.jsx';
+import { fallbackNote } from './reader/fallbackNote.js';
 import { sanitizeArticleHtml, sanitizeFeedHtml } from './reader/sanitize.js';
 import { briefOf, panelLayout } from './reader/panelLayout.js';
 import { useAIRail } from './reader/useAIRail.js';
@@ -48,13 +50,15 @@ function useReaderSettingsState() {
   return [settings, setSettings];
 }
 
-// Best available content: extracted full text, else the feed's own HTML.
-function useArticleContent(current, extractedContent) {
+// Best available content: extracted full text, else the feed's own HTML, with
+// a note on why when that is only a short summary (fallbackNote.js).
+function useArticleContent(current, extraction) {
   const feedHtml = current?.content || current?.summary || '';
-  const displayContent = extractedContent || feedHtml;
+  const displayContent = extraction.content || feedHtml;
   const html = useMemo(() => sanitizeArticleHtml(displayContent), [displayContent]);
   const previewHtml = useMemo(() => (feedHtml ? sanitizeFeedHtml(feedHtml) : ''), [feedHtml]);
-  return { displayContent, html, previewHtml };
+  const fallback = useMemo(() => fallbackNote(extraction.failure, htmlToText(feedHtml)), [extraction.failure, feedHtml]);
+  return { displayContent, html, previewHtml, fallback };
 }
 
 // Focus ("zen") mode plus the reader's keyboard shortcuts, which depend on it.
@@ -95,7 +99,7 @@ export default function ArticleReader({
   const visible = useSlideIn(isOpen);
   const note = useNoteEditing(articleId, live);
   const zen = useZenAndKeyboard({ isOpen, isModalOpen, hasPrev, hasNext, onNavigate, onClose, link, toggleBookmark: live.toggleBookmark, toggleAI: rail.toggle, note });
-  const { displayContent, html, previewHtml } = useArticleContent(current, extraction.content);
+  const { displayContent, html, previewHtml, fallback } = useArticleContent(current, extraction);
   const cssVars = useMemo(() => getReaderCSSVars(readerSettings), [readerSettings]);
 
   // Draw saved highlights onto the rendered article.
@@ -135,7 +139,7 @@ export default function ArticleReader({
               extracting={extraction.extracting}
               previewHtml={previewHtml}
               html={html}
-              displayContent={displayContent}
+              displayContent={displayContent} fallback={fallback}
             />
           </div>
         </div>

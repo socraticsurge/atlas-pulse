@@ -19,7 +19,8 @@ router.post('/extract', async (req, res) => {
     const article = await extractArticle(url);
     res.json(article);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    // reason and site say why, for the reader's note (articleExtractor.js).
+    res.status(500).json({ error: error.message, reason: error.reason ?? 'failed', site: error.site ?? '' });
   }
 });
 

@@ -18,5 +18,6 @@ test('an article on a private or metadata address is refused, with the reason', 
   const res = await api.post('/extract', { url: 'http://169.254.169.254/latest/meta-data/' });
   assert.equal(res.status, 500);
   assert.equal(res.body.error, 'Article extraction failed: Blocked private or loopback address');
+  assert.deepEqual([res.body.reason, res.body.site], ['failed', '169.254.169.254']);
   assert.equal((await api.post('/extract', { url: 'http://10.0.0.8/post' })).status, 500);
 });

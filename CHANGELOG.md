@@ -10,6 +10,10 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 - **Follow Google News searches.** A new Google News tab in Add feeds follows a search across news sites as a feed: pick one of 23 editions (it starts on the one matching your browser's language), optionally limit it to one site, and use the search tips for exact phrases, headline-only words, exclusions, AND, OR and recent-only. A preview shows the latest headlines before you add it. Google News feeds are now titled with your search as you typed it, without Google's doubled quotes (#150).
 - **APA citations for everything you keep.** A saved article shows its APA 7 citation under your note in the reader. Saved rows get a copy button on hover, and each saved AI summary shows its citation. A collection's **Copy citations** copies them all as a reference list, A to Z. Copies paste into a word processor with their italics. The NotebookLM sources file adds a citation to each article, and a Studio draft from a collection ends with a References section. arXiv papers are cited as preprints with their arXiv ID; missing authors and dates follow APA's rules, and messy author fields (e-mail wrappers, LaTeX accents, affiliations, aggregator "via" lines) are cleaned up (#149).
 
+### Improved
+
+- **The reader says why it shows only the feed's text.** When the full article can't be fetched and the feed sent only a summary or an excerpt, a note above it says why: the site doesn't let apps fetch its articles (Ars Technica, for one), Google News didn't give the publisher's link, or no article was found. The note links to the original. The "Feed text" label's tooltip gives the same reason (#152).
+
 ### Fixed
 
 - **Google News articles open in full.** Articles from Google News feeds used to show only the feed's summary, because their links point at Google, not the publisher. Opening one now asks Google for the publisher's link first, then reads the article from there, so the reader and AI summaries get the full text. Only the article you open is looked up, and if Google won't say, you get the summary as before (#151).

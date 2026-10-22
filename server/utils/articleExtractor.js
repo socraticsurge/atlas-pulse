@@ -1,7 +1,7 @@
 import { extractFromHtml } from '@extractus/article-extractor';
 import * as cheerio from 'cheerio';
 import { fetchText } from './fetchText.js';
-import { publisherUrl } from './googleNewsLink.js';
+import { googleNewsArticleId, publisherUrl } from './googleNewsLink.js';
 
 /**
  * Extract the full article content from a URL.
@@ -85,18 +85,54 @@ export function prepareForExtraction(html) {
   return changed ? $.html() : html;
 }
 
+// Answers and pages of bot checks, which want a browser that runs the site's
+// script: statuses sites send them with, and the pages of Cloudflare, AWS WAF,
+// SiteGround, DataDome and PerimeterX.
+const BLOCKED_STATUSES = new Set([401, 403, 405, 429]);
+const BOT_CHECK = /<title>\s*(?:Just a moment|Attention Required|Human Verification)|\/\.well-known\/sgcaptcha\/|captcha-delivery\.com|px-captcha/i;
+
+const siteOf = (url) => URL.parse(url)?.hostname.replace(/^www\./, '') ?? '';
+
+/**
+ * A failed extraction, with `reason` for the reader: 'google' (Google News
+ * gave no publisher link), 'blocked' (the site turns apps away), 'no-article'
+ * (the page has none) or 'failed' (anything else), and the `site` asked.
+ */
+function failure(message, reason, site) {
+  return Object.assign(new Error(`Article extraction failed: ${message}`), { reason, site });
+}
+
+async function fetchArticlePage(target, fetchPage) {
+  try {
+    return await fetchPage(target, { headers: { 'User-Agent': USER_AGENT }, timeoutMs: EXTRACTION_TIMEOUT_MS });
+  } catch (error) {
+    throw failure(error.message, BLOCKED_STATUSES.has(error.status) ? 'blocked' : 'failed', siteOf(target));
+  }
+}
+
+// The URL to fetch: the publisher's for a Google News link, which must
+// decode, since the Google page itself holds no article.
+async function articleUrl(url, fetchPage) {
+  const target = await publisherUrl(url, fetchPage);
+  if (target === url && googleNewsArticleId(url)) throw failure('Google News gave no publisher link', 'google', 'news.google.com');
+  return target;
+}
+
+// The article on a fetched page, or why there is none: a bot check page
+// means the site turned us away, anything else that it has no article.
+async function articleOn(page, target) {
+  const article = await extractFromHtml(prepareForExtraction(page.text), page.url).catch(() => null);
+  if (article) return article;
+  if (BOT_CHECK.test(page.text)) throw failure('The site asked for a browser check', 'blocked', siteOf(target));
+  throw failure('Could not extract article content', 'no-article', siteOf(target));
+}
+
 // The page is fetched by fetchText (SSRF-guarded on every redirect, with our
 // User-Agent and a real timeout), then parsed from the HTML string. A Google
 // News link is first decoded to the publisher's URL (googleNewsLink.js).
 // `fetchPage` is fetchText's signature (tests pass a stub).
 export async function extractArticle(url, fetchPage = fetchText) {
-  try {
-    const target = await publisherUrl(url, fetchPage);
-    const page = await fetchPage(target, { headers: { 'User-Agent': USER_AGENT }, timeoutMs: EXTRACTION_TIMEOUT_MS });
-    const article = await extractFromHtml(prepareForExtraction(page.text), page.url);
-    if (!article) throw new Error('Could not extract article content');
-    return toExtracted(article, url);
-  } catch (error) {
-    throw new Error(`Article extraction failed: ${error.message}`, { cause: error });
-  }
+  const target = await articleUrl(url, fetchPage);
+  const page = await fetchArticlePage(target, fetchPage);
+  return toExtracted(await articleOn(page, target), url);
 }
