@@ -22,7 +22,3 @@ export function searchCatalog(query, catalog = POPULAR_FEEDS) {
 export function categoriesFor(selected, catalog = POPULAR_FEEDS) {
   return selected === 'all' ? catalog : catalog.filter((c) => c.category === selected);
 }
-
-export function googleNewsUrl(query) {
-  return `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en&gl=US&ceid=US:en`;
-}

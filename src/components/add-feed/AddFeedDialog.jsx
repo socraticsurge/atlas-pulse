@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { HiOutlineBell, HiOutlineGlobeAlt, HiOutlineMagnifyingGlass, HiOutlineRss, HiOutlineXMark } from 'react-icons/hi2';
+import { HiOutlineBell, HiOutlineGlobeAlt, HiOutlineMagnifyingGlass, HiOutlineNewspaper, HiOutlineRss, HiOutlineXMark } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useLibrary } from '../../app/LibraryContext.jsx';
 import { AlertsTab } from './AlertsTab.jsx';
+import { GoogleNewsTab } from './GoogleNewsTab.jsx';
 import { useAsyncStatus, useFeedAdder, useFeedDiscovery, useGoogleNews } from './hooks.js';
 import { PopularTab } from './PopularTab.jsx';
 import { SearchTab } from './SearchTab.jsx';
@@ -13,12 +14,13 @@ const TABS = [
   { id: 'discover', label: 'URL', Icon: HiOutlineGlobeAlt },
   { id: 'search', label: 'Search', Icon: HiOutlineMagnifyingGlass },
   { id: 'popular', label: 'Popular', Icon: HiOutlineRss },
+  { id: 'news', label: 'Google News', Icon: HiOutlineNewspaper },
   { id: 'google', label: 'Google Alerts', Icon: HiOutlineBell },
 ];
 
 function Tabs({ tab, onChange }) {
   return (
-    <div role="tablist" className="flex gap-1 px-5">
+    <div role="tablist" className="flex gap-1 overflow-x-auto px-5">
       {TABS.map(({ id, label, Icon }) => (
         <button
           key={id}
@@ -27,7 +29,7 @@ function Tabs({ tab, onChange }) {
           aria-selected={tab === id}
           onClick={() => onChange(id)}
           className={cn(
-            '-mb-px flex h-10 cursor-pointer items-center gap-1.5 border-0 border-b-2 bg-transparent px-2.5 text-[13px] transition-colors',
+            '-mb-px flex h-10 shrink-0 cursor-pointer items-center gap-1.5 border-0 border-b-2 bg-transparent px-2.5 text-[13px] transition-colors',
             tab === id ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
           )}
         >
@@ -56,13 +58,17 @@ function FolderPicker({ folders, value, onChange }) {
 
 function TabPanel({ tab, setTab, state }) {
   const { discovery, googleNews, status, adder, searchQuery, setSearchQuery, category, setCategory } = state;
-  if (tab === 'search') return <SearchTab query={searchQuery} onQueryChange={setSearchQuery} googleNews={googleNews} loading={status.loading} adder={adder} />;
+  if (tab === 'search') {
+    const openGoogleNews = (query) => { setTab('news'); googleNews.search({ query }); };
+    return <SearchTab query={searchQuery} onQueryChange={setSearchQuery} onSearchGoogleNews={openGoogleNews} adder={adder} />;
+  }
+  if (tab === 'news') return <GoogleNewsTab googleNews={googleNews} loading={status.loading} adder={adder} />;
   if (tab === 'popular') return <PopularTab category={category} onCategoryChange={setCategory} adder={adder} />;
   if (tab === 'google') return <AlertsTab url={discovery.url} onUrlChange={discovery.setUrl} onSubmit={() => { setTab('discover'); discovery.discover(); }} />;
   return <UrlTab discovery={discovery} loading={status.loading} adder={adder} />;
 }
 
-/** Add feeds: by URL, catalog search, popular categories, or Google Alerts; into a folder. */
+/** Add feeds: by URL, catalog search, popular categories, Google News or Google Alerts; into a folder. */
 export default function AddFeedDialog({ isOpen, onClose }) {
   const { onAddFeed, existingFeedUrls, folders } = useLibrary();
   const [tab, setTab] = useState('discover');
@@ -80,7 +86,7 @@ export default function AddFeedDialog({ isOpen, onClose }) {
       <DialogContent showCloseButton={false} className="flex h-[min(720px,88vh)] w-[min(720px,calc(100vw-2rem))] max-w-none flex-col gap-0 overflow-hidden border-border bg-[var(--bg-modal)] p-0 sm:max-w-none">
         <div className="flex h-[var(--pane-header-height)] shrink-0 items-center gap-3 pr-2 pl-5">
           <DialogTitle className="m-0 mr-auto text-[15px] font-semibold">Add feeds</DialogTitle>
-          <DialogDescription className="sr-only">Add feeds by URL, search, popular categories or Google Alerts</DialogDescription>
+          <DialogDescription className="sr-only">Add feeds by URL, search, popular categories, Google News or Google Alerts</DialogDescription>
           <FolderPicker folders={folders} value={folderId} onChange={setFolderId} />
           <button type="button" onClick={onClose} aria-label="Close" className="flex size-8 cursor-pointer items-center justify-center rounded-md border-0 bg-transparent text-muted-foreground hover:bg-[var(--bg-hover)] hover:text-foreground">
             <HiOutlineXMark className="size-4" />

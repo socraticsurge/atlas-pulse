@@ -62,7 +62,7 @@ To run it without the dev server, `npm start` builds the app and serves everythi
 
 **On Windows**, commands in this README that set a variable, like `PORT=3002 npm run dev`, are written for macOS and Linux. In PowerShell write `$env:PORT=3002; npm run dev`, and in Command Prompt `set "PORT=3002" && npm run dev`. nvm-windows doesn't read `.nvmrc`, so run `nvm install 24` and `nvm use 24`. The background service below is macOS-only; use `npm start` instead.
 
-Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), search Google News, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
+Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), follow a Google News search in any of 23 editions, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
 
 ### Run it like an app (macOS)
 
@@ -142,7 +142,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 
 | Feature | Details |
 |---------|---------|
-| **Add a feed four ways** | Paste a URL (feeds are discovered from the page), search Google News, browse the Popular catalog, or follow the Google Alerts steps |
+| **Add a feed five ways** | Paste a URL (feeds are discovered from the page), search the curated catalog, follow a Google News search (any edition, optionally one site, with search operators), browse the Popular catalog, or follow the Google Alerts steps |
 | **OPML** | Import and export your feeds and folders in **Settings → Data**; imported feeds fetch right away |
 | **Feed health** | A feed that fails shows a warning with the reason; refresh it on its own from its menu |
 | **Auto-refresh** | Off, 15 min, 30 min, 1 h or 2 h. The local server refreshes on its own, so feeds keep updating with the app closed (not while the computer sleeps). A refresh fetches only what's new |
