@@ -7,6 +7,23 @@ const TRACKING_PARAMS = new Set([
   'fbclid', 'gclid', 'msclkid', '_ga', 'mc_cid', 'mc_eid', 'ref', 'source',
 ]);
 
+// Removes tracking params from a URL object; true if there were any.
+function dropTrackingParams(u) {
+  const tracking = [...u.searchParams.keys()].filter((key) => TRACKING_PARAMS.has(key.toLowerCase()));
+  for (const key of tracking) u.searchParams.delete(key);
+  return tracking.length > 0;
+}
+
+/** The URL without tracking params (utm_*, fbclid…), otherwise exactly as given. */
+export function withoutTracking(url) {
+  try {
+    const u = new URL(url);
+    return dropTrackingParams(u) ? u.toString() : url;
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Produce a canonical URL for cross-feed deduplication.
  * Strips tracking params and the www prefix, sorts params, and drops a
@@ -19,9 +36,7 @@ export function canonicalizeUrl(url) {
   try {
     const u = new URL(url);
     u.hostname = u.hostname.toLowerCase().replace(/^www\./, '');
-    for (const key of [...u.searchParams.keys()]) {
-      if (TRACKING_PARAMS.has(key.toLowerCase())) u.searchParams.delete(key);
-    }
+    dropTrackingParams(u);
     u.searchParams.sort();
     if (u.pathname !== '/' && u.pathname.endsWith('/')) {
       u.pathname = u.pathname.slice(0, -1);

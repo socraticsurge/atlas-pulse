@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.2.0-f26b1d" alt="Version 2.2.0">
+  <img src="https://img.shields.io/badge/version-2.3.0-f26b1d" alt="Version 2.3.0">
   <img src="https://img.shields.io/badge/license-MIT-0b3b6f" alt="License: MIT">
   <img src="https://img.shields.io/badge/AI-on--device%20%C2%B7%20Gemini%20Nano%20%7C%20Ollama-0b3b6f" alt="On-device AI: Gemini Nano or Ollama">
   <img src="https://img.shields.io/badge/node-22.13%2B%20%7C%2024%2B-0b3b6f" alt="Node 22.13+ or 24+">
@@ -62,7 +62,7 @@ To run it without the dev server, `npm start` builds the app and serves everythi
 
 **On Windows**, commands in this README that set a variable, like `PORT=3002 npm run dev`, are written for macOS and Linux. In PowerShell write `$env:PORT=3002; npm run dev`, and in Command Prompt `set "PORT=3002" && npm run dev`. nvm-windows doesn't read `.nvmrc`, so run `nvm install 24` and `nvm use 24`. The background service below is macOS-only; use `npm start` instead.
 
-Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), search Google News, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
+Add a feed with **+** in the rail: paste any site URL (the feed is discovered for you), follow a Google News search in any of 23 editions, pick from the Popular catalog, or import an OPML file in **Settings → Data**.
 
 ### Run it like an app (macOS)
 
@@ -94,7 +94,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 |---------|---------|
 | **Four list views** | **Rows** (default: dense two-line rows with day headings), Grid, List and Compact. Switch in the list header, in **Settings → Reading**, or with ⌘K |
 | **Docked reader** | A third pane on wide windows (1100 px and up); on narrower ones it slides over the list. Hide the sidebar with `[` and the list with `]` for more room |
-| **Full text, automatically** | The full article is extracted from the source when you open it; the reader shows whether you're reading the full article or the feed's text |
+| **Full text, automatically** | The full article is extracted from the source when you open it, Google News articles included; the reader shows whether you're reading the full article or the feed's text, and says why when it's the feed's text |
 | **Reading comfort** | Newsreader serif by default, with font, size, spacing and width in the **Aa** menu; a progress bar; focus mode (`f`); your scroll position is remembered |
 | **In brief** | When an article has an AI summary, it appears at the top of the reader |
 | **Highlights** | Select text to highlight it in one of four colours; browse and search them all in **Highlights**, and export as CSV |
@@ -108,8 +108,9 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 | **Save with a note** | `b` saves an article; `n` saves it and opens a note on why it caught your eye. Saved lists your saves newest first under "today", "yesterday", "this week" and "earlier", with each note in place of the preview |
 | **Collections** | `c` opens the collection picker: add the article to one or more collections, or type a name to create one. Adding an article saves it; unsaving removes it from every collection. Rename or delete from the sidebar (deleting a collection keeps its saves) |
 | **Unsorted** | Saves that aren't in any collection yet: a filing queue. Press `c` to file one, and `j` moves on to the next |
-| **Send to NotebookLM** | From a collection: download its articles as one Markdown file (title, source, dates, your note and the text of each) to upload as a source, copy the links to paste as website sources, or open NotebookLM |
-| **Start a Studio draft** | Turns a collection into a newsletter draft, one section per article with your note as "Why it matters" |
+| **Send to NotebookLM** | From a collection: download its articles as one Markdown file (title, source, dates, APA citation, your note and the text of each) to upload as a source, copy the links to paste as website sources, or open NotebookLM |
+| **Start a Studio draft** | Turns a collection into a newsletter draft, one section per article with your note as "Why it matters", and a reference list at the end |
+| **APA citations** | Every saved article carries an APA 7 citation: under your note in the reader, on each saved summary, and behind a copy button on saved rows (hover). A collection's **Copy citations** copies them all as a reference list, A to Z. Copies paste into a word processor with their italics. arXiv papers are cited as preprints with their arXiv ID; missing authors and dates follow APA's rules |
 | **Folders** | Group feeds into folders; right-click a feed to refresh it, move it or remove it |
 | **Search** | Full-text search over everything you've fetched, ranked title › source › AI topics › body. Words match as prefixes; "quoted phrases" match exactly. Press `/` |
 | **Filters** | The **Filters** button reveals AI-analyzed-only and content filters (sentiment, urgency, frame, tone, depth) |
@@ -141,7 +142,7 @@ The service listens on `127.0.0.1` only and is not reachable from other devices.
 
 | Feature | Details |
 |---------|---------|
-| **Add a feed four ways** | Paste a URL (feeds are discovered from the page), search Google News, browse the Popular catalog, or follow the Google Alerts steps |
+| **Add a feed five ways** | Paste a URL (feeds are discovered from the page), search the curated catalog, follow a Google News search (any edition, optionally one site, with search operators), browse the Popular catalog, or follow the Google Alerts steps |
 | **OPML** | Import and export your feeds and folders in **Settings → Data**; imported feeds fetch right away |
 | **Feed health** | A feed that fails shows a warning with the reason; refresh it on its own from its menu |
 | **Auto-refresh** | Off, 15 min, 30 min, 1 h or 2 h. The local server refreshes on its own, so feeds keep updating with the app closed (not while the computer sleeps). A refresh fetches only what's new |
@@ -344,6 +345,8 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) for the proje
 [MIT](LICENSE). Copyright (c) 2026 Vinay Chaganti.
 
 ## Changelog
+
+**2.3.0** adds Google News: follow a search across news sites in any of 23 editions, and read its articles in full. Saved articles, collections and summaries carry APA 7 citations, the reader says why when it can only show a feed's text, and other websites can no longer show Atlas Pulse in a frame.
 
 **2.2.0** keeps feeds refreshing with the app closed, makes the reader work from the keyboard and with a screen reader, brings text in both themes up to WCAG 2.2 AA contrast, and closes two security holes in the local server. If you open Atlas Pulse under a name other than `localhost`, see the upgrading note in the changelog.
 

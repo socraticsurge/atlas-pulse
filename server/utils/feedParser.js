@@ -28,16 +28,31 @@ export function normalizeItem(item) {
   };
 }
 
+const GOOGLE_NEWS_SEARCH = 'https://news.google.com/rss/search';
+
+/**
+ * The title for a Google News search feed: the search as typed, then
+ * "- Google News". Google's own title quotes the search, which doubles the
+ * quotes of a search that has its own (""AI"" - Google News). '' for any
+ * other feed.
+ */
+export function googleNewsTitle(feedUrl) {
+  const url = URL.parse(feedUrl);
+  const isSearch = `${url?.origin}${url?.pathname}` === GOOGLE_NEWS_SEARCH;
+  const query = isSearch ? url.searchParams.getAll('q').join(' ').trim() : '';
+  return query && `${query} - Google News`;
+}
+
 /** Normalizes an rss-parser feed. */
 export function normalizeFeed(feed, feedUrl) {
   return {
-    title: feed.title || 'Untitled Feed',
-    description: feed.description || '',
-    link: feed.link || feedUrl,
+    title: firstOf(googleNewsTitle(feedUrl), feed.title, 'Untitled Feed'),
+    description: firstOf(feed.description),
+    link: firstOf(feed.link, feedUrl),
     feedUrl,
-    language: feed.language || '',
+    language: firstOf(feed.language),
     image: firstOf(feed.image?.url, feed.itunes?.image),
-    items: (feed.items || []).map(normalizeItem),
+    items: firstOf(feed.items, []).map(normalizeItem),
   };
 }
 

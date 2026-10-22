@@ -2,6 +2,7 @@ import { HiOutlineCheck, HiOutlineMagnifyingGlass, HiOutlineNewspaper, HiOutline
 import { cn } from '@/lib/utils';
 import { stripHtml, timeAgo } from '../../utils/helpers.js';
 import FeedFavicon from '../FeedFavicon.jsx';
+import { SavedCitationButton } from '../library/Citation.jsx';
 import { shortTime } from './listLogic.js';
 import { OpenTitle } from './OpenTitle.jsx';
 
@@ -51,6 +52,7 @@ function CompactCard({ article, feed, state, onOpen, onToggle }) {
         <OpenTitle active={state.active} onOpen={onOpen} className="truncate">{article.title}</OpenTitle>
       </span>
       <span className="flex items-center gap-2">
+        <SavedCitationButton article={article} feed={feed} className="-my-1 group-hover/card:opacity-100" />
         {article.aiStatus === 'done' && <AIBadge />}
         <span className="font-mono text-[11px] text-[var(--text-tertiary)]" title={timeAgo(article.publishedAt)}>{shortTime(article.publishedAt)}</span>
       </span>
@@ -68,7 +70,10 @@ function ExcerptCard({ article, feed, state, onOpen, onToggle }) {
         {!article.isRead && <UnreadDot />}
         <SourceIcon feed={feed} />
         <span className="truncate">{feed?.title || 'Unknown'}</span>
-        <span className="ml-auto shrink-0 font-mono text-[11px] text-[var(--text-tertiary)]">{timeAgo(article.publishedAt)}</span>
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          <SavedCitationButton article={article} feed={feed} className="-my-1 group-hover/card:opacity-100" />
+          <span className="font-mono text-[11px] text-[var(--text-tertiary)]">{timeAgo(article.publishedAt)}</span>
+        </span>
         {article.aiStatus === 'done' && <AIBadge />}
       </div>
       <div className="mt-1.5 flex gap-3">
@@ -100,7 +105,10 @@ function GridCard({ article, feed, state, onOpen, onToggle }) {
           {!article.isRead && <UnreadDot />}
           <SourceIcon feed={feed} />
           <span className="truncate">{feed?.title || 'Unknown'}</span>
-          <span className="ml-auto shrink-0 font-mono text-[10.5px] text-[var(--text-tertiary)]">{shortTime(article.publishedAt)}</span>
+          <span className="ml-auto flex shrink-0 items-center gap-1.5">
+            <SavedCitationButton article={article} feed={feed} className="-my-1 group-hover/card:opacity-100" />
+            <span className="font-mono text-[10.5px] text-[var(--text-tertiary)]">{shortTime(article.publishedAt)}</span>
+          </span>
         </div>
         <h3 className={cn('m-0 text-[13.5px] leading-snug', titleTone(article.isRead))}>
           <OpenTitle active={state.active} onOpen={onOpen}><span className="line-clamp-4">{article.title}</span></OpenTitle>

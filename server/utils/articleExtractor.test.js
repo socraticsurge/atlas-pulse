@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractFromHtml } from '@extractus/article-extractor';
-import { largestInSrcset, prepareForExtraction } from './articleExtractor.js';
+import { extractArticle, largestInSrcset, prepareForExtraction } from './articleExtractor.js';
 
 const IMAGE = 'https://miro.medium.com/v2/resize:fit:1400/1*abc.png';
 
@@ -64,3 +64,66 @@ test('a Medium article keeps its images and loses the page clutter through extra
   assert.match(article.content, /Figure 1: a chart/);
   assert.doesNotMatch(article.content, /Press enter or click|min read|Oct 11, 2026/);
 });
+
+// Before Google News links were decoded, extraction fetched the Google page,
+// which holds no article, and failed with "Could not extract article content".
+test('a Google News link is extracted from the publisher\'s page', async () => {
+  const publisher = 'https://pub.example.com/a-post';
+  const answer = `)]}'\n\n${JSON.stringify([['wrb.fr', 'Fbv4je', JSON.stringify(['garturlres', publisher, 1]), null, null, null, 'generic']])}`;
+  const pages = {
+    'https://news.google.com/rss/articles/CBMiExtract': '<div data-n-a-ts="1792602246" data-n-a-sg="sig"></div>',
+    'https://news.google.com/_/DotsSplashUi/data/batchexecute': answer,
+    [publisher]: page(),
+  };
+  const requested = [];
+  const fetchPage = async (url) => {
+    requested.push(url);
+    return { text: pages[url] ?? '<html><body>Google News</body></html>', url };
+  };
+  const article = await extractArticle('https://news.google.com/rss/articles/CBMiExtract?oc=5', fetchPage);
+  assert.equal(requested.at(-1), publisher);
+  assert.equal(article.url, publisher);
+  assert.match(article.content, /runs long enough/);
+});
+
+// A Google News link that decodes to `publisher`, and what that page answers.
+function googleNewsSite(publisher, answerPage) {
+  const answer = `)]}'\n\n${JSON.stringify([['wrb.fr', 'Fbv4je', JSON.stringify(['garturlres', publisher, 1]), null, null, null, 'generic']])}`;
+  return async (url) => {
+    if (url.includes('/rss/articles/')) return { text: '<div data-n-a-ts="1792602246" data-n-a-sg="sig"></div>', url };
+    if (url.includes('batchexecute')) return { text: answer, url };
+    return answerPage(url);
+  };
+}
+
+const failureOf = (promise) => promise.then(() => assert.fail('expected a failure'), (error) => ({ reason: error.reason, site: error.site, message: error.message }));
+
+test('a site that turns apps away is reported as blocked, by status or by its bot check page', async () => {
+  const awsWaf = async () => { throw Object.assign(new Error('Status code 405'), { status: 405 }); };
+  assert.deepEqual(await failureOf(extractArticle('https://news.google.com/rss/articles/CBMiArs', googleNewsSite('https://arstechnica.com/culture/a/', awsWaf))), {
+    reason: 'blocked', site: 'arstechnica.com', message: 'Article extraction failed: Status code 405',
+  });
+  // SiteGround answers 202 with a page that refreshes into its captcha.
+  const siteGround = async (url) => ({ url, text: '<html><head><meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/?r=%2Fa%2F"></meta></head></html>' });
+  assert.deepEqual(await failureOf(extractArticle('https://www.cphpost.dk/a/', siteGround)), {
+    reason: 'blocked', site: 'cphpost.dk', message: 'Article extraction failed: The site asked for a browser check',
+  });
+});
+
+test('a Google News link that will not decode stops before fetching the Google page', async () => {
+  const requested = [];
+  const consentOnly = async (url) => { requested.push(url); return { url, text: '<html>consent page</html>' }; };
+  const failed = await failureOf(extractArticle('https://news.google.com/rss/articles/CBMiNoDecode?oc=5', consentOnly));
+  assert.deepEqual([failed.reason, failed.site], ['google', 'news.google.com']);
+  assert.deepEqual(requested, ['https://news.google.com/rss/articles/CBMiNoDecode']);
+});
+
+test('a page without an article, and any other failure, say so', async () => {
+  const empty = async (url) => ({ url, text: '<html><body><nav>Home</nav></body></html>' });
+  assert.equal((await failureOf(extractArticle('https://e.com/a', empty))).reason, 'no-article');
+  const notFound = async () => { throw Object.assign(new Error('Status code 404'), { status: 404 }); };
+  assert.deepEqual(await failureOf(extractArticle('https://e.com/gone', notFound)), {
+    reason: 'failed', site: 'e.com', message: 'Article extraction failed: Status code 404',
+  });
+});
+

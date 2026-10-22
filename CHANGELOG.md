@@ -7,8 +7,35 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 
 ### Under the hood
 
-- [MAINTAINING.md](MAINTAINING.md) sets out the definition of done, the merge routine, the release checklist and the rules for AI-assisted work, and [CLAUDE.md](CLAUDE.md) points every Claude Code session in the repository to it. The pull request template gains CHANGELOG, security-design and AI-disclosure boxes (#146).
 - [GOVERNANCE.md](GOVERNANCE.md) says how review works with AI assistance, and how a single maintainer changes governance: a pull request labelled `governance` that the maintainer reads in full and that stays open for 24 hours, with a Discussion first once there is a co-maintainer or a named backup (#147).
+
+## 2.3.0 (2026-10-22)
+
+Follow a Google News search across news sites, in any of 23 editions, and read its articles in full. Saved articles, collections and summaries carry APA 7 citations. When the reader can only show a feed's text, it says why. And other websites can no longer show Atlas Pulse inside a frame.
+
+**Upgrading:** nothing beyond pulling; no dependencies changed. With the background service, `npm run service restart` picks up the new server code.
+
+### New
+
+- **Follow Google News searches.** A new Google News tab in Add feeds follows a search across news sites as a feed: pick one of 23 editions (it starts on the one matching your browser's language), optionally limit it to one site, and use the search tips for exact phrases, headline-only words, exclusions, AND, OR and recent-only. A preview shows the latest headlines before you add it. Google News feeds are now titled with your search as you typed it, without Google's doubled quotes (#150).
+- **APA citations for everything you keep.** A saved article shows its APA 7 citation under your note in the reader. Saved rows get a copy button on hover, and each saved AI summary shows its citation. A collection's **Copy citations** copies them all as a reference list, A to Z. Copies paste into a word processor with their italics. The NotebookLM sources file adds a citation to each article, and a Studio draft from a collection ends with a References section. arXiv papers are cited as preprints with their arXiv ID; missing authors and dates follow APA's rules, and messy author fields (e-mail wrappers, LaTeX accents, affiliations, aggregator "via" lines) are cleaned up (#149).
+
+### Improved
+
+- **The reader says why it shows only the feed's text.** When the full article can't be fetched and the feed sent only a summary or an excerpt, a note above it says why: the site doesn't let apps fetch its articles (Ars Technica, for one), Google News didn't give the publisher's link, or no article was found. The note links to the original. The "Feed text" label's tooltip gives the same reason (#152).
+
+### Fixed
+
+- **Google News articles open in full.** Articles from Google News feeds used to show only the feed's summary, because their links point at Google, not the publisher. Opening one now asks Google for the publisher's link first, then reads the article from there, so the reader and AI summaries get the full text. Only the article you open is looked up, and if Google won't say, you get the summary as before (#151).
+
+### Security
+
+- **Other websites can't show Atlas Pulse in a frame.** A page on another site could load the app in a hidden frame and trick you into clicking something like "Delete all". Every response now forbids framing, and the built app sends a Content-Security-Policy that runs only its own scripts, takes video embeds only from YouTube, Vimeo and SoundCloud, and talks only to its own server: a second layer behind the HTML sanitizer (#148).
+
+### Under the hood
+
+- [MAINTAINING.md](MAINTAINING.md) sets out the definition of done, the merge routine, the release checklist and the rules for AI-assisted work, and [CLAUDE.md](CLAUDE.md) points every Claude Code session in the repository to it. The pull request template gains CHANGELOG, security-design and AI-disclosure boxes (#146).
+- 461 tests, up from 404 in 2.2.0.
 
 ## 2.2.0 (2026-10-20)
 

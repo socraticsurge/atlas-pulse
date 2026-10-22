@@ -1,6 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canonicalizeUrl, firstOf, orEmpty, toArticle } from './feedItems.js';
+import { canonicalizeUrl, firstOf, orEmpty, toArticle, withoutTracking } from './feedItems.js';
+
+test('withoutTracking drops only tracking params and otherwise returns the URL untouched', () => {
+  assert.equal(withoutTracking('https://www.example.com/a/?utm_source=rss&id=7&fbclid=x#top'), 'https://www.example.com/a/?id=7#top');
+  assert.equal(withoutTracking('https://pub.towardsai.net/x?source=rss----98111c9905da---4'), 'https://pub.towardsai.net/x');
+  assert.equal(withoutTracking('https://www.ft.com/content/0ed1?syn-25a6b1a6=1'), 'https://www.ft.com/content/0ed1?syn-25a6b1a6=1');
+  assert.equal(withoutTracking('https://Example.com/A%20b/'), 'https://Example.com/A%20b/');
+  assert.equal(withoutTracking('not a url'), 'not a url');
+});
 
 test('firstOf matches a || b || c, including the last-value fallback', () => {
   assert.equal(firstOf('', 'b', 'c'), 'b');

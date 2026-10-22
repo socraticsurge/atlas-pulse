@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { HiOutlineArrowDownTray, HiOutlineArrowTopRightOnSquare, HiOutlineChevronDown, HiOutlineLink, HiOutlinePaintBrush } from 'react-icons/hi2';
+import { HiOutlineArrowDownTray, HiOutlineArrowTopRightOnSquare, HiOutlineChevronDown, HiOutlineClipboardDocumentList, HiOutlineLink, HiOutlinePaintBrush } from 'react-icons/hi2';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { useLibrary } from '../../app/LibraryContext.jsx';
@@ -9,6 +9,8 @@ import { useMenuKeys } from '../../hooks/useMenuKeys.js';
 import { emit } from '../../lib/appEvents.js';
 import { STUDIO_QUERY_KEY } from '../../lib/queryClient.js';
 import { createStudioItem, fetchArticlePage, getCollectionExportURL } from '../../utils/api.js';
+import { copyReferences } from './citationClipboard.js';
+import { articleReferences } from './citationModel.js';
 import { collectionDraft } from './collectionDraft.js';
 import { useCollections } from './useCollections.js';
 
@@ -72,17 +74,37 @@ function NotebookLMMenu({ id }) {
   );
 }
 
+// Each article's feed (removed feeds included: their saves stay).
+function useFeedOf() {
+  const { sourceFeeds: feeds } = useLibrary();
+  return useCallback((article) => feeds.find((f) => f.id === article.feedId), [feeds]);
+}
+
+// Copies every article in the collection as an APA reference list.
+function useCopyCitations(id) {
+  const feedOf = useFeedOf();
+  const showToast = useToast();
+  return async () => {
+    try {
+      const articles = await collectionArticles(id);
+      await copyReferences(articleReferences(articles, feedOf));
+      showToast(`Copied ${articles.length} APA citation${articles.length === 1 ? '' : 's'}, in reference-list order.`, 'info');
+    } catch (err) {
+      showToast(`Couldn't copy the citations: ${err.message}`, 'error');
+    }
+  };
+}
+
 // A Studio draft from the collection, opened in Studio once saved.
 function useStartDraft(collection) {
-  const { sourceFeeds: feeds } = useLibrary();
+  const feedOf = useFeedOf();
   const queryClient = useQueryClient();
   const showToast = useToast();
   const [busy, setBusy] = useState(false);
   const start = async () => {
     setBusy(true);
     try {
-      const sourceOf = (a) => feeds.find((f) => f.id === a.feedId)?.title || '';
-      const item = await createStudioItem(collectionDraft(collection, await collectionArticles(collection.id), sourceOf));
+      const item = await createStudioItem(collectionDraft(collection, await collectionArticles(collection.id), feedOf));
       queryClient.invalidateQueries({ queryKey: [STUDIO_QUERY_KEY] });
       emit('open-studio', item.id);
     } catch (err) {
@@ -94,16 +116,20 @@ function useStartDraft(collection) {
   return { busy, start };
 }
 
-/** Under a collection's list header: send it to NotebookLM, or start a Studio draft from it. */
+/** Under a collection's list header: send it to NotebookLM, start a Studio draft from it, or copy its citations. */
 export default function CollectionOutBar({ id }) {
   const collection = useCollections().find((c) => c.id === id);
   const draft = useStartDraft(collection);
+  const copyCitations = useCopyCitations(id);
   if (!collection || collection.count === 0) return null;
   return (
-    <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-2">
+    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
       <NotebookLMMenu id={id} />
-      <Button size="sm" variant="ghost" onClick={draft.start} disabled={draft.busy} title="A newsletter draft in Studio: one section per article, with your notes">
+      <Button size="sm" variant="ghost" onClick={draft.start} disabled={draft.busy} title="A newsletter draft in Studio: one section per article, with your notes and a reference list">
         <HiOutlinePaintBrush /> {draft.busy ? 'Starting…' : 'Start a Studio draft'}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={copyCitations} title="Every article as an APA 7 reference, A to Z, ready to paste into a document">
+        <HiOutlineClipboardDocumentList /> Copy citations
       </Button>
     </div>
   );

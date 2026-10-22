@@ -5,6 +5,7 @@ import {
 import { BsBookmarkFill } from 'react-icons/bs';
 import { IconButton } from '@/components/ui/icon-button';
 import { Spinner } from '@/components/ui/spinner';
+import { fallbackText } from './fallbackNote.js';
 import ReaderSettingsMenu from './ReaderSettingsMenu.jsx';
 import ShareMenu from './ShareMenu.jsx';
 
@@ -30,8 +31,9 @@ function ExtractionStatus({ extraction }) {
   else if (extraction.content) state = 'full';
   else if (extraction.error) state = 'feed';
   if (!state) return null;
+  const title = (state === 'feed' && fallbackText(extraction.failure)) || STATUS[state].title;
   return (
-    <span title={STATUS[state].title} className="ml-1 flex items-center gap-1.5 font-mono text-[10.5px] text-[var(--text-tertiary)] @max-[680px]:hidden">
+    <span title={title} className="ml-1 flex items-center gap-1.5 font-mono text-[10.5px] text-[var(--text-tertiary)] @max-[680px]:hidden">
       {state === 'loading' && <Spinner className="size-3 border-[1.5px]" />}
       {STATUS[state].label}
     </span>

@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { stripHtml } from '../../utils/helpers.js';
 import { shortTime } from '../article-list/listLogic.js';
 import { OpenTitle } from '../article-list/OpenTitle.jsx';
+import { SavedCitationButton } from '../library/Citation.jsx';
 
 // The preview line: the AI summary when there is one, else the feed's excerpt.
 const previewOf = (article) => article.aiSummary || stripHtml(article.excerpt || '', 220);
@@ -53,7 +54,8 @@ function NoteText({ note }) {
 }
 
 // Second line: source, your note or else the preview (the AI summary when
-// there is one), then the saved and AI marks.
+// there is one), then the saved and AI marks (and, on hover, a saved
+// article's copy-citation button).
 function MetaLine({ article, feed, unread }) {
   const preview = previewOf(article);
   return (
@@ -61,6 +63,7 @@ function MetaLine({ article, feed, unread }) {
       <span className={cn('shrink-0', unread && 'text-[var(--text-secondary)]')}>{feed?.title || 'Unknown'}</span>
       {article.note ? <NoteText note={article.note} /> : preview && <span className="truncate">· {preview}</span>}
       <span className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+        <SavedCitationButton article={article} feed={feed} className="-my-1 group-hover/row:opacity-100" />
         {Boolean(article.isBookmarked) && <BsBookmarkFill className="size-2.5 text-primary" title="Saved" aria-label="Saved" />}
         <AIMark article={article} />
       </span>

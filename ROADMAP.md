@@ -1,6 +1,6 @@
 # Roadmap
 
-_Written: 20 October 2026, at v2.1.0. Covers October 2026 to October 2027. Reviewed at each minor release._
+_Written: 20 October 2026, at v2.1.0. Covers October 2026 to October 2027. Reviewed at each minor release; last reviewed at v2.3.0 (22 October 2026)._
 
 This is what Atlas Pulse intends to do over the next year, and what it will not do. Atlas Pulse has one maintainer working in spare time, so the roadmap gives no dates. Items under **Planned** are intended. Items under **Candidates** may happen, change or be dropped, and each starts as an issue before any code is written.
 
@@ -44,13 +44,12 @@ The goal is the [OpenSSF Best Practices](https://www.bestpractices.dev/) passing
 Maintenance and hardening work that may happen if time allows:
 
 - **Page the summaries and highlights lists.** Both still load in full, as the article list did before it was paged ([docs/TECH-DEBT.md](docs/TECH-DEBT.md), section 3.3).
-- **A Content-Security-Policy for the app page,** as a second layer behind the HTML sanitizer.
 - **Tests for the HTML sanitizer.** Its rules have no automated test yet, because the test runner has no DOM.
 - **Signed release tags.** This needs a signing key that the maintainer, and later the backup maintainer, keeps safe. GOVERNANCE.md would change to list it.
 
 ## Feature work
 
-New features are on hold until about 26 October 2026. Until then the maintainer is using 2.1 day to day to see which problems are worth solving next. The directions chosen then will be added here as candidates, so this roadmap names no new features yet.
+New features are on hold until about 26 October 2026, apart from small ones that came up in daily use: 2.3 added APA citations and Google News feeds. Until then the maintainer is using the app day to day to see which problems are worth solving next. The directions chosen then will be added here as candidates, so this roadmap names no new features yet.
 
 Feature ideas are welcome at any time as a [feature request](https://github.com/socraticsurge/atlas-pulse/issues/new?template=feature_request.yml) or a [Discussion](https://github.com/socraticsurge/atlas-pulse/discussions). Each one is weighed against the principles above.
 
