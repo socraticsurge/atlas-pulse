@@ -3,6 +3,12 @@
 All notable changes to Atlas Pulse. Pull request numbers link to
 [socraticsurge/atlas-pulse](https://github.com/socraticsurge/atlas-pulse/pulls?q=is%3Apr+is%3Amerged).
 
+## Unreleased
+
+### Under the hood
+
+- [GOVERNANCE.md](GOVERNANCE.md) says how review works with AI assistance, and how a single maintainer changes governance: a pull request labelled `governance` that the maintainer reads in full and that stays open for 24 hours, with a Discussion first once there is a co-maintainer or a named backup (#147).
+
 ## 2.3.0 (2026-10-22)
 
 Follow a Google News search across news sites, in any of 23 editions, and read its articles in full. Saved articles, collections and summaries carry APA 7 citations. When the reader can only show a feed's text, it says why. And other websites can no longer show Atlas Pulse inside a frame.
