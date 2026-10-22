@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractFromHtml } from '@extractus/article-extractor';
-import { largestInSrcset, prepareForExtraction } from './articleExtractor.js';
+import { extractArticle, largestInSrcset, prepareForExtraction } from './articleExtractor.js';
 
 const IMAGE = 'https://miro.medium.com/v2/resize:fit:1400/1*abc.png';
 
@@ -64,3 +64,25 @@ test('a Medium article keeps its images and loses the page clutter through extra
   assert.match(article.content, /Figure 1: a chart/);
   assert.doesNotMatch(article.content, /Press enter or click|min read|Oct 11, 2026/);
 });
+
+// Before Google News links were decoded, extraction fetched the Google page,
+// which holds no article, and failed with "Could not extract article content".
+test('a Google News link is extracted from the publisher\'s page', async () => {
+  const publisher = 'https://pub.example.com/a-post';
+  const answer = `)]}'\n\n${JSON.stringify([['wrb.fr', 'Fbv4je', JSON.stringify(['garturlres', publisher, 1]), null, null, null, 'generic']])}`;
+  const pages = {
+    'https://news.google.com/rss/articles/CBMiExtract': '<div data-n-a-ts="1792602246" data-n-a-sg="sig"></div>',
+    'https://news.google.com/_/DotsSplashUi/data/batchexecute': answer,
+    [publisher]: page(),
+  };
+  const requested = [];
+  const fetchPage = async (url) => {
+    requested.push(url);
+    return { text: pages[url] ?? '<html><body>Google News</body></html>', url };
+  };
+  const article = await extractArticle('https://news.google.com/rss/articles/CBMiExtract?oc=5', fetchPage);
+  assert.equal(requested.at(-1), publisher);
+  assert.equal(article.url, publisher);
+  assert.match(article.content, /runs long enough/);
+});
+

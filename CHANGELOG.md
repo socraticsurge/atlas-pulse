@@ -10,6 +10,10 @@ All notable changes to Atlas Pulse. Pull request numbers link to
 - **Follow Google News searches.** A new Google News tab in Add feeds follows a search across news sites as a feed: pick one of 23 editions (it starts on the one matching your browser's language), optionally limit it to one site, and use the search tips for exact phrases, headline-only words, exclusions, AND, OR and recent-only. A preview shows the latest headlines before you add it. Google News feeds are now titled with your search as you typed it, without Google's doubled quotes (#150).
 - **APA citations for everything you keep.** A saved article shows its APA 7 citation under your note in the reader. Saved rows get a copy button on hover, and each saved AI summary shows its citation. A collection's **Copy citations** copies them all as a reference list, A to Z. Copies paste into a word processor with their italics. The NotebookLM sources file adds a citation to each article, and a Studio draft from a collection ends with a References section. arXiv papers are cited as preprints with their arXiv ID; missing authors and dates follow APA's rules, and messy author fields (e-mail wrappers, LaTeX accents, affiliations, aggregator "via" lines) are cleaned up (#149).
 
+### Fixed
+
+- **Google News articles open in full.** Articles from Google News feeds used to show only the feed's summary, because their links point at Google, not the publisher. Opening one now asks Google for the publisher's link first, then reads the article from there, so the reader and AI summaries get the full text. Only the article you open is looked up, and if Google won't say, you get the summary as before (#151).
+
 ### Security
 
 - **Other websites can't show Atlas Pulse in a frame.** A page on another site could load the app in a hidden frame and trick you into clicking something like "Delete all". Every response now forbids framing, and the built app sends a Content-Security-Policy that runs only its own scripts, takes video embeds only from YouTube, Vimeo and SoundCloud, and talks only to its own server: a second layer behind the HTML sanitizer (#148).
