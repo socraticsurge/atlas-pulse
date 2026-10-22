@@ -1,6 +1,6 @@
 # Security design
 
-_Written: 20 October 2026, at v2.1.0. Update it in the same pull request as any change that crosses a trust boundary; see [Keeping this document current](#keeping-this-document-current)._
+_Written: 20 October 2026, at v2.1.0. Reviewed at v2.3.0 (22 October 2026). Update it in the same pull request as any change that crosses a trust boundary; see [Keeping this document current](#keeping-this-document-current)._
 
 This is Atlas Pulse's assurance case: the argument, with pointers to the code, that its security requirements are met. It covers the threat model, the trust boundaries, how secure design principles are applied, and how common weaknesses are countered. To report a vulnerability, follow [SECURITY.md](../SECURITY.md), not this document.
 
@@ -186,7 +186,7 @@ CodeQL (`javascript-typescript`) scans every pull request, every push to `master
 
 ## Supply chain and process
 
-- **Dependencies:** installed from `package-lock.json` with `npm ci`. Dependabot proposes npm and GitHub Actions updates weekly ([.github/dependabot.yml](../.github/dependabot.yml)). `npm audit` reported no vulnerabilities at v2.1.0.
+- **Dependencies:** installed from `package-lock.json` with `npm ci`. Dependabot proposes npm and GitHub Actions updates weekly ([.github/dependabot.yml](../.github/dependabot.yml)). `npm audit` reported no vulnerabilities at v2.3.0.
 - **CI:** GitHub Actions are pinned to commit SHAs, workflow tokens are read-only, and checkout doesn't keep credentials ([.github/workflows/](../.github/workflows/)). OpenSSF Scorecard runs on the repository.
 - **Merging:** the `master` branch ruleset requires lint, tests and builds on Linux, macOS and Windows, plus CodeQL, before a change lands. It also blocks a merge while CodeQL reports a high or critical security alert, and forbids force-pushes and deleting the branch. Nobody can bypass it, the maintainer included ([GOVERNANCE.md](../GOVERNANCE.md#how-decisions-are-made)).
 - **Vulnerability reports:** private, through GitHub security advisories or email ([SECURITY.md](../SECURITY.md)).
