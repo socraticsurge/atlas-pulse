@@ -2,6 +2,14 @@ import { useEffect, useState } from 'react';
 import * as api from '../../utils/api.js';
 import { useOnKeyChange } from '../../hooks/useOnKeyChange.js';
 
+// Records a failed extraction: its message, and the server's { reason, site }.
+// An abort (the article changed) is not a failure.
+function recordFailure(err, setError, setFailure) {
+  if (err.name === 'AbortError') return;
+  setError(err.message);
+  setFailure(err.details ?? {});
+}
+
 /**
  * Full-text extraction from the source URL; aborted when the article changes.
  * `settled` turns true once the content shown will no longer change: the
@@ -32,10 +40,7 @@ export function useArticleExtraction(articleId, link) {
         const data = await api.extractArticle(link, controller.signal);
         if (data.content) setContent(data.content);
       } catch (err) {
-        if (err.name !== 'AbortError') {
-          setError(err.message);
-          setFailure({ reason: err.details?.reason, site: err.details?.site });
-        }
+        recordFailure(err, setError, setFailure);
       } finally {
         if (!controller.signal.aborted) {
           setExtracting(false);

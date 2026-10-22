@@ -110,17 +110,29 @@ async function fetchArticlePage(target, fetchPage) {
   }
 }
 
-// The page is fetched by fetchText (SSRF-guarded on every redirect, with our
-// User-Agent and a real timeout), then parsed from the HTML string. A Google
-// News link is first decoded to the publisher's URL (googleNewsLink.js); the
-// Google page itself holds no article, so a link that won't decode stops there.
-// `fetchPage` is fetchText's signature (tests pass a stub).
-export async function extractArticle(url, fetchPage = fetchText) {
+// The URL to fetch: the publisher's for a Google News link, which must
+// decode, since the Google page itself holds no article.
+async function articleUrl(url, fetchPage) {
   const target = await publisherUrl(url, fetchPage);
   if (target === url && googleNewsArticleId(url)) throw failure('Google News gave no publisher link', 'google', 'news.google.com');
-  const page = await fetchArticlePage(target, fetchPage);
+  return target;
+}
+
+// The article on a fetched page, or why there is none: a bot check page
+// means the site turned us away, anything else that it has no article.
+async function articleOn(page, target) {
   const article = await extractFromHtml(prepareForExtraction(page.text), page.url).catch(() => null);
-  if (article) return toExtracted(article, url);
+  if (article) return article;
   if (BOT_CHECK.test(page.text)) throw failure('The site asked for a browser check', 'blocked', siteOf(target));
   throw failure('Could not extract article content', 'no-article', siteOf(target));
+}
+
+// The page is fetched by fetchText (SSRF-guarded on every redirect, with our
+// User-Agent and a real timeout), then parsed from the HTML string. A Google
+// News link is first decoded to the publisher's URL (googleNewsLink.js).
+// `fetchPage` is fetchText's signature (tests pass a stub).
+export async function extractArticle(url, fetchPage = fetchText) {
+  const target = await articleUrl(url, fetchPage);
+  const page = await fetchArticlePage(target, fetchPage);
+  return toExtracted(await articleOn(page, target), url);
 }
