@@ -16,6 +16,7 @@ test('fallbackText says why the full article is missing', () => {
 test('fallbackNote shows only over a short feed summary', () => {
   const blocked = { reason: 'blocked', site: 'cphpost.dk' };
   assert.equal(fallbackNote(blocked, 'Spotify removes millions of AI-generated songs  CPH POST'), fallbackText(blocked));
+  assert.equal(fallbackNote(blocked, `${'An excerpt. '.repeat(90)}Read full article`), fallbackText(blocked), 'an excerpt of about 1,100 characters');
   assert.equal(fallbackNote(blocked, 'x'.repeat(5000)), '', 'a feed that carries the whole article needs no note');
   assert.equal(fallbackNote(blocked, '   '), '', 'with no feed text the reader shows its own "no text" message');
   assert.equal(fallbackNote(null, 'A short summary'), '', 'no note when extraction worked');
